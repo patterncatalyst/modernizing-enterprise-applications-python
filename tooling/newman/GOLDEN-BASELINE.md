@@ -12,7 +12,7 @@ assertion, as contexts are pulled out of this monolith one at a time.
 **This collection is never rewritten per extraction — only re-pointed.** The
 `{{baseUrl}}` variable is the one thing every later iteration changes; every
 request and every assertion in `mea.postman_collection.json` stays as written
-here until the monolith's own contract changes deliberately (in which case
+here until the monolith's own contract itself changes (in which case
 this collection changes with it, in the same commit).
 
 ## What was run, and against what
@@ -26,7 +26,7 @@ The suite was run against `{{baseUrl}}=http://localhost:8000` — the monolith
 directly, since no proxy or extracted service exists at r01.
 
 Stock levels were whatever `manage.py seed` produced (`SKU-WIDGET-001` 100,
-`SKU-GADGET-002` 50, `SKU-GIZMO-003` 5 — deliberately low to exercise the
+`SKU-GADGET-002` 50, `SKU-GIZMO-003` 5 — seeded low to exercise the
 over-order path with no extra setup). No manual data manipulation was needed
 before or between runs: every scenario captures its own "before" stock level
 as a collection variable rather than asserting an absolute number, so the
@@ -59,8 +59,8 @@ First run:
 ```
 
 Second, back-to-back run against the same process (no database reset in
-between — proves the suite's "capture stock before" pattern is genuinely
-idempotent, not an artifact of a clean database):
+between — proves the suite's "capture stock before" pattern is idempotent,
+not an artifact of a clean database):
 
 ```
 ┌─────────────────────────┬───────────────────┬──────────────────┐
@@ -108,7 +108,7 @@ Zero failures on both runs, newman 6.2.3.
    `PAYMENT_DECLINED`; stock read after confirms it is **rolled back to the
    same value** — the single `@transaction.atomic()` in
    `order/services.py`'s `place_order()` (SMELL[ch.22]) spans the inventory
-   reservation and the payment capture, so a decline unwinds both for free.
+   reservation and the payment capture, so a decline unwinds both together.
 5. **Scenario 4 — Shipping-Failure** — stock read before; checkout with a
    `shippingAddress` containing the `SHIP-FAIL` sentinel returns `422
    Unprocessable Entity` / `SHIPPING_FAILED`; stock read after confirms

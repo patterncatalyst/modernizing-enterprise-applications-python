@@ -4,14 +4,14 @@ The r01 "before" system: a Django 5.2 LTS + Django REST Framework monolith with
 all six bounded contexts -- **order, inventory, payment, shipping,
 notification, review** -- living in one Django project, sharing one Postgres
 schema, checkout orchestrated by one synchronous god function. This is the
-walking skeleton the rest of the book incrementally decomposes.
+walking skeleton the book incrementally decomposes.
 
 Python sibling of
 [`modernizing-enterprise-applications/examples/00-monolith`](https://github.com/patterncatalyst/modernizing-enterprise-applications)
 (Java/Spring Boot), built to that project's *original* schema/seed/smell
 intent.
 
-## Six smells, on purpose
+## Six deliberate smells
 
 Every smell below is intentional -- see [`SMELLS.md`](./SMELLS.md) for the full
 table and which chapter cures each one.

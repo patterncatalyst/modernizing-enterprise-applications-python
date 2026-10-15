@@ -1,5 +1,5 @@
 ---
-title: "Transaction Log Tailing, CDC & Extraction 3 — Inventory"
+title: "Change Data Capture & Extraction 3 — Inventory"
 order: 19
 part: "Data Across the Seam"
 description: "Debezium-style CDC/log-tailing to bridge the monolith's tables during transition; grpcio-first Inventory with a decomposed DB and CDC backfill."

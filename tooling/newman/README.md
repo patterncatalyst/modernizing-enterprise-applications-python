@@ -12,7 +12,7 @@ This is the Python sibling of
 scoped to **r01** (the walking skeleton): the monolith is the only backend
 that exists yet, so every request is parameterized by `{{baseUrl}}` and that
 variable is set to the monolith's own address, `http://localhost:8000`. The
-same load-bearing rule the Java project established applies here from the
+same rule the Java project established applies here from the
 start: **this collection is never rewritten per extraction, only re-pointed**
 — once later iterations pull a context (review, notification, inventory,
 payment, shipping, order) out of the monolith into its own service, this
@@ -39,7 +39,7 @@ context is only "done" once it passes unchanged.
    persisted status; and `GET /api/inventory/{sku}` confirms
    `quantityOnHand` dropped by exactly the ordered quantity.
 3. **Scenario 2 — Out-of-Stock** — ordering more than `quantityOnHand` (against
-   the deliberately low-stock seeded `SKU-GIZMO-003`, quantity 5) returns
+   the low-stock seeded `SKU-GIZMO-003`, quantity 5) returns
    `409 Conflict` with `{ "error": "OUT_OF_STOCK", "message": "...<sku>...",
    "timestamp": ... }`, and stock is confirmed **unchanged** afterward —
    `inventory/services.py`'s `reserve()` raises `InsufficientStock` before any
@@ -105,8 +105,8 @@ newman run tooling/newman/mea.postman_collection.json \
   monolith into its own service, this exact collection (only `baseUrl`
   changed, nothing else) must pass before that context's monolith module is
   decommissioned.
-- **Versioned with the monolith:** when the monolith's contract changes
-  deliberately, this collection changes with it in the same commit; an
+- **Versioned with the monolith:** when the monolith's contract changes,
+  this collection changes with it in the same commit; an
   extracted service that still diverges afterward is a real regression, not
   suite drift.
 - **No bounded-wait polling yet:** the Java sibling project's suite grows
