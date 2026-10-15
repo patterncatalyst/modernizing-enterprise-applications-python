@@ -98,8 +98,11 @@ jobs:
           cache-dependency-glob: "examples/00-monolith/uv.lock"
 
       - name: uv sync (monolith)
+        # --locked: fail if uv.lock is out of date rather than silently
+        # re-resolving, matching the Dockerfile's reproducibility discipline
+        # (examples/00-monolith/Dockerfile: `uv sync --locked --no-dev`).
         working-directory: examples/00-monolith
-        run: uv sync --group dev
+        run: uv sync --locked --group dev
 
       - name: Migrate + seed the monolith's database
         working-directory: examples/00-monolith
