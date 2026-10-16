@@ -92,11 +92,18 @@ SSRF: no caller can redirect the proxy to an arbitrary host.
 | `STRANGLER_REVIEW_ENABLED` | `false` | Cutover flag for the Review seam |
 | `STRANGLER_MONOLITH_BASE_URL` | `http://localhost:8000` | Default backend |
 | `STRANGLER_REVIEW_BASE_URL` | `http://localhost:8001` | Review backend, once cut over |
+| `STRANGLER_NOTIFICATION_ENABLED` | `false` | Cutover flag for the Notification seam |
+| `STRANGLER_NOTIFICATION_BASE_URL` | `http://localhost:8002` | Notification backend, once cut over |
 
-| Flag | Backend for `/api/reviews*` | Backend for everything else |
-|---|---|---|
-| `false` (default) | monolith `:8000` | monolith `:8000` |
-| `true` | review-service `:8001` | monolith `:8000` |
+| Flag | Backend for `/api/reviews*` | Backend for `/api/notifications*` | Backend for everything else |
+|---|---|---|---|
+| review `false`, notification `false` (default) | monolith `:8000` | monolith `:8000` | monolith `:8000` |
+| review `true`, notification `false` | review-service `:8001` | monolith `:8000` | monolith `:8000` |
+| review `false`, notification `true` | monolith `:8000` | notification-service `:8002` | monolith `:8000` |
+| review `true`, notification `true` | review-service `:8001` | notification-service `:8002` | monolith `:8000` |
+
+The two flags are independent: each gates its own path prefix, and either
+can be flipped without affecting the other.
 
 Flipping the flag is a config change plus a restart, not a code change —
 that is what makes the cutover (and, while the monolith's Review module
@@ -154,10 +161,16 @@ To cut Review over:
 STRANGLER_REVIEW_ENABLED=true uv run uvicorn app.main:app --port 8888
 ```
 
+To cut Notification over (independently of Review):
+
+```bash
+STRANGLER_NOTIFICATION_ENABLED=true uv run uvicorn app.main:app --port 8888
+```
+
 ## Testing
 
 ```bash
-uv run pytest       # 7 tests, in-process ASGI stub backends, no network sockets
+uv run pytest       # 11 tests, in-process ASGI stub backends, no network sockets
 uv run ruff check .
 ```
 
@@ -166,7 +179,8 @@ uv run ruff check .
 each wired to its own `httpx.AsyncClient` mounted onto in-process stub ASGI
 backends (no real sockets, no running servers) — proving the proxy is
 reconfigurable per-instance, not hard-wired to a single process-global flag.
-It covers: routing under both flag states, pass-through fidelity (method,
-path, query string, headers, body), a real upstream 4xx/5xx relayed
-unchanged, and an upstream-down case that must surface a real `502`, never a
-masked `200`.
+It covers: routing under all four Review/Notification flag combinations
+(each flag independent of the other), pass-through fidelity (method, path,
+query string, headers, body), a real upstream 4xx/5xx relayed unchanged, and
+upstream-down cases (both Review and Notification) that must surface a real
+`502`, never a masked `200`.

@@ -284,8 +284,191 @@ contract, Option B). No unexplained drift remains for ch.14/15.
 
 ---
 
-*Per `build-plan.md` §J, the Notification extraction (ch.16–17, extraction 2
-of 6) is scheduled for r03 in this project's renumbered cadence. The next
-section appended to this file should be headed `ch.16-17 — Notification
-(r03, extraction 2 of 6)`, following the per-extraction-reconcile shape
-above.*
+## ch.16-17 — Notification (r03, extraction 2 of 6)
+
+### Transactional outbox + the dual-write cure
+
+**Source:** no external artifact — a project-first implementation of the
+Transactional Outbox pattern (§C) realized against `examples/00-monolith/`'s
+own `place_order()` checkout flow. `_plans/r03-build-plan.md`'s
+MONOLITH-OUTBOX lane is the design source.
+
+**Reused as-is (shape):** the pattern's canonical shape — a transactional
+`OutboxEvent` table (partial index on `published_at IS NULL`), written in the
+**same database transaction** as the business write, with a separate relay
+process polling and publishing asynchronously. This is the standard cure for
+both SMELLS.md #5 (synchronous notification dispatch inside checkout) and
+#6 (the dual-write of a `Notification` row + an external send, with no
+atomicity between them).
+
+**What shipped:** `place_order()` now writes a single `order.placed`
+`OutboxEvent` row in-transaction instead of calling the notification
+dispatcher; `manage.py outbox_relay` (an aiokafka-producer polling management
+command, DRQ-032) picks up unpublished rows, publishes to Kafka keyed by
+`orderId`, and stamps `published_at` on broker ack. **Verified atomic:** a
+`CARD-DECLINE` or `SHIP-FAIL` checkout — which rolls back the whole
+`transaction.atomic()` block — leaves **zero** new outbox rows; this was
+exercised as a test, not just asserted. Checkout remains synchronous `201
+CONFIRMED` with no Kafka on the request path (async `202` is out of scope
+until r05/payment).
+
+**Verdict:** CLEAN — the dual-write smell is cured atomically, proven by a
+rollback test, not merely argued.
+
+### The monolith becomes a consumer of its own event (DRQ-038)
+
+**Source:** no external artifact — this is the pivotal design decision the
+`_plans/r03-build-plan.md` gate posed directly to the user: once
+`place_order()` stops writing a `Notification` row synchronously, something
+has to repopulate the monolith's own `/api/notifications` read-model for the
+flag-OFF state.
+
+**Decision and why:** the user chose the **recommended** option over the
+simpler fallback. The monolith gained a new `order_placed_consumer`
+management command (consumer group `monolith-notification`, idempotent via
+`record_order_placed`) that consumes the same `order.placed` topic the
+notification-service consumes (in its own group, `notification-service`) and
+writes the `Notification` row from the event rather than from the original
+in-process call. The **rejected fallback** — keep an in-transaction
+`Notification` write in checkout and drop only the external dispatch — was
+recorded (DRQ-038) specifically because it would have kept the flag-OFF path
+Kafka-free, which sounds safer but actually (a) leaves SMELLS.md #6 only
+half-cured (the write is no longer dual, but it's also no longer the
+event-driven thing ch.17 is teaching) and (b) would never exercise the
+Newman async bounded-wait suite in the flag-OFF state, undermining the
+chapter's own teaching point.
+
+**Why this is the right pedagogy, not just the right code:** it makes the
+monolith and the notification-service **true like-for-like replacements** —
+both are now consumers of the identical `order.placed` event, differing only
+in schema (shared vs. owned) and process (Django management command vs.
+FastAPI lifespan task). The strangler flag now genuinely chooses *who serves
+the read*, not *whether the system is event-driven at all*. This is recorded
+in `build-plan.md` §C as the Decorating Collaborator pattern landing at
+ch.16, and is the concrete proof-point for ch.17's "going event-driven"
+narrative.
+
+**Verdict:** CLEAN — a real architectural choice, made by the user at the
+plan gate (not defaulted by the executor), traceable to DRQ-038 (status:
+fixed), with a concrete narrative payoff in both ch.16 and ch.17.
+
+### Notification-service: first owned schema (DRQ-035, contrast with DRQ-028)
+
+**Source:** `examples/02-review-service/` (this project's own r02 work, not
+an external project) for the *shape* of a FastAPI service with its own
+Alembic-free, shared-schema posture — notification deliberately **diverges**
+from that posture rather than repeating it.
+
+**Named divergence:** review (r02) stayed on the monolith's shared schema,
+DB ownership deferred to ch.18/19 (DRQ-028). Notification (r03) owns a
+dedicated Postgres `notification` SCHEMA in the same instance, created and
+migrated via **Alembic** — this project's first service to own its schema
+from day one. The divergence is deliberate and named (DRQ-035): notification
+is the right place to introduce owned-schema because its data (delivery
+records keyed by `order_id`) has no legitimate reason to live in the
+monolith's tables, unlike review's r02-scoped deferral.
+
+**Reconciliation finding #1 — Alembic async `CREATE SCHEMA` needed an
+explicit commit.** Alembic's async migration runner did not persist the
+`CREATE SCHEMA IF NOT EXISTS notification` DDL until an explicit
+`await connection.commit()` was added inside the migration's `run_sync`
+path — without it, the schema silently failed to appear outside the
+migration's own transaction scope in some run orders, which is the kind of
+bug that only shows up when a second process (the service itself, started
+after `alembic upgrade head`) tries to use the schema and finds it missing.
+**Fixed** by adding the explicit commit. Found during the Verify phase, not
+left latent.
+
+**Reconciliation finding #2 — Testcontainers `KafkaContainer` needed
+`.with_kraft()`.** The notification-service's own idempotency pytest, using
+`testcontainers`'s `KafkaContainer`, failed to start a usable broker until
+`.with_kraft()` was added — the default container mode did not match the
+project's KRaft-only Kafka posture (no ZooKeeper anywhere in this project,
+matching the `apache/kafka:4.3.1` CI service container). **Fixed** by
+pinning the test fixture to KRaft mode, keeping the test environment
+consistent with both CI and the dev-loop compose stack.
+
+**Verdict:** CLEAN adaptation (owned-schema posture, named divergence from
+DRQ-028) + two bugs found during Verify and fixed before merge, not
+discovered later: the Alembic commit gap and the Testcontainers KRaft gap.
+Both are recorded here per R4's "zero unexplained drift" bar — a bug found
+and fixed during the same reconcile pass is not drift, but it is reported
+honestly as a real defect rather than smoothed over.
+
+### `order.placed` contract (DRQ-036)
+
+**Source:** this project's own r02 camelCase JSON-contract convention
+(DRQ-002), extended to an event payload rather than a REST response body.
+
+**Reused as-is (shape):** camelCase field naming, applied consistently to an
+event for the first time: `{orderId, customerId, customerEmail, totalCents,
+confirmationMessage, placedAt}`, topic `order.placed`, key `orderId`.
+
+**Named divergence:** hand-maintained (no schema registry) — Apicurio
+registry governance is deferred to ch.28, named explicitly rather than
+implied as already in place (DRQ-036).
+
+**Verdict:** CLEAN — contract frozen before the three lanes (monolith-outbox,
+notification-service, proxy-flag) built against it in parallel, per the
+`_plans/r03-build-plan.md` dependency chain (STEP 0 froze the contract
+first).
+
+### Async equivalence gate — green through both flag states, plus the negative check
+
+**Source:** the r02 synchronous equivalence-gate precedent
+(`review-equivalence-gate`), extended to an async, eventually-consistent
+contract for the first time — the shape is reused, the mechanism is new
+(DRQ-039).
+
+**What shipped:** an env-guarded "Notification Context Contract" Newman
+folder — `POST /api/orders` → `201 CONFIRMED` capturing `customerId`/
+`orderId`, then a busy-wait-on-retry poll of
+`GET /api/notifications?customerId=` (self-`setNextRequest`, ≤20 attempts ×
+750ms = a 15s budget) with a **strict terminal assertion** (not a soft
+timeout) on camelCase fields + channel `EMAIL` + the confirmation message.
+The folder is inert unless `--env-var notificationContractEnabled=true`
+populates the environment-scope guard variable the pre-request script
+checks — so the two pre-existing (Kafka-free) gates stay green and
+untouched, and the new Kafka gate is the only one that turns it on.
+
+| Run | Flag | Notifications served by | Result |
+|---|---|---|---|
+| Full suite, flag OFF | `STRANGLER_NOTIFICATION_ENABLED=false` | monolith (`order_placed_consumer` self-populates the read-model) | **66/66 green** |
+| Full suite, flag ON | `STRANGLER_NOTIFICATION_ENABLED=true` | notification-service | **66/66 green — byte-identical in shape to the OFF run** |
+| Bounded-wait margin | — | — | poll succeeded on attempt **2 of 20** (well inside the 15s budget — comfortable margin, not a near-miss) |
+| Negative check (consumer down) | ON, notification-service consumer stopped | *(no row ever appears)* | **21 failed assertions, process exit 1** — the bounded-wait's strict terminal assert fires loudly, not a silent pass |
+| Recovery | ON, consumer restarted | notification-service | green again |
+
+The RED-then-green negative check mirrors the r02 precedent
+(`CUTOVER.md`'s 502 negative check) for the async case: the gate does not
+quietly pass when the extracted service's consumer is down, it fails loudly
+with a nonzero exit code that a CI job can gate on.
+
+**Kafka-in-CI:** `.github/workflows/code-ci.yml` gained a new
+`notification-equivalence-gate` (Postgres + Kafka service containers +
+monolith + relay + monolith self-consumer + notification-service + proxy,
+run with the flag ON then OFF, plus the consumer-down negative check),
+wired into the required `code-ci-ok` status. The two pre-existing gates
+(monolith, review) remain Kafka-free and green, confirming the skip-guard
+did not leak into gates that shouldn't pay the Kafka tax.
+
+**Verdict:** CLEAN — async equivalence proven both directions, with margin,
+plus a genuine negative check that fails loudly rather than silently.
+
+### Verdicts summary
+
+CLEAN across every artifact in this section, **plus two bugs found and fixed
+during Verify** (not left latent, not discovered post-merge): the Alembic
+async `CREATE SCHEMA` missing-commit bug, and the Testcontainers
+`KafkaContainer` missing-`.with_kraft()` bug. One named user decision at the
+plan gate (DRQ-038, monolith-self-consumer over the simpler fallback). No
+unexplained drift for ch.16/17.
+
+---
+
+*Per `build-plan.md` §J, the Inventory extraction (ch.18–19, extraction 3 of
+6) — Change Data Capture via Debezium, gRPC-first inventory on a decomposed
+DB with CDC backfill — is scheduled for r04 in this project's renumbered
+cadence. The next section appended to this file should be headed
+`ch.18-19 — Inventory (r04, extraction 3 of 6)`, following the
+per-extraction-reconcile shape above.*

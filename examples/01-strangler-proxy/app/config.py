@@ -28,6 +28,8 @@ class Settings:
     review_enabled: bool = False
     monolith_base_url: str = "http://localhost:8000"
     review_base_url: str = "http://localhost:8001"
+    notification_enabled: bool = False
+    notification_base_url: str = "http://localhost:8002"
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -38,6 +40,10 @@ class Settings:
                 "STRANGLER_MONOLITH_BASE_URL", "http://localhost:8000"
             ),
             review_base_url=os.environ.get("STRANGLER_REVIEW_BASE_URL", "http://localhost:8001"),
+            notification_enabled=_env_bool("STRANGLER_NOTIFICATION_ENABLED", False),
+            notification_base_url=os.environ.get(
+                "STRANGLER_NOTIFICATION_BASE_URL", "http://localhost:8002"
+            ),
         )
 
 

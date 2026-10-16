@@ -1,55 +1,57 @@
 import logging
 
+from django.db import IntegrityError, transaction
+
 from .models import Notification
 
 logger = logging.getLogger(__name__)
 
 
-def send_order_confirmation(customer, order) -> Notification:
+def record_order_placed(event: dict) -> Notification | None:
+    """Handler for the `order.placed` event (frozen contract: camelCase
+    `orderId`/`customerId`/`customerEmail`/`totalCents`/`confirmationMessage`/
+    `placedAt`), invoked by `notification.management.commands
+    .order_placed_consumer`.
+
+    SMELL[ch.17] CURED (r03, smells #5/#6): this replaces the old
+    `send_order_confirmation()`, which was called SYNCHRONOUSLY, in-process,
+    from `order.services.place_order()` inside checkout's own
+    `transaction.atomic()` -- coupling checkout latency to "sending" a
+    notification (smell #5) and dual-writing to the DB and a stand-in
+    provider with no shared transaction between them (smell #6). Now
+    `place_order()` writes only an outbox row in its own transaction; a relay
+    (`common.management.commands.outbox_relay`) publishes it to Kafka
+    at-least-once; THIS consumer repopulates the `Notification` read model
+    from the event, fully decoupled from checkout's transaction and failure
+    domain.
+
+    Idempotent by construction: at-least-once delivery means this can run
+    more than once for the same order (a relay crash between publish and
+    stamping `published_at` re-sends; a consumer re-processing after a crash
+    before its offset commit re-delivers). Check-then-create is the fast
+    path; `Notification`'s partial unique constraint on `order`
+    (`uniq_notification_per_order`) is the DB-level backstop against the
+    race between the check and the create.
     """
-    SMELL[ch.17]: called SYNCHRONOUSLY, in-process, from
-    order.services.place_order() -- inside the SAME transaction.atomic() as
-    the rest of checkout. Two problems this plants on purpose: (1) checkout
-    latency is coupled to however long "sending" a notification takes, even
-    though the customer doesn't need to wait for it; (2) if sending raised, it
-    would roll back the whole order along with it. The cure (notification
-    extraction) replaces this with a transactional outbox write + an async
-    event-driven consumer, decoupling both latency and failure domain.
-    """
-    message = f"Order #{order.id} confirmed, total ${order.total_cents / 100:.2f}"
-    notification = Notification.objects.create(
-        customer=customer, order=order, channel="EMAIL", message=message
-    )
+    order_id = event["orderId"]
+    existing = Notification.objects.filter(order_id=order_id).first()
+    if existing is not None:
+        logger.info("notification.duplicate order_id=%s -- skipping", order_id)
+        return existing
 
-    # SMELL[ch.17]: DUAL-WRITE HAZARD. The DB write above (the Notification
-    # row, committed/rolled back atomically with the rest of checkout) and the
-    # "send" below (a stand-in for a call to a real email/SMS provider) are
-    # two independent writes to two independent systems with NO shared
-    # transaction between them. If the process crashed between the DB commit
-    # and the provider call, the customer would never get the email even
-    # though the Notification row says it was sent; if the provider call were
-    # retried naively, the customer could get duplicate emails. This is the
-    # textbook "dual write" problem. The transactional outbox cures it by
-    # making the OUTBOX WRITE the only thing inside the local transaction, and
-    # letting a relay publish to the real provider at-least-once,
-    # independently, with its own retry and idempotency story -- the same
-    # pattern the Java sibling's `V3__outbox.sql` migration introduces.
-    _dispatch_via_external_provider(notification)
-    return notification
-
-
-def _dispatch_via_external_provider(notification: Notification) -> None:
-    """Stand-in for a call to a real transactional email/SMS provider
-    (SendGrid, SES, Twilio, ...). Logged rather than actually sent, since this
-    is a demo system -- but the hazard it illustrates (SMELL[ch.17] above) is
-    real: this call is not part of the database transaction that wrote
-    `notification`, and never can be."""
-    logger.info(
-        "notification.dispatched channel=%s customer_id=%s order_id=%s",
-        notification.channel,
-        notification.customer_id,
-        notification.order_id,
-    )
+    try:
+        with transaction.atomic():
+            return Notification.objects.create(
+                customer_id=event["customerId"],
+                order_id=order_id,
+                channel="EMAIL",
+                message=event["confirmationMessage"],
+            )
+    except IntegrityError:
+        # Lost the race against another delivery of the same event -- the
+        # partial unique constraint caught it. Fetch what the winner wrote.
+        logger.info("notification.duplicate order_id=%s -- lost race", order_id)
+        return Notification.objects.filter(order_id=order_id).first()
 
 
 def list_by_customer_id(customer_id):

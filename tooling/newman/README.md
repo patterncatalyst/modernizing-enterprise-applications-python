@@ -23,10 +23,10 @@ context is only "done" once it passes unchanged.
 
 | File | Purpose |
 |---|---|
-| `mea.postman_collection.json` | The collection itself: Smoke + four checkout scenarios + the r02 **Review Context Contract** folder. Every request is parameterized by `{{baseUrl}}`. |
+| `mea.postman_collection.json` | The collection itself: Smoke + four checkout scenarios + the r02 **Review Context Contract** folder + the r03 **Notification Context Contract** folder (the suite's first bounded-wait/async folder). Every request is parameterized by `{{baseUrl}}`. |
 | `local.postman_environment.json` | Points `{{baseUrl}}` at the monolith, `http://localhost:8000`. |
-| `proxy.postman_environment.json` | Points `{{baseUrl}}` at the r02 strangler proxy (`examples/01-strangler-proxy`), `http://localhost:8888` — the re-pointing target for the cutover evidence below. |
-| `GOLDEN-BASELINE.md` | The frozen record of the r01 baseline run, PLUS the r02 NEWMAN-CUTOVER lane's evidence trail (the exact `newman` summaries for the proxy flag-off/flag-on/flip-back/negative-check sequence, and the chunked-body defect discovered while proving it), PLUS the r02 PHASE-2 repair lane's evidence trail (the fix, the regression test, and the corrected re-run — fully green through the proxy in both flag states). |
+| `proxy.postman_environment.json` | Points `{{baseUrl}}` at the strangler proxy (`examples/01-strangler-proxy`), `http://localhost:8888` — the re-pointing target for the cutover evidence below. |
+| `GOLDEN-BASELINE.md` | The frozen record of the r01 baseline run, PLUS the r02 NEWMAN-CUTOVER lane's evidence trail (the exact `newman` summaries for the proxy flag-off/flag-on/flip-back/negative-check sequence, and the chunked-body defect discovered while proving it), PLUS the r02 PHASE-2 repair lane's evidence trail (the fix, the regression test, and the corrected re-run — fully green through the proxy in both flag states), PLUS the r03 NEWMAN-ASYNC lane's evidence trail (the Notification Context Contract's bounded-wait poll, live against a real Kafka broker, in both proxy flag states, plus its own negative check). |
 
 ## Scenarios asserted
 
@@ -77,6 +77,38 @@ context is only "done" once it passes unchanged.
    re-pointed, unedited, at `{{baseUrl}}=http://localhost:8888` (the
    strangler proxy) to prove the review cutover — see
    "The r02 NEWMAN-CUTOVER lane" in `GOLDEN-BASELINE.md`.
+
+7. **Notification Context Contract** (added at r03, see
+   `examples/03-notification-service`) — the suite's first async,
+   env-guarded, bounded-wait folder. N1 is a plain checkout (`POST
+   /api/orders`, `201 CONFIRMED` — checkout itself stays synchronous; only
+   notification delivery moved off the request path and onto `order.placed`
+   via the outbox) that captures the created order's `id`/`customerId`. N2
+   polls `GET /api/notifications?customerId=` with a bounded-wait self-loop
+   (`notificationPollMaxAttempts` x `notificationPollDelayMs` = 20 x 750ms,
+   a ~15s budget; only delays on a *retry*, never on attempt 0) until a
+   notification whose `orderId` matches the one N1 created appears, then
+   strictly asserts its camelCase shape (`id, customerId, orderId, channel,
+   message, sentAt`), `channel: "EMAIL"`, and that `message` contains the
+   order id. If the budget is exhausted the final assertion fails strictly
+   — it never hangs and never soft-passes. The whole folder is env-guarded
+   and INERT by default: each request's pre-request script checks
+   `pm.environment.get('notificationContractEnabled') === 'true'` (note:
+   `pm.environment.get`/`pm.variables.get`, NOT `pm.collectionVariables.get`
+   — `--env-var` populates the *environment* scope, verified empirically
+   against this newman build; a collection-variable read would silently
+   never see it) and calls `postman.setNextRequest(null)` when it isn't
+   set. Because this is the LAST folder in the collection, that cleanly
+   ends the run right there for any existing, unmodified invocation (CI
+   gates that predate this folder, local smoke runs, etc.) — N1 itself
+   still fires even when the guard is off (it's a plain synchronous
+   checkout that needs no Kafka, the same kind of request Scenario 1
+   already proves safe), but N2's bounded-wait poll — the one request that
+   actually needs Kafka — is never reached, and its own test script also
+   no-ops immediately if it somehow is. This is the folder that gets
+   re-pointed, unedited, at the strangler proxy to prove the notification
+   cutover, enabled per run via `--env-var notificationContractEnabled=true`
+   — see "The r03 NEWMAN-ASYNC lane" in `GOLDEN-BASELINE.md`.
 
 All assertions target status codes, response-body fields, and `Content-Type`
 — the externally-observable contract — never internal DB rows directly, so
@@ -154,6 +186,69 @@ green through the proxy in **both** flag states, with the review-service-
 down fail-safe (a real `502`, never a masked `200`) still confirmed RED then
 green.
 
+### Running the r03 NEWMAN-ASYNC evidence through the strangler proxy
+
+The Notification Context Contract folder is env-guarded and does nothing
+unless `notificationContractEnabled=true` is passed on the command line —
+every invocation below adds `--env-var notificationContractEnabled=true`.
+This lane needs a real Kafka broker, in addition to everything r02 needed:
+
+```bash
+# Postgres + Kafka (the repo's apache/kafka:4.3.1 pin, KRaft, single node):
+docker run -d --name mea-mono-pg -p 5432:5432 \
+  -e POSTGRES_USER=monolith -e POSTGRES_PASSWORD=monolith -e POSTGRES_DB=monolith \
+  postgres:18.6-alpine
+docker run -d --name mea-mono-kafka -p 9092:9092 \
+  -e KAFKA_NODE_ID=1 -e KAFKA_PROCESS_ROLES=broker,controller \
+  -e KAFKA_CONTROLLER_QUORUM_VOTERS=1@localhost:9093 \
+  -e KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093 \
+  -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092 \
+  -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT \
+  -e KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER \
+  -e KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT \
+  -e KAFKA_AUTO_CREATE_TOPICS_ENABLE=true -e CLUSTER_ID=MkU3OEVBNTcwNTJENDM2Qk \
+  docker.io/apache/kafka:4.3.1
+# (or scripts/stack-up.sh, which brings up the same Postgres + Kafka + LGTM.)
+
+# Monolith on :8000, PLUS its outbox relay and its own order.placed
+# self-consumer (the flag-OFF read model depends on the consumer):
+cd examples/00-monolith
+uv run python manage.py migrate && uv run python manage.py seed
+uv run python manage.py runserver 0.0.0.0:8000 &
+uv run python manage.py outbox_relay &
+uv run python manage.py order_placed_consumer &
+
+# notification-service on :8002 (needs its own migration first):
+cd ../03-notification-service
+uv run alembic upgrade head
+uv run uvicorn app.main:app --port 8002 &
+
+# Proxy on :8888, flag OFF (default) or ON (STRANGLER_NOTIFICATION_ENABLED=true):
+cd ../01-strangler-proxy
+uv run uvicorn app.main:app --port 8888 &
+
+# Flag OFF -- notifications served by the monolith's own order.placed
+# consumer, through the proxy:
+newman run tooling/newman/mea.postman_collection.json \
+    -e tooling/newman/proxy.postman_environment.json \
+    --env-var notificationContractEnabled=true
+
+# Flag ON (restart the proxy with STRANGLER_NOTIFICATION_ENABLED=true) --
+# notifications now served by examples/03-notification-service. Same
+# collection, same environment file, only the proxy's own flag changed:
+STRANGLER_NOTIFICATION_ENABLED=true uv run uvicorn app.main:app --port 8888
+newman run tooling/newman/mea.postman_collection.json \
+    -e tooling/newman/proxy.postman_environment.json \
+    --env-var notificationContractEnabled=true
+```
+
+See "The r03 NEWMAN-ASYNC lane" in `GOLDEN-BASELINE.md` for the full, real
+evidence trail: the full suite fully green through the proxy in both flag
+states (byte-identical collection, only the flag changed), the bounded-wait
+attempt counts actually observed, and the notification-service-down negative
+check (a real `502` from the proxy, the bounded-wait budget exhausting
+cleanly, and `newman` exiting non-zero) going RED then back to green.
+
 ## How this collection will be used going forward
 
 - **Per-extraction acceptance:** once a bounded context is pulled out of the
@@ -164,9 +259,16 @@ green.
   this collection changes with it in the same commit; an
   extracted service that still diverges afterward is a real regression, not
   suite drift.
-- **No bounded-wait polling yet:** the Java sibling project's suite grows
-  bounded-wait assertions once checkout goes asynchronous across a real
-  service boundary (its r06+). r01 has no asynchrony — checkout is one
-  synchronous HTTP round-trip against one process — so every assertion here
-  is a plain immediate check. Expect this file to grow bounded-wait helpers
-  the same way once this project's own extractions make checkout async.
+- **Bounded-wait polling, since r03:** r01 and r02 had no asynchrony to wait
+  on — checkout was one synchronous HTTP round-trip, and the Review
+  extraction only ever served a synchronously-consistent read. r03's
+  Notification Context Contract is the first folder where a write
+  (checkout) and the read that observes its effect (the notification) are
+  connected only by an eventually-consistent path (outbox -> Kafka ->
+  consumer), so it is the first to need a bounded-wait poll: retry on a
+  fixed budget (`notificationPollMaxAttempts` x `notificationPollDelayMs`),
+  never sleep on the first attempt, and fail strictly — never hang, never
+  soft-pass — if the budget runs out. The Java sibling project's suite
+  earned this same idiom the same way, at its own first async boundary
+  (its r06); expect later folders here (payment, shipping, the order
+  extraction's own eventual cutover) to reuse it unchanged.

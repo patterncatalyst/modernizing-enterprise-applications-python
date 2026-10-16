@@ -50,7 +50,7 @@ jobs:
           fi
           if ! files="$(git diff --name-only "$base" "${{ github.sha }}" 2>/dev/null)"; then
             echo "run=true" >> "$GITHUB_OUTPUT"   # cannot diff: run everything
-          elif grep -qE '^(examples/00-monolith/|examples/01-strangler-proxy/|examples/02-review-service/|tooling/newman/|infra/|compose\.yaml$|\.env\.example$|\.github/workflows/code-ci\.yml$)' <<<"$files"; then
+          elif grep -qE '^(examples/00-monolith/|examples/01-strangler-proxy/|examples/02-review-service/|examples/03-notification-service/|tooling/newman/|infra/|compose\.yaml$|\.env\.example$|\.github/workflows/code-ci\.yml$)' <<<"$files"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -360,12 +360,359 @@ jobs:
             fi
           done
 
+  # r03's extraction gate: the Notification bounded context (DRQ-0xx), the
+  # first ASYNC extraction -- the monolith's own outbox_relay publishes
+  # `order.placed` to Kafka, and (flag OFF) the monolith's own
+  # order_placed_consumer rebuilds its read model from that same topic, so
+  # the self-consumer is part of the flag-OFF equivalence contract, not an
+  # implementation detail. Flag ON hands the topic to
+  # examples/03-notification-service's own consumer instead. Both states are
+  # proven through the proxy on :8888 with the SAME Newman collection -- only
+  # the flag changes -- and a negative check proves the cutover is real (kill
+  # notification-service while the flag is ON and Newman must go RED), not
+  # just a dead-code path. See tooling/newman/README.md's "Running the r03
+  # NEWMAN-ASYNC evidence through the strangler proxy" for the exact,
+  # hand-verified recipe this job encodes.
+  notification-equivalence-gate:
+    name: notification-equivalence-gate
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-latest
+
+    # Same Postgres pin/creds as the other gates, plus a single-node KRaft
+    # Kafka broker (no ZooKeeper) -- env block ported from this repo's own
+    # compose.yaml (`kafka` service), minus the DOCKER-only listener that
+    # exists there just for the compose-network case. CLUSTER_ID is the same
+    # fixed value as .env.example's KAFKA_CLUSTER_ID so this isn't "any
+    # base64-ish string" drifting between local dev and CI.
+    services:
+      postgres:
+        image: docker.io/library/postgres:18.6-alpine
+        env:
+          POSTGRES_DB: monolith
+          POSTGRES_USER: monolith
+          POSTGRES_PASSWORD: monolith
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U monolith -d monolith"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+
+      kafka:
+        image: docker.io/apache/kafka:4.3.1
+        env:
+          KAFKA_NODE_ID: 1
+          KAFKA_PROCESS_ROLES: broker,controller
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+          KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+          KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+          KAFKA_NUM_PARTITIONS: 3
+          KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+          KAFKA_MIN_INSYNC_REPLICAS: 1
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+          KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+          CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+        ports:
+          - 9092:9092
+        options: >-
+          --health-cmd "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 24
+          --health-start-period 30s
+
+    env:
+      DATABASE_URL: postgresql://monolith:monolith@localhost:5432/monolith
+      KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+      LOG_DIR: logs
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v7
+
+      - name: Install uv (pinned) + Python 3.14
+        uses: astral-sh/setup-uv@v10.3.0   # no floating v10 tag; pin exact
+        with:
+          version: "0.13.1"            # decisions.md version matrix: uv 0.13.1
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: |
+            examples/00-monolith/uv.lock
+            examples/01-strangler-proxy/uv.lock
+            examples/03-notification-service/uv.lock
+
+      - name: uv sync (monolith)
+        working-directory: examples/00-monolith
+        run: uv sync --locked --group dev
+
+      - name: uv sync (strangler proxy)
+        working-directory: examples/01-strangler-proxy
+        run: uv sync --locked --group dev
+
+      - name: uv sync (notification service)
+        working-directory: examples/03-notification-service
+        run: uv sync --locked --group dev
+
+      - name: Migrate + seed the monolith's database
+        working-directory: examples/00-monolith
+        run: |
+          set -euo pipefail
+          uv run python manage.py migrate
+          uv run python manage.py seed
+
+      - name: Migrate notification-service's own `notification` schema
+        working-directory: examples/03-notification-service
+        run: uv run alembic upgrade head
+
+      - name: Start the monolith (gunicorn) on :8000
+        working-directory: examples/00-monolith
+        run: |
+          mkdir -p logs
+          nohup uv run gunicorn config.wsgi -b 0.0.0.0:8000 > gunicorn.out.log 2>&1 &
+          echo $! > gunicorn.pid
+
+      - name: Start the outbox relay
+        # Publishes the monolith's outbox rows (incl. `order.placed`) to
+        # Kafka at-least-once -- required for BOTH flag states, since the
+        # topic is the only path from "an order was placed" to either
+        # consumer (the monolith's own, or notification-service's).
+        working-directory: examples/00-monolith
+        run: |
+          nohup uv run python manage.py outbox_relay > relay.out.log 2>&1 &
+          echo $! > relay.pid
+
+      - name: Start the monolith's own order.placed self-consumer
+        # Required for the flag-OFF pass: with STRANGLER_NOTIFICATION_ENABLED
+        # unset, the proxy still routes to the monolith, whose Notification
+        # read model is rebuilt by THIS consumer, not notification-service's.
+        working-directory: examples/00-monolith
+        run: |
+          nohup uv run python manage.py order_placed_consumer > consumer.out.log 2>&1 &
+          echo $! > consumer.pid
+
+      - name: Start the notification-service (uvicorn) on :8002
+        working-directory: examples/03-notification-service
+        env:
+          DATABASE_URL: postgresql://monolith:monolith@localhost:5432/monolith
+          KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+        run: |
+          mkdir -p logs
+          nohup uv run uvicorn app.main:app --host 0.0.0.0 --port 8002 > uvicorn.out.log 2>&1 &
+          echo $! > uvicorn.pid
+
+      - name: Wait for the monolith to be ready on :8000
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:8000/api/orders" > /dev/null; then
+              echo "Monolith is up."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Monolith did not become ready in time." >&2
+          exit 1
+
+      - name: Wait for the notification-service's Kafka consumer to be assigned on :8002
+        # GET /health reports consumerPartitionsAssigned -- app/main.py's own
+        # CI-readiness contract. Waiting on this (not just process liveness)
+        # avoids a flag-ON Newman run racing the consumer's group-join.
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:8002/health" | grep -q '"consumerPartitionsAssigned":true'; then
+              echo "notification-service's consumer has partitions assigned."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "notification-service's consumer never got partitions assigned." >&2
+          curl -sf "http://localhost:8002/health" || true
+          exit 1
+
+      - name: Start the strangler proxy (uvicorn) on :8888 -- notification cutover flag ON
+        working-directory: examples/01-strangler-proxy
+        env:
+          STRANGLER_NOTIFICATION_ENABLED: 'true'
+          STRANGLER_MONOLITH_BASE_URL: http://localhost:8000
+          STRANGLER_NOTIFICATION_BASE_URL: http://localhost:8002
+        run: |
+          nohup uv run uvicorn app.main:app --host 0.0.0.0 --port 8888 > uvicorn-flag-on.out.log 2>&1 &
+          echo $! > uvicorn.pid
+
+      - name: Wait for the strangler proxy to be ready on :8888
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:8888/api/orders" > /dev/null; then
+              echo "Proxy is up."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Proxy did not become ready in time." >&2
+          exit 1
+
+      - name: Set up Node (for newman)
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Install newman
+        run: npm install -g newman@6.2.2   # pin: decisions.md version matrix
+
+      - name: Run the behavior-equivalence suite through the proxy -- notification cutover flag ON
+        # THE GATE (half 1 of 2): notifications served by
+        # examples/03-notification-service. --env-var is required, not
+        # --global-var -- it populates the *environment* scope the
+        # Notification Context Contract folder's guard reads (see
+        # tooling/newman/README.md); a plain collection variable would never
+        # see it.
+        run: |
+          newman run tooling/newman/mea.postman_collection.json \
+            -e tooling/newman/proxy.postman_environment.json \
+            --env-var notificationContractEnabled=true
+
+      - name: Flip the strangler proxy to flag OFF
+        # Same proxy contract as review-equivalence-gate's cutover test:
+        # only the flag changes, same collection, same environment file.
+        working-directory: examples/01-strangler-proxy
+        env:
+          STRANGLER_MONOLITH_BASE_URL: http://localhost:8000
+          STRANGLER_NOTIFICATION_BASE_URL: http://localhost:8002
+        run: |
+          if [ -f uvicorn.pid ]; then kill "$(cat uvicorn.pid)" || true; fi
+          sleep 1
+          nohup uv run uvicorn app.main:app --host 0.0.0.0 --port 8888 > uvicorn-flag-off.out.log 2>&1 &
+          echo $! > uvicorn.pid
+
+      - name: Wait for the strangler proxy to be ready on :8888 (flag OFF)
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:8888/api/orders" > /dev/null; then
+              echo "Proxy is up."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Proxy did not become ready in time." >&2
+          exit 1
+
+      - name: Run the behavior-equivalence suite through the proxy -- notification cutover flag OFF
+        # THE GATE (half 2 of 2): notifications served by the monolith's own
+        # order.placed self-consumer -- proves the flag-OFF path is still a
+        # real, working equivalent, not a code path nothing exercises.
+        run: |
+          newman run tooling/newman/mea.postman_collection.json \
+            -e tooling/newman/proxy.postman_environment.json \
+            --env-var notificationContractEnabled=true
+
+      - name: Flip the strangler proxy back to flag ON (for the negative check)
+        working-directory: examples/01-strangler-proxy
+        env:
+          STRANGLER_NOTIFICATION_ENABLED: 'true'
+          STRANGLER_MONOLITH_BASE_URL: http://localhost:8000
+          STRANGLER_NOTIFICATION_BASE_URL: http://localhost:8002
+        run: |
+          if [ -f uvicorn.pid ]; then kill "$(cat uvicorn.pid)" || true; fi
+          sleep 1
+          nohup uv run uvicorn app.main:app --host 0.0.0.0 --port 8888 > uvicorn-flag-on-2.out.log 2>&1 &
+          echo $! > uvicorn.pid
+
+      - name: Wait for the strangler proxy to be ready on :8888 (flag ON, negative check)
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:8888/api/orders" > /dev/null; then
+              echo "Proxy is up."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Proxy did not become ready in time." >&2
+          exit 1
+
+      - name: Kill the notification-service (for the negative check)
+        working-directory: examples/03-notification-service
+        run: |
+          if [ -f uvicorn.pid ]; then kill "$(cat uvicorn.pid)" || true; fi
+
+      - name: Negative check -- flag ON with notification-service down must go RED
+        # Inverted: the STEP passes only when newman FAILS (non-zero exit).
+        # The Notification Context Contract folder's own N2 bounded-wait
+        # (20 x 750ms, ~15s budget) is the poll budget here -- no outer retry
+        # loop needed. If newman exits zero, the cutover is not real (the
+        # proxy masked the outage), so fail the job.
+        run: |
+          if newman run tooling/newman/mea.postman_collection.json \
+              -e tooling/newman/proxy.postman_environment.json \
+              --folder "Notification Context Contract" \
+              --env-var notificationContractEnabled=true; then
+            echo "::error::Negative check failed: newman passed (exit 0) with notification-service down; expected a RED run." >&2
+            exit 1
+          fi
+          echo "Negative check OK: newman correctly exited non-zero with notification-service down."
+
+      - name: Dump service logs on failure
+        if: failure()
+        run: |
+          echo "::group::examples/00-monolith/logs/monolith.log"
+          cat examples/00-monolith/logs/monolith.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/00-monolith/gunicorn.out.log"
+          cat examples/00-monolith/gunicorn.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/00-monolith/relay.out.log"
+          cat examples/00-monolith/relay.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/00-monolith/consumer.out.log"
+          cat examples/00-monolith/consumer.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/03-notification-service/logs/notification-service.log"
+          cat examples/03-notification-service/logs/notification-service.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/03-notification-service/uvicorn.out.log"
+          cat examples/03-notification-service/uvicorn.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/01-strangler-proxy/uvicorn-flag-on.out.log"
+          cat examples/01-strangler-proxy/uvicorn-flag-on.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/01-strangler-proxy/uvicorn-flag-off.out.log"
+          cat examples/01-strangler-proxy/uvicorn-flag-off.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/01-strangler-proxy/uvicorn-flag-on-2.out.log"
+          cat examples/01-strangler-proxy/uvicorn-flag-on-2.out.log 2>/dev/null || true
+          echo "::endgroup::"
+
+      - name: Stop the monolith, relay, self-consumer, notification-service, and proxy
+        if: always()
+        run: |
+          for pidfile in \
+            examples/00-monolith/gunicorn.pid \
+            examples/00-monolith/relay.pid \
+            examples/00-monolith/consumer.pid \
+            examples/03-notification-service/uvicorn.pid \
+            examples/01-strangler-proxy/uvicorn.pid; do
+            if [ -f "$pidfile" ]; then
+              kill "$(cat "$pidfile")" || true
+            fi
+          done
+
   # The one check the ruleset requires. Passes when every needed job
   # succeeded or was skipped by `changes`.
   code-ci-ok:
     name: code-ci-ok
     if: always()
-    needs: [changes, monolith-equivalence-gate, review-equivalence-gate]
+    needs: [changes, monolith-equivalence-gate, review-equivalence-gate, notification-equivalence-gate]
     runs-on: ubuntu-latest
     steps:
       - env:
