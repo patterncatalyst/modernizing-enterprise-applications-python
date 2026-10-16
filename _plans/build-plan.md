@@ -279,11 +279,13 @@ the "Runnable via" column changes to name the Python mechanism.
 | Modular Monolith w/ decomposed DBs (B) | ch.13, ch.18 | per-app `DATABASES` routing | distributed-monolith trap |
 | Strangler Fig + proxy/redirection/shared-DB variants (B) | ch.14 | ASGI reverse-proxy façade | the spine |
 | Content-based Routing (B) | ch.16, ch.17 | façade path/header routing | **landed r03** — `STRANGLER_NOTIFICATION_ENABLED` routes `/api/notifications*` |
-| Anti-Corruption Layer (B) | ch.16 | FastAPI translation layer at the seam | **landed r03** — the ACL half of ch.16's title, realized at the notification seam |
-| Decorating Collaborator (B) | ch.16, ch.19 | FastAPI client wrapper | **ch.16 landed r03** — the monolith's `order_placed_consumer` decorates the monolith's own read-model from the same event the service consumes (DRQ-038); ch.19 (inventory retire) not started |
+| Anti-Corruption Layer (B) | ch.16, ch.19 | FastAPI translation layer at the seam | **ch.16 landed r03** at the notification seam; **ch.19 landed r04** — `inventory.proto` is the ACL for the gRPC seam, deliberately wire-vocab-distinct from the domain, with a byte-identical drift guard (`scripts/check-proto-drift.sh`, DRQ-042) |
+| Decorating Collaborator (B) | ch.16, ch.19 | FastAPI client wrapper | **ch.16 landed r03** — the monolith's `order_placed_consumer` decorates the monolith's own read-model from the same event the service consumes (DRQ-038); **ch.19 inventory retire landed r04** — the monolith's `RemoteInventoryClient` wraps the gRPC seam, and the CDC backfill connector is retired per its runbook once the owned schema is reached (DRQ-044) |
 | Shared Data (C) | ch.18 | shared Postgres schema | and its limits |
-| Transaction Log Tailing (C) | ch.19 | Debezium (unchanged) | folded into CDC |
-| Simple CDC (C) | ch.19 | Debezium Postgres connector | inventory backfill |
+| Owned Data / Database-per-Service (C) | ch.18, ch.19 | own Postgres schema per service (Alembic) | **landed r04** — inventory's CDC-backfilled, Alembic-migrated `inventory` schema completes the shared→owned narrative begun with notification's day-one owned schema (DRQ-035); own-migration + own-seed is the steady-state path, CDC is transition-only (DRQ-041) |
+| Synchronous gRPC (C) | ch.19 | `grpc.aio` server + grpcio client (`CheckStock`/`Reserve`/`Release`/`GetStock`) | **landed r04** — the project's first synchronous inter-service RPC seam; atomic conditional-UPDATE `Reserve` (concurrency-safe, race-tested) + compensating `Release` issued outside the monolith's local `transaction.atomic()` (DRQ-043) |
+| Transaction Log Tailing (C) | ch.19 | Debezium (unchanged) | folded into CDC; **landed r04**, transition-only (DRQ-044) |
+| Simple CDC (C) | ch.19 | Debezium Postgres connector | **landed r04** — inventory backfill (snapshot + pgoutput stream from `public.inventory_items`), then retired; confirmed NOT in CI, mirrors the Java sibling's gate (DRQ-044/045) |
 | Transactional Outbox (C) | ch.17 (intro), ch.20 | Django `OutboxEvent` model (partial index) + `outbox_relay` management-command poller (aiokafka producer) | **landed r03** — cures SMELLS #5/#6 (sync-send + dual-write); a DECLINE/SHIP-FAIL checkout leaves zero outbox rows (tested); ch.20 (outbox-done-right deep dive) not started |
 | Event-Driven (C) | ch.17 | aiokafka producer (relay) → aiokafka consumers (monolith self-consumer + notification-service) | **landed r03** — first event-driven extraction; `order.placed` hand-maintained contract (DRQ-036) |
 | Idempotent Consumer (C) | ch.17 | DB partial-unique backstop, deduped by `order_id`/`customerId` | **landed r03** — both the monolith's `order_placed_consumer` and the notification-service's consumer are idempotent on redelivery |
@@ -387,14 +389,21 @@ green by the Newman `review-equivalence-gate`. **Row 2 is now done, built in
 r03** (`_plans/r03-build-plan.md`): the notification extraction
 (`examples/03-notification-service/`), behind
 `STRANGLER_NOTIFICATION_ENABLED`, gated green by the new
-`notification-equivalence-gate`. Rows 3–6 remain not started.
+`notification-equivalence-gate`. **Row 3 is now done, built in r04**
+(`_plans/r04-build-plan.md`): the inventory extraction
+(`examples/04-inventory-service/`) — the project's first synchronous gRPC
+seam and first CDC (Debezium) use, own `inventory` Postgres schema reached
+via own-migration + own-seed with a transition-only CDC backfill, behind the
+two independent cutover flags `STRANGLER_INVENTORY_ENABLED` (reads) and
+`INVENTORY_MODE=local|grpc` (reserve/release), gated green by the new
+`inventory-equivalence-gate`. Rows 4–6 remain not started.
 
 | # | Service | Seam / mechanism | Data & transaction handling | Target runtime | Chapters | Status |
 |---|---|---|---|---|---|---|
 | 0 | — | Insert the ASGI strangler façade in front of the monolith | n/a | — | ch.14 | done |
 | 1 | **review** | REST leaf, no sync deps; façade redirect by path; ACL | Shared schema initially; DB decomposition deferred to ch.18/19 | FastAPI | ch.15 *(walking skeleton)* | done |
 | 2 | **notification** | Event consumer; content-based routing; decorating collaborator | Outbox in monolith → Kafka; idempotent consumer; **own schema from day one** (`notification`, Alembic-migrated — first owned schema, DRQ-035); the monolith's own notification read-model survives as a decorating collaborator (`order_placed_consumer`, DRQ-038) | FastAPI + **aiokafka** | ch.16–17 | done |
-| 3 | **inventory** | Synchronous gRPC; decomposed DB; decorating collaborator | CDC (Debezium) backfill from shared schema → owned DB, then cut writes | FastAPI + **grpcio** server | ch.19 | not started |
+| 3 | **inventory** | Synchronous gRPC; decomposed DB; decorating collaborator | CDC (Debezium) backfill from shared schema → owned DB (transition-only, then retired), then cut writes; own `inventory` schema (Alembic, own-seed); `order_items` FK→snapshot | FastAPI + **grpcio** server (`grpc.aio`, :9004) | ch.18–19 | **done** |
 | 4 | **payment** | Event choreography (`order.placed`→`payment.captured`) | Choreographed saga via **aiokafka**; compensations; ACID→ACD realized | FastAPI + aiokafka | ch.23 | not started |
 | 5 | **shipping** | Completes the chain; alternative orchestration | **Orchestrated saga** via the reused CNDP Python DB-backed saga orchestrator | FastAPI + saga orchestrator | ch.24 | not started |
 | 6 | **order** (+ gateway) | Core aggregate, extracted last; GraphQL read side | CQRS read model; event-sourcing optional; monolith decommissioned | FastAPI REST/aiokafka + **Strawberry** GraphQL gateway | ch.26 | not started |
@@ -491,7 +500,7 @@ shifted down by one iteration, for the same total of **10 iterations**.
 | **r01** | **Walking skeleton** | site scaffold + Django monolith (pristine "before," all six apps/smells live) + Newman baseline + minimal Code-CI green; chapters are stubs — **done** | Java r01 (planning) **+** r02 (skeleton), combined |
 | **r02** | **Strangler proxy + review extraction — done** | ASGI strangler façade (`examples/01-strangler-proxy/`, ch.14) + Review extraction Phase A (documented) / Phase B (shipped) (`examples/02-review-service/`, ch.15), auth contract realized (Option B), Newman `review-equivalence-gate` green through the proxy flag OFF and ON | Java r03 (re-themed: this project's r02 is the first extraction, not front matter) |
 | **r03** | **Notification extraction — event-driven, outbox + aiokafka, own schema — done** | `OutboxEvent` transactional outbox cures SMELLS #5/#6 (`examples/00-monolith/`); notification extraction (`examples/03-notification-service/`, ch.16–17) on aiokafka with its own Alembic-migrated `notification` schema; the monolith becomes a consumer of its own event (DRQ-038); `STRANGLER_NOTIFICATION_ENABLED` cutover; Newman async bounded-wait suite + `notification-equivalence-gate` green both flag states | Java r04 |
-| **r04** | Data patterns | Part 6 (18–22) incl. **Inventory extraction (ch.19)** + CDC, outbox-done-right, CQRS, ACID→ACD | Java r05 |
+| **r04** | **Inventory extraction — gRPC seam + CDC backfill + FK→snapshot — done** | Part 6 (18–19): `inventory.proto` (gRPC ACL) + drift guard; inventory extraction (`examples/04-inventory-service/`, ch.18–19) with own `inventory` Alembic schema + own-seed, atomic conditional-UPDATE Reserve (concurrency-safe, race-tested) + compensating Release issued outside the monolith's local transaction; transition-only Debezium CDC backfill (retired, NOT in CI); `order_items` FK→snapshot; two cutover flags (`STRANGLER_INVENTORY_ENABLED` + `INVENTORY_MODE`); Newman `inventory-equivalence-gate` green fully-gRPC and fully-local, plus RED-then-green negative checks | Java r05 |
 | **r05** | Sagas — choreographed | Part 7 ch.23 incl. **Payment extraction (ch.23, aiokafka choreography)** | Java r06 |
 | **r06** | Sagas — orchestrated + resilience | Part 7 ch.24–25 incl. **Shipping extraction (ch.24, CNDP Python saga orchestrator)** | Java r07 |
 | **r07** | Comms + contracts | Part 8 (26–28) incl. **Order extraction + GraphQL gateway (strangler completes)** | Java r08 |
