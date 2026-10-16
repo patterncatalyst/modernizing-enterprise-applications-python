@@ -5,8 +5,9 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
 from common.management.commands.seed import REVIEWER_PASSWORD, REVIEWER_USERNAME
-from common.models import Customer
+from common.models import Customer, OutboxEvent
 from inventory.models import InventoryItem
+from notification.services import record_order_placed
 from order.services import place_order
 
 
@@ -61,10 +62,23 @@ def confirmed_order(db, customer, widget):
     """A confirmed order with a payment, shipment, and notification already
     attached -- exercises place_order()'s full six-context checkout flow once
     so the read-side smoke tests (payments/shipments/notifications by
-    orderId/customerId) have something to find."""
-    return place_order(
+    orderId/customerId) have something to find.
+
+    r03: `place_order()` itself only writes an `order.placed` OutboxEvent
+    row now (see SMELLS.md #5/#6, cured) -- there's no live Kafka broker in
+    the test environment to carry it to the consumer. This fixture plays the
+    part of `common.management.commands.outbox_relay` +
+    `notification.management.commands.order_placed_consumer` end to end,
+    synchronously, by handing the outbox row's own payload straight to
+    `notification.services.record_order_placed()` -- the same function the
+    real consumer calls. That keeps the read-side smoke tests exercising the
+    real `Notification`-creation code path without requiring a broker."""
+    order = place_order(
         customer_id=customer.id,
         items=[{"sku": widget.sku, "quantity": 2}],
         payment_method="CARD-VISA",
         shipping_address="1 Analytical Engine Way, London",
     )
+    outbox_event = OutboxEvent.objects.get(aggregate_type="order", aggregate_id=str(order.id))
+    record_order_placed(outbox_event.payload)
+    return order

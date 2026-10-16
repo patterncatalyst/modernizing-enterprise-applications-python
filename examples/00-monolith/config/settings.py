@@ -101,6 +101,19 @@ DATABASES = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# ---------------------------------------------------------------------------
+# Kafka -- r03's outbox relay (common.management.commands.outbox_relay)
+# publishes to ORDER_PLACED_TOPIC; notification's consumer
+# (notification.management.commands.order_placed_consumer) subscribes to it.
+# Env-overridable so CI/compose/CRC point these at their own broker without
+# this module hard-coding a dependency on any one of them being up -- same
+# convention as DATABASE_URL above.
+# ---------------------------------------------------------------------------
+
+KAFKA_BOOTSTRAP_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+ORDER_PLACED_TOPIC = "order.placed"
+OUTBOX_RELAY_POLL_MS = int(os.environ.get("OUTBOX_RELAY_POLL_MS", "1000"))
+
 # This API's contract (and the ported Newman collection) uses paths with NO
 # trailing slash (`/api/inventory/{sku}`, not `/api/inventory/{sku}/`), so
 # each app's urls.py intentionally starts its detail route with "/" against
@@ -190,5 +203,14 @@ LOGGING = {
         "django": {"handlers": ["file", "console"], "level": "INFO", "propagate": False},
         "order": {"level": "DEBUG", "propagate": True},
         "notification": {"level": "DEBUG", "propagate": True},
+        "common.management.commands.outbox_relay": {"level": "DEBUG", "propagate": True},
+        "notification.management.commands.order_placed_consumer": {
+            "level": "DEBUG",
+            "propagate": True,
+        },
+        # aiokafka's own DEBUG logging is noisy (connection heartbeats,
+        # metadata refreshes) -- keep it at INFO in both the relay and the
+        # consumer's loggers.
+        "aiokafka": {"level": "INFO", "propagate": True},
     },
 }

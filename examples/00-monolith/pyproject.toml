@@ -9,6 +9,7 @@ dependencies = [
     "drf-spectacular==0.30.0",
     "psycopg[binary]==3.3.6",
     "gunicorn==26.2.0",
+    "aiokafka==0.14.0",
 ]
 
 [dependency-groups]
