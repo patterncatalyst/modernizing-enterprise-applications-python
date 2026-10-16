@@ -1,0 +1,46 @@
+[project]
+name = "mea-review-service"
+version = "0.1.0"
+description = "Modernizing Enterprise Applications (Python) -- r02 S9: the review bounded context, extracted from 00-monolith onto a standalone FastAPI service (ch.15, DRQ-009). Phase B (idiomatic FastAPI + async SQLAlchemy/asyncpg) is the live app; Phase A (lift via the monolith's Django ORM) is documented in MIGRATION.md."
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi==0.143.2",
+    "uvicorn[standard]==0.54.0",
+    "sqlalchemy[asyncio]==2.1.4",
+    "asyncpg==0.32.0",
+    "pydantic==2.14.1",
+    "passlib==1.7.4",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "httpx==0.28.1",
+    "ruff==0.17.1",
+]
+
+[tool.pytest.ini_options]
+python_files = ["test_*.py"]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# B008 (function call in argument default) is a false positive for FastAPI's
+# `Depends(...)`/`Query(...)` pattern -- that IS the idiomatic way to declare
+# a dependency, per FastAPI's own docs.
+ignore = ["B008"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.uv]
+# A standalone FastAPI service, not a distributable library -- don't
+# build/install it as a package into its own virtualenv.
+package = false

@@ -23,9 +23,10 @@ context is only "done" once it passes unchanged.
 
 | File | Purpose |
 |---|---|
-| `mea.postman_collection.json` | The collection itself: Smoke + four checkout scenarios. Every request is parameterized by `{{baseUrl}}`. |
+| `mea.postman_collection.json` | The collection itself: Smoke + four checkout scenarios + the r02 **Review Context Contract** folder. Every request is parameterized by `{{baseUrl}}`. |
 | `local.postman_environment.json` | Points `{{baseUrl}}` at the monolith, `http://localhost:8000`. |
-| `GOLDEN-BASELINE.md` | The frozen record of the r01 baseline run: what was running, the exact `newman` summary, and what each scenario strictly asserts. |
+| `proxy.postman_environment.json` | Points `{{baseUrl}}` at the r02 strangler proxy (`examples/01-strangler-proxy`), `http://localhost:8888` — the re-pointing target for the cutover evidence below. |
+| `GOLDEN-BASELINE.md` | The frozen record of the r01 baseline run, PLUS the r02 NEWMAN-CUTOVER lane's evidence trail (the exact `newman` summaries for the proxy flag-off/flag-on/flip-back/negative-check sequence, and the chunked-body defect discovered while proving it), PLUS the r02 PHASE-2 repair lane's evidence trail (the fix, the regression test, and the corrected re-run — fully green through the proxy in both flag states). |
 
 ## Scenarios asserted
 
@@ -58,6 +59,24 @@ context is only "done" once it passes unchanged.
    stock nets back to zero change: the same `transaction.atomic()` unwinds the
    inventory reservation *and* the payment capture *and* the order row itself
    — the deepest of the three failure-injection paths.
+
+6. **Review Context Contract** (added at r02, see `examples/02-review-service`)
+   — `GET /api/reviews?sku=...` returns `200` with a camelCase array
+   (`id, customerId, sku, rating, comment, createdAt`), scoped to the
+   requested SKU, and captures a seeded review id; `GET /api/reviews/{id}`
+   returns the same shape for a single review; `POST /api/reviews` with
+   **no credentials** returns `401` with the uniform
+   `{error,message,timestamp}` body and `error: "ERROR"` (the generic
+   auth-failure catch-all code both the monolith's DRF stack and the
+   FastAPI review-service's exception handler produce, not a dedicated
+   `UNAUTHORIZED` code — see `examples/02-review-service/app/errors.py`);
+   `POST /api/reviews` with HTTP Basic **`reviewer:review-pw-r02`** and a
+   valid body returns `201` with a `Location: /api/reviews/{id}` header and
+   the camelCase echo; the same request with an out-of-range `rating`
+   (`99`) returns `400 VALIDATION_FAILED`. This is the folder that gets
+   re-pointed, unedited, at `{{baseUrl}}=http://localhost:8888` (the
+   strangler proxy) to prove the review cutover — see
+   "The r02 NEWMAN-CUTOVER lane" in `GOLDEN-BASELINE.md`.
 
 All assertions target status codes, response-body fields, and `Content-Type`
 — the externally-observable contract — never internal DB rows directly, so
@@ -98,6 +117,42 @@ uv run python manage.py runserver 0.0.0.0:8000
 newman run tooling/newman/mea.postman_collection.json \
     --environment tooling/newman/local.postman_environment.json
 ```
+
+### Running the r02 cutover evidence through the strangler proxy
+
+```bash
+# Monolith on :8000, review-service on :8001 (both pointed at the same
+# migrated+seeded Postgres), and the proxy on :8888 -- see the "Bringing up
+# the monolith" section above and examples/02-review-service/README.md and
+# examples/01-strangler-proxy/README.md for each component's own run
+# instructions.
+
+# Flag OFF (default) -- reviews served by the monolith, through the proxy:
+newman run tooling/newman/mea.postman_collection.json \
+    --environment tooling/newman/proxy.postman_environment.json
+
+# Flag ON (restart the proxy with STRANGLER_REVIEW_ENABLED=true) -- reviews
+# now served by examples/02-review-service, everything else still the
+# monolith. Same collection, same environment file, only the proxy's own
+# flag changed:
+STRANGLER_REVIEW_ENABLED=true uv run uvicorn app.main:app --port 8888
+newman run tooling/newman/mea.postman_collection.json \
+    --environment tooling/newman/proxy.postman_environment.json
+```
+
+See "The r02 NEWMAN-CUTOVER lane" in `GOLDEN-BASELINE.md` for the full,
+real evidence trail captured this way (flag off / flag on / flip back /
+review-service-down negative check) — **and a real defect in
+`examples/01-strangler-proxy` discovered while capturing it**: the proxy
+forwarded request bodies as `Transfer-Encoding: chunked`, which the WSGI
+monolith decoded as a zero-length body, breaking every `POST`/`PUT`/`PATCH`
+routed through the proxy to the monolith. See "The r02 PHASE-2 repair lane"
+in the same file for the fix (buffer the body, forward it with a correct
+`Content-Length`) and the corrected re-run: the full suite — Smoke, all
+four checkout scenarios, and the Review Context Contract — is now fully
+green through the proxy in **both** flag states, with the review-service-
+down fail-safe (a real `502`, never a masked `200`) still confirmed RED then
+green.
 
 ## How this collection will be used going forward
 

@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 900" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="40" y="210" width="220" height="90" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="150.0" y="253.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Client</text>
+<text x="150.0" y="270.0" font-size="11.5" fill="#555555" text-anchor="middle">(curl / Newman)</text>
+<rect x="330" y="210" width="260" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="460.0" y="255.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Starlette strangler proxy</text>
+<text x="460.0" y="272.5" font-size="11.5" fill="#555555" text-anchor="middle">:8888</text>
+<text x="460.0" y="287.5" font-size="11.5" fill="#555555" text-anchor="middle">STRANGLER_REVIEW_ENABLED=false</text>
+<rect x="660" y="80" width="260" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="790.0" y="120.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Django monolith</text>
+<text x="790.0" y="137.5" font-size="11.5" fill="#555555" text-anchor="middle">:8000 -- all contexts</text>
+<text x="790.0" y="152.5" font-size="11.5" fill="#555555" text-anchor="middle">incl. review/</text>
+<rect x="660" y="340" width="260" height="100" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="790.0" y="380.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">review-service (FastAPI)</text>
+<text x="790.0" y="397.5" font-size="11.5" fill="#555555" text-anchor="middle">:8001</text>
+<text x="790.0" y="412.5" font-size="11.5" fill="#555555" text-anchor="middle">(built, not serving reviews)</text>
+<rect x="1000" y="200" width="240" height="120" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="1120.0" y="243.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">PostgreSQL 18</text>
+<text x="1120.0" y="260.0" font-size="11.5" fill="#555555" text-anchor="middle">monolith schema</text>
+<text x="1120.0" y="275.0" font-size="11.5" fill="#555555" text-anchor="middle">reviews, customers,</text>
+<text x="1120.0" y="290.0" font-size="11.5" fill="#555555" text-anchor="middle">inventory_items, auth_user (shared schema)</text>
+<rect x="40" y="650" width="220" height="90" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="150.0" y="693.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Client</text>
+<text x="150.0" y="710.0" font-size="11.5" fill="#555555" text-anchor="middle">(curl / Newman)</text>
+<rect x="330" y="650" width="260" height="110" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="460.0" y="695.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Starlette strangler proxy</text>
+<text x="460.0" y="712.5" font-size="11.5" fill="#555555" text-anchor="middle">:8888</text>
+<text x="460.0" y="727.5" font-size="11.5" fill="#555555" text-anchor="middle">STRANGLER_REVIEW_ENABLED=true</text>
+<rect x="660" y="520" width="260" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="790.0" y="560.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Django monolith</text>
+<text x="790.0" y="577.5" font-size="11.5" fill="#555555" text-anchor="middle">:8000 -- everything else</text>
+<text x="790.0" y="592.5" font-size="11.5" fill="#555555" text-anchor="middle">review/ app still present</text>
+<rect x="660" y="780" width="260" height="100" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="790.0" y="820.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">review-service (FastAPI)</text>
+<text x="790.0" y="837.5" font-size="11.5" fill="#555555" text-anchor="middle">:8001</text>
+<text x="790.0" y="852.5" font-size="11.5" fill="#555555" text-anchor="middle">serving /api/reviews*</text>
+<rect x="1000" y="640" width="240" height="120" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="1120.0" y="683.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">PostgreSQL 18</text>
+<text x="1120.0" y="700.0" font-size="11.5" fill="#555555" text-anchor="middle">monolith schema</text>
+<text x="1120.0" y="715.0" font-size="11.5" fill="#555555" text-anchor="middle">reviews, customers,</text>
+<text x="1120.0" y="730.0" font-size="11.5" fill="#555555" text-anchor="middle">inventory_items, auth_user (shared schema, Phase B)</text>
+<path d="M260.0,258.5483870967742 L330.0,260.80645161290323" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="301.0" y="253.67741935483872" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">HTTP</text>
+<text x="301.0" y="253.67741935483872" font-size="11" fill="#555" text-anchor="middle">HTTP</text>
+<path d="M590.0,211.8181818181818 L667.7777777777778,180.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="634.8888888888889" y="189.9090909090909" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">every path, incl. /api/reviews*</text>
+<text x="634.8888888888889" y="189.9090909090909" font-size="11" fill="#555" text-anchor="middle">every path, incl. /api/reviews*</text>
+<path d="M590.0,314.24242424242425 L660.0,340.75757575757575" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="631.0" y="321.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">/api/reviews* (unused while flag=false)</text>
+<text x="631.0" y="321.5" font-size="11" fill="#555" text-anchor="middle">/api/reviews* (unused while flag=false)</text>
+<path d="M916.9230769230769,180.0 L1000.0,212.72727272727272" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M916.9230769230769,340.0 L1000.0,307.27272727272725" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M260.0,698.5483870967741 L330.0,700.8064516129032" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="301.0" y="693.6774193548387" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">HTTP</text>
+<text x="301.0" y="693.6774193548387" font-size="11" fill="#555" text-anchor="middle">HTTP</text>
+<path d="M590.0,651.8181818181819 L667.7777777777778,620.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="634.8888888888889" y="629.909090909091" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">everything else</text>
+<text x="634.8888888888889" y="629.909090909091" font-size="11" fill="#555" text-anchor="middle">everything else</text>
+<path d="M590.0,754.2424242424242 L660.0,780.7575757575758" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="631.0" y="761.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">/api/reviews* matched on request.url.path</text>
+<text x="631.0" y="761.5" font-size="11" fill="#2f5f3d" text-anchor="middle">/api/reviews* matched on request.url.path</text>
+<path d="M916.9230769230769,620.0 L1000.0,652.7272727272727" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M916.9230769230769,780.0 L1000.0,747.2727272727273" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="660.0" y="32" font-size="18" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.14 -- content-based routing: STRANGLER_REVIEW_ENABLED flag OFF vs ON</text>
+<text x="40" y="65" font-size="14" fill="#1d1d1d" text-anchor="start" font-weight="700">FLAG OFF (default) -- /api/reviews* still answered by the monolith</text>
+<text x="40" y="498" font-size="14" fill="#1d1d1d" text-anchor="start" font-weight="700">FLAG ON -- /api/reviews* answered by review-service; everything else unchanged</text>
+<text x="40" y="866" font-size="11" fill="#555555" text-anchor="start">_select_backend() matches request.url.path -- the FULL path the client sent -- never a value</text>
+<text x="40" y="882" font-size="11" fill="#555555" text-anchor="start">relative to a mount point or route prefix (the full-path-prefix lesson, see CUTOVER.md).</text>
+</svg>
