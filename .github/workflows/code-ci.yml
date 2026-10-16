@@ -50,7 +50,7 @@ jobs:
           fi
           if ! files="$(git diff --name-only "$base" "${{ github.sha }}" 2>/dev/null)"; then
             echo "run=true" >> "$GITHUB_OUTPUT"   # cannot diff: run everything
-          elif grep -qE '^(examples/00-monolith/|examples/01-strangler-proxy/|examples/02-review-service/|examples/03-notification-service/|examples/04-inventory-service/|examples/05-payment-service/|tooling/newman/|infra/|compose\.yaml$|\.env\.example$|\.github/workflows/code-ci\.yml$)' <<<"$files"; then
+          elif grep -qE '^(examples/00-monolith/|examples/01-strangler-proxy/|examples/02-review-service/|examples/03-notification-service/|examples/04-inventory-service/|examples/05-payment-service/|examples/06-shipping-service/|tooling/newman/|infra/|compose\.yaml$|\.env\.example$|\.github/workflows/code-ci\.yml$)' <<<"$files"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -1440,12 +1440,444 @@ jobs:
             fi
           done
 
+  # r06's extraction gate: the Shipping bounded context (ch.26), the first
+  # ORCHESTRATED (DB-backed saga, no gRPC, no Camel) extraction --
+  # examples/06-shipping-service reacts to 05-payment-service's own
+  # `payment.captured` event over Kafka, drives a four-step saga
+  # (enrich -> dispatch -> book_carrier -> emit) against the monolith's OWN
+  # `GET /api/orders/{id}` (MONOLITH_BASE_URL, the enrich step's only
+  # outbound call), and publishes `shipment.dispatched`/`shipment.failed`
+  # from its OWN transactional outbox into its OWN `shipping` Postgres
+  # schema. The monolith's `order_saga_listener` consumes those events in
+  # turn to finish the order (CONFIRMED on dispatched, compensating
+  # release+decline-equivalent handling on failed) -- same listener process
+  # payment-equivalence-gate already starts, now also carrying
+  # SHIPPING_MODE=orchestrated.
+  #
+  # Orchestrated shipping still rides on top of choreographed payment, which
+  # ALWAYS reserves inventory over gRPC (CUTOVER.md, same as
+  # payment-equivalence-gate), so this gate's topology is
+  # payment-equivalence-gate's PLUS shipping-service: inventory-service
+  # (gRPC :9004), payment-service, shipping-service, the monolith (with its
+  # three background commands), and the proxy with all three cutover flags
+  # ON. See examples/06-shipping-service/README.md's "orchestrated" story
+  # and AGENTS.md's "no monolith original for the write path" note -- the
+  # monolith's own SHIPPING_MODE=inprocess default is what r05 and earlier
+  # gates already exercise implicitly; this gate is the first to flip it.
+  shipping-equivalence-gate:
+    name: shipping-equivalence-gate
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-latest
+
+    # Same Postgres + Kafka service containers as payment-equivalence-gate --
+    # shipping-service's payment.captured consumer and outbox relay are a
+    # real Kafka round trip, not a Kafka-free lane.
+    services:
+      postgres:
+        image: docker.io/library/postgres:18.6-alpine
+        env:
+          POSTGRES_DB: monolith
+          POSTGRES_USER: monolith
+          POSTGRES_PASSWORD: monolith
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U monolith -d monolith"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+
+      kafka:
+        image: docker.io/apache/kafka:4.3.1
+        env:
+          KAFKA_NODE_ID: 1
+          KAFKA_PROCESS_ROLES: broker,controller
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+          KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+          KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+          KAFKA_NUM_PARTITIONS: 3
+          KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+          KAFKA_MIN_INSYNC_REPLICAS: 1
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+          KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+          CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+        ports:
+          - 9092:9092
+        options: >-
+          --health-cmd "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 24
+          --health-start-period 30s
+
+    env:
+      DATABASE_URL: postgresql://monolith:monolith@localhost:5432/monolith
+      KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+      LOG_DIR: logs
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v7
+
+      - name: Proto drift guard -- vendored inventory ACL proto must match the canonical one
+        # Same guard as inventory-equivalence-gate/payment-equivalence-gate:
+        # this gate also brings up inventory-service (choreographed payment
+        # still reserves over gRPC underneath the orchestrated shipping
+        # saga), so the same drift class would bite it too.
+        run: bash scripts/check-proto-drift.sh
+
+      - name: Install uv (pinned) + Python 3.14
+        uses: astral-sh/setup-uv@v10.3.0   # no floating v10 tag; pin exact
+        with:
+          version: "0.13.1"            # decisions.md version matrix: uv 0.13.1
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: |
+            examples/00-monolith/uv.lock
+            examples/01-strangler-proxy/uv.lock
+            examples/04-inventory-service/uv.lock
+            examples/05-payment-service/uv.lock
+            examples/06-shipping-service/uv.lock
+
+      - name: uv sync (monolith)
+        working-directory: examples/00-monolith
+        run: uv sync --locked --group dev
+
+      - name: uv sync (strangler proxy)
+        working-directory: examples/01-strangler-proxy
+        run: uv sync --locked --group dev
+
+      - name: uv sync (inventory service)
+        working-directory: examples/04-inventory-service
+        run: uv sync --locked --group dev
+
+      - name: uv sync (payment service)
+        working-directory: examples/05-payment-service
+        run: uv sync --locked --group dev
+
+      - name: uv sync (shipping service)
+        working-directory: examples/06-shipping-service
+        run: uv sync --locked --group dev
+
+      - name: Migrate + seed the monolith's database
+        working-directory: examples/00-monolith
+        run: |
+          set -euo pipefail
+          uv run python manage.py migrate
+          uv run python manage.py seed
+
+      - name: Migrate + seed inventory-service's own `inventory` schema
+        working-directory: examples/04-inventory-service
+        run: uv run alembic upgrade head
+
+      - name: Migrate payment-service's own `payment` schema
+        working-directory: examples/05-payment-service
+        run: uv run alembic upgrade head
+
+      - name: Migrate shipping-service's own `shipping` schema
+        working-directory: examples/06-shipping-service
+        run: uv run alembic upgrade head
+
+      - name: Start the inventory-service (uvicorn) on :8084 -- gRPC on :9004
+        working-directory: examples/04-inventory-service
+        run: |
+          mkdir -p logs
+          nohup uv run uvicorn app.main:app --host 0.0.0.0 --port 8084 > uvicorn.out.log 2>&1 &
+          echo $! > uvicorn.pid
+
+      - name: Wait for the inventory-service's gRPC server to be listening on :9004
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:8084/health" | grep -q '"grpcServerListening":true'; then
+              echo "inventory-service's gRPC server is listening."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "inventory-service's gRPC server never came up." >&2
+          curl -sf "http://localhost:8084/health" || true
+          exit 1
+
+      - name: Start the payment-service (uvicorn) on :8085 -- consumer + outbox relay run from its lifespan
+        working-directory: examples/05-payment-service
+        env:
+          DATABASE_URL: postgresql://monolith:monolith@localhost:5432/monolith
+          KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+        run: |
+          mkdir -p logs
+          nohup uv run uvicorn app.main:app --host 0.0.0.0 --port 8085 > uvicorn.out.log 2>&1 &
+          echo $! > uvicorn.pid
+
+      - name: Wait for the payment-service's Kafka consumer to be assigned on :8085
+        # GET /health reports consumerPartitionsAssigned AND
+        # refundConsumerPartitionsAssigned -- payment-service's lifespan runs
+        # BOTH the order.placed consumer and the shipment.failed refund
+        # consumer, plus its own outbox relay. Waiting on both assignment
+        # flags avoids a choreographed checkout, or a shipment-failure
+        # refund, racing either consumer's group-join.
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            body="$(curl -sf "http://localhost:8085/health" || true)"
+            if grep -q '"consumerPartitionsAssigned":true' <<<"$body" \
+                && grep -q '"refundConsumerPartitionsAssigned":true' <<<"$body"; then
+              echo "payment-service's consumers have partitions assigned."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "payment-service's consumers never got partitions assigned." >&2
+          curl -sf "http://localhost:8085/health" || true
+          exit 1
+
+      - name: Start the shipping-service (uvicorn) on :8087 -- payment.captured consumer + relay + crash-resume scan run from its lifespan
+        working-directory: examples/06-shipping-service
+        env:
+          DATABASE_URL: postgresql://monolith:monolith@localhost:5432/monolith
+          KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+          MONOLITH_BASE_URL: http://localhost:8000
+        run: |
+          mkdir -p logs
+          nohup uv run uvicorn app.main:app --host 0.0.0.0 --port 8087 > uvicorn.out.log 2>&1 &
+          echo $! > uvicorn.pid
+
+      - name: Wait for the shipping-service's Kafka consumer + crash-resume scan on :8087
+        # GET /health reports consumerPartitionsAssigned AND resumeComplete
+        # (app/main.py) -- the crash-resume scan runs BEFORE the lifespan
+        # reports ready, so waiting on both flags avoids a checkout's
+        # payment.captured event racing either the consumer's group-join or
+        # an in-flight saga this instance is still resuming from a prior
+        # process.
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            body="$(curl -sf "http://localhost:8087/health" || true)"
+            if grep -q '"consumerPartitionsAssigned":true' <<<"$body" \
+                && grep -q '"resumeComplete":true' <<<"$body"; then
+              echo "shipping-service's consumer is assigned and crash-resume is complete."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "shipping-service never reported ready." >&2
+          curl -sf "http://localhost:8087/health" || true
+          exit 1
+
+      - name: Start the monolith (gunicorn) on :8000 -- INVENTORY_MODE=grpc, PAYMENT_MODE=choreographed, SHIPPING_MODE=orchestrated
+        working-directory: examples/00-monolith
+        env:
+          INVENTORY_MODE: grpc
+          INVENTORY_GRPC_TARGET: localhost:9004
+          PAYMENT_MODE: choreographed
+          SHIPPING_MODE: orchestrated
+          KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+        run: |
+          mkdir -p logs
+          nohup uv run gunicorn config.wsgi -b 0.0.0.0:8000 > gunicorn.out.log 2>&1 &
+          echo $! > gunicorn.pid
+
+      - name: Wait for the monolith to be ready on :8000
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:8000/api/orders" > /dev/null; then
+              echo "Monolith is up."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Monolith did not become ready in time." >&2
+          exit 1
+
+      - name: Start the monolith's outbox relay, order.placed self-consumer, and order saga listener
+        # Same env as the monolith's gunicorn process -- all three background
+        # `manage.py` commands need SHIPPING_MODE=orchestrated visible too,
+        # since order_saga_listener now also reacts to
+        # shipment.dispatched/shipment.failed (same listener process
+        # payment-equivalence-gate already starts for payment.captured/
+        # payment.declined).
+        working-directory: examples/00-monolith
+        env:
+          INVENTORY_MODE: grpc
+          INVENTORY_GRPC_TARGET: localhost:9004
+          PAYMENT_MODE: choreographed
+          SHIPPING_MODE: orchestrated
+          KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+        run: |
+          nohup uv run python manage.py outbox_relay > relay.out.log 2>&1 &
+          echo $! > relay.pid
+          nohup uv run python manage.py order_placed_consumer > consumer.out.log 2>&1 &
+          echo $! > consumer.pid
+          nohup uv run python manage.py order_saga_listener > saga.out.log 2>&1 &
+          echo $! > saga.pid
+
+      - name: Start the strangler proxy (uvicorn) on :8888 -- inventory/payment/shipping flags ON
+        # Only the flags for services THIS gate actually starts are enabled,
+        # same scoping as payment-equivalence-gate -- STRANGLER_REVIEW_ENABLED
+        # and STRANGLER_NOTIFICATION_ENABLED stay unset, so /api/reviews and
+        # /api/notifications still fall through to STRANGLER_MONOLITH_BASE_URL
+        # unchanged.
+        working-directory: examples/01-strangler-proxy
+        env:
+          STRANGLER_INVENTORY_ENABLED: 'true'
+          STRANGLER_PAYMENT_ENABLED: 'true'
+          STRANGLER_SHIPPING_ENABLED: 'true'
+          STRANGLER_MONOLITH_BASE_URL: http://localhost:8000
+          STRANGLER_INVENTORY_BASE_URL: http://localhost:8084
+          STRANGLER_PAYMENT_BASE_URL: http://localhost:8085
+          STRANGLER_SHIPPING_BASE_URL: http://localhost:8087
+        run: |
+          nohup uv run uvicorn app.main:app --host 0.0.0.0 --port 8888 > uvicorn.out.log 2>&1 &
+          echo $! > uvicorn.pid
+
+      - name: Wait for the strangler proxy to be ready on :8888
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:8888/api/orders" > /dev/null; then
+              echo "Proxy is up."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Proxy did not become ready in time." >&2
+          exit 1
+
+      - name: Set up Node (for newman)
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Install newman
+        run: npm install -g newman@6.2.2   # pin: decisions.md version matrix
+
+      - name: Run the behavior-equivalence suite through the proxy -- fully-orchestrated
+        # THE GATE: the whole collection runs (no --folder restriction), with
+        # checkout-time reserve/release over gRPC, payment charged
+        # asynchronously by payment-service, and shipping driven by
+        # shipping-service's saga off payment.captured. The bounded-wait
+        # polls (Scenario 1/3/4's *c steps) already tolerate the
+        # PENDING -> AWAITING_SHIPMENT -> CONFIRMED path (NON_TERMINAL_STATUSES
+        # includes AWAITING_SHIPMENT) and converge to a real terminal status
+        # over genuine Kafka round trips through payment-service AND
+        # shipping-service and back through order_saga_listener. Payment
+        # Context Contract, Inventory Context Contract, and Shipping Context
+        # Contract are all exercised for real (all three --env-var guards
+        # set). Review Context Contract passes via the monolith's own
+        # unchanged /api/reviews. Notification Context Contract stays an
+        # inert, self-guarding no-op (no --env-var
+        # notificationContractEnabled=true passed).
+        run: |
+          newman run tooling/newman/mea.postman_collection.json \
+            -e tooling/newman/proxy.postman_environment.json \
+            --env-var paymentContractEnabled=true \
+            --env-var inventoryContractEnabled=true \
+            --env-var shippingContractEnabled=true
+
+      - name: Kill the shipping-service (for the negative check)
+        # THE HONESTY PROOF: with the stack otherwise unchanged and still
+        # fully-orchestrated, kill shipping-service. A checkout still returns
+        # 202/PENDING and payment still captures (neither needs
+        # shipping-service), so the order advances to AWAITING_SHIPMENT --
+        # but there is no longer anything to run the shipping saga, so the
+        # order must get stuck AWAITING_SHIPMENT rather than falsely
+        # resolving CONFIRMED.
+        working-directory: examples/06-shipping-service
+        run: |
+          if [ -f uvicorn.pid ]; then kill "$(cat uvicorn.pid)" || true; fi
+
+      - name: Negative check -- stuck-AWAITING_SHIPMENT honesty, shipping-service down must go RED
+        # Inverted: the STEP passes only when newman FAILS (non-zero exit).
+        # Scenario 1's own bounded-wait poll (1c, 20 x 750ms, ~15s budget) is
+        # the poll budget here -- no outer retry loop needed. The order stays
+        # AWAITING_SHIPMENT for the whole budget (NON_TERMINAL_STATUSES
+        # tolerates it, but the poll's terminal-CONFIRMED assertion still
+        # fails once the budget is exhausted), so newman exits non-zero. If
+        # newman exits zero, the cutover is not real (the stack is reporting
+        # a false CONFIRMED with no shipping saga ever run), so fail the job.
+        run: |
+          if newman run tooling/newman/mea.postman_collection.json \
+              -e tooling/newman/proxy.postman_environment.json \
+              --folder "Scenario 1 — Happy-Path Checkout" \
+              --env-var paymentContractEnabled=true \
+              --env-var inventoryContractEnabled=true \
+              --env-var shippingContractEnabled=true; then
+            echo "::error::Negative check failed: newman passed (exit 0) with shipping-service down; expected a RED run (order stuck AWAITING_SHIPMENT)." >&2
+            exit 1
+          fi
+          echo "Negative check OK: newman correctly exited non-zero with shipping-service down (order stuck AWAITING_SHIPMENT)."
+
+      - name: Dump service logs on failure
+        if: failure()
+        run: |
+          echo "::group::examples/00-monolith/logs/monolith.log"
+          cat examples/00-monolith/logs/monolith.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/00-monolith/gunicorn.out.log"
+          cat examples/00-monolith/gunicorn.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/00-monolith/relay.out.log"
+          cat examples/00-monolith/relay.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/00-monolith/consumer.out.log"
+          cat examples/00-monolith/consumer.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/00-monolith/saga.out.log"
+          cat examples/00-monolith/saga.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/04-inventory-service/logs/inventory-service.log"
+          cat examples/04-inventory-service/logs/inventory-service.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/04-inventory-service/uvicorn.out.log"
+          cat examples/04-inventory-service/uvicorn.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/05-payment-service/logs/payment-service.log"
+          cat examples/05-payment-service/logs/payment-service.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/05-payment-service/uvicorn.out.log"
+          cat examples/05-payment-service/uvicorn.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/06-shipping-service/logs/shipping-service.log"
+          cat examples/06-shipping-service/logs/shipping-service.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/06-shipping-service/uvicorn.out.log"
+          cat examples/06-shipping-service/uvicorn.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/01-strangler-proxy/uvicorn.out.log"
+          cat examples/01-strangler-proxy/uvicorn.out.log 2>/dev/null || true
+          echo "::endgroup::"
+
+      - name: Stop the monolith, its background commands, shipping-service, payment-service, inventory-service, and proxy
+        if: always()
+        run: |
+          for pidfile in \
+            examples/00-monolith/gunicorn.pid \
+            examples/00-monolith/relay.pid \
+            examples/00-monolith/consumer.pid \
+            examples/00-monolith/saga.pid \
+            examples/06-shipping-service/uvicorn.pid \
+            examples/05-payment-service/uvicorn.pid \
+            examples/04-inventory-service/uvicorn.pid \
+            examples/01-strangler-proxy/uvicorn.pid; do
+            if [ -f "$pidfile" ]; then
+              kill "$(cat "$pidfile")" || true
+            fi
+          done
+
   # The one check the ruleset requires. Passes when every needed job
   # succeeded or was skipped by `changes`.
   code-ci-ok:
     name: code-ci-ok
     if: always()
-    needs: [changes, monolith-equivalence-gate, review-equivalence-gate, notification-equivalence-gate, inventory-equivalence-gate, payment-equivalence-gate]
+    needs: [changes, monolith-equivalence-gate, review-equivalence-gate, notification-equivalence-gate, inventory-equivalence-gate, payment-equivalence-gate, shipping-equivalence-gate]
     runs-on: ubuntu-latest
     steps:
       - env:

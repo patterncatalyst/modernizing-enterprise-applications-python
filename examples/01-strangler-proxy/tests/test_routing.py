@@ -34,6 +34,8 @@ INVENTORY_URL = "http://inventory.test"
 DEAD_INVENTORY_URL = "http://inventory-down.test"
 PAYMENT_URL = "http://payment.test"
 DEAD_PAYMENT_URL = "http://payment-down.test"
+SHIPPING_URL = "http://shipping.test"
+DEAD_SHIPPING_URL = "http://shipping-down.test"
 
 
 def make_stub_app(name: str):
@@ -172,6 +174,7 @@ def _mounts() -> dict[str, httpx.AsyncBaseTransport]:
         NOTIFICATION_URL: httpx.ASGITransport(app=make_stub_app("notification")),
         INVENTORY_URL: httpx.ASGITransport(app=make_stub_app("inventory")),
         PAYMENT_URL: httpx.ASGITransport(app=make_stub_app("payment")),
+        SHIPPING_URL: httpx.ASGITransport(app=make_stub_app("shipping")),
     }
 
 
@@ -426,6 +429,90 @@ async def test_payment_down_surfaces_real_5xx_not_masked_200():
     }
     async with running_proxy(settings, mounts) as client:
         down_resp = await client.get("/api/payments/5")
+        assert down_resp.status_code == 502
+        assert down_resp.status_code != 200
+
+        # The failure is scoped to the dead backend -- everything else on
+        # this same proxy instance keeps working.
+        healthy_resp = await client.get("/api/orders/1")
+        assert healthy_resp.status_code == 200
+        assert healthy_resp.json()["backend"] == "monolith"
+
+
+async def test_shipping_flag_off_routes_shipments_path_to_monolith():
+    settings = Settings(
+        shipping_enabled=False,
+        monolith_base_url=MONOLITH_URL,
+        shipping_base_url=SHIPPING_URL,
+    )
+    async with running_proxy(settings, _mounts()) as client:
+        resp = await client.get("/api/shipments/5")
+        assert resp.status_code == 200
+        assert resp.json()["backend"] == "monolith"
+
+
+async def test_shipping_flag_on_routes_shipments_path_to_shipping_service():
+    settings = Settings(
+        review_enabled=True,
+        notification_enabled=True,
+        inventory_enabled=True,
+        payment_enabled=True,
+        shipping_enabled=True,
+        monolith_base_url=MONOLITH_URL,
+        review_base_url=REVIEW_URL,
+        notification_base_url=NOTIFICATION_URL,
+        inventory_base_url=INVENTORY_URL,
+        payment_base_url=PAYMENT_URL,
+        shipping_base_url=SHIPPING_URL,
+    )
+    async with running_proxy(settings, _mounts()) as client:
+        resp = await client.get("/api/shipments/5")
+        assert resp.status_code == 200
+        assert resp.json()["backend"] == "shipping"
+
+        # A sibling path under /api/shipments/* must also cut over, not just
+        # the exact prefix.
+        resp2 = await client.get("/api/shipments?orderId=42")
+        assert resp2.status_code == 200
+        assert resp2.json()["backend"] == "shipping"
+
+        # The shipping flag must be independent of the review, notification,
+        # inventory, and payment flags: all five cut-over paths route
+        # correctly in the same proxy instance ...
+        review_resp = await client.get("/api/reviews/5")
+        assert review_resp.status_code == 200
+        assert review_resp.json()["backend"] == "review"
+
+        notification_resp = await client.get("/api/notifications/5")
+        assert notification_resp.status_code == 200
+        assert notification_resp.json()["backend"] == "notification"
+
+        inventory_resp = await client.get("/api/inventory/5")
+        assert inventory_resp.status_code == 200
+        assert inventory_resp.json()["backend"] == "inventory"
+
+        payment_resp = await client.get("/api/payments/5")
+        assert payment_resp.status_code == 200
+        assert payment_resp.json()["backend"] == "payment"
+
+        # ... and every other path still falls through to the monolith.
+        other_resp = await client.get("/api/orders/1")
+        assert other_resp.status_code == 200
+        assert other_resp.json()["backend"] == "monolith"
+
+
+async def test_shipping_down_surfaces_real_5xx_not_masked_200():
+    settings = Settings(
+        shipping_enabled=True,
+        monolith_base_url=MONOLITH_URL,
+        shipping_base_url=DEAD_SHIPPING_URL,
+    )
+    mounts = {
+        MONOLITH_URL: httpx.ASGITransport(app=make_stub_app("monolith")),
+        DEAD_SHIPPING_URL: httpx.MockTransport(_raise_connect_error),
+    }
+    async with running_proxy(settings, mounts) as client:
+        down_resp = await client.get("/api/shipments/5")
         assert down_resp.status_code == 502
         assert down_resp.status_code != 200
 

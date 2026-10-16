@@ -858,14 +858,232 @@ stated headline. No unexplained drift for ch.20/22/23.
 
 ---
 
-*Per `build-plan.md` §J, the Shipping extraction (ch.24, extraction 5 of 6)
-— an **orchestrated saga**, the deliberate contrast with r05's choreographed
-payment saga, reusing the CNDP Python DB-backed saga orchestrator
-(`~/Dev/cloud-native-design-patterns/examples/17-sagas/python/`, DRQ-007) —
-is scheduled for r06 in this project's renumbered cadence. r06 should also
-close the stranded-payment refund gap honestly deferred at DRQ-054 above
-(shipping-fail Option A captures payment but does not refund it on ship-fail;
-the orchestrator's compensation chain is the natural place to add that
-second hop). The next section appended to this file should be headed
-`ch.24 — Shipping (r06, extraction 5 of 6)`, following the
-per-extraction-reconcile shape above.*
+## ch.24-25 — Shipping (r06, extraction 5 of 6)
+
+### Orchestrated saga: the CNDP Example-17 adaptation
+
+**Source:** `~/Dev/cloud-native-design-patterns/examples/17-sagas/python/
+saga-orchestrator/` and its `_docs/17-appendix-d-sagas.md` — recorded as a
+forward reference at r01 (DRQ-007) and in this file's own first-creation
+note, built for the first time this iteration (DRQ-059).
+
+**Reused as-is (shape):** the orchestrator's core logic — a STEPS/
+COMPENSATIONS table, `advance()` guarded by a row lock and an idempotent
+"already past this step" check, reverse-order `compensate()` over only the
+steps that actually completed, and persisted `sagas`/`saga_log` state as the
+source of truth for where a saga is.
+
+**What shipped (adapted, not ported verbatim):** the source's raw-asyncpg
+persistence is re-homed onto this repo's async SQLAlchemy[asyncio] +
+asyncpg + Alembic stack — the row lock is `select(Saga).with_for_update()`,
+not a hand-rolled `SELECT ... FOR UPDATE` string — and the orchestrator is
+embedded inside `examples/06-shipping-service/` (:8087) rather than kept as
+a standalone service, triggered by a `payment.captured` Kafka consumer
+instead of the source's own trigger. The service owns its own `shipping`
+Postgres schema (sagas, saga_log, shipments, outbox), mirroring the owned-
+schema posture every prior service-with-its-own-data has used since
+notification (DRQ-035). Steps: `enrich` (REST `GET` to the monolith for the
+shipping address, `httpx`+`tenacity`) then `dispatch` then `book_carrier`
+(the `SHIP-FAIL` sentinel lives in the address, checked here, DRQ-065) then
+`emit` (writes `shipment.dispatched`/`shipment.failed` to the service's own
+outbox, atomically with the saga's terminal state change).
+
+**Named divergence:** persistence engine (raw asyncpg to SQLAlchemy[asyncio]/
+asyncpg), embedding (standalone service to embedded in shipping-service),
+and trigger (the source's own driver to a Kafka consumer) — all three named
+and traced to DRQ-059, not silent.
+
+**Verdict:** CLEAN adaptation — logic reused, persistence and integration
+re-homed deliberately and named.
+
+### The durability upgrade: crash-resume, proven live
+
+**Source:** the Java sibling's `InMemorySagaService` (the orchestrator's
+analogue in that book) is the explicit comparison point named in
+`_plans/r06-build-plan.md` and recorded as DRQ-060 — not a reused artifact,
+but the contrast this adaptation is built to demonstrate.
+
+**What shipped:** because saga state (`sagas`+`saga_log`) is persisted, not
+held in a process's memory, a crash mid-saga does not lose progress.
+`resume_running_sagas()` runs at shipping-service startup, scans for
+`RUNNING` sagas, and resumes each from its persisted `step_index`. **Proven
+live**, not just argued from the schema: the process was killed mid-saga and
+restarted, and the health/startup log reported `resumedSagaCount=1` — the
+saga picked up from its last completed step without re-invoking `enrich`
+(the already-fetched shipping address was not re-fetched).
+
+**Why this matters for ch.24's pedagogy:** the Java sibling's in-memory
+orchestrator loses all in-flight saga state on a crash or restart — there is
+nothing to resume from. The Python sibling's DB-backed adaptation is a real,
+measured improvement over that, not a parity port dressed up as one; ch.24
+teaches crash-resume as a concrete property with a before/after demo, not a
+claim.
+
+**Verdict:** CLEAN — a genuine durability upgrade, demonstrated by a kill-
+and-restart test, not merely asserted from the orchestrator's design.
+
+### Orchestrated vs. choreographed, side by side on one codebase
+
+**Source:** r05's payment saga (`examples/05-payment-service/`,
+`reconciliation.md`'s own "ch.23 — Payment" section above) is the direct
+comparison point, by design (DRQ-050/DRQ-061).
+
+**The contrast, concretely:** r05's payment-service and the monolith's
+`order_saga_listener` are two independent Kafka consumers, each reacting to
+events with no shared coordinator and no knowledge of the other's internal
+state — choreography. r06's shipping-service is one named coordinator
+(`app/orchestrator.py`) that owns the entire fulfilment sequence
+(enrich then dispatch then book_carrier then emit) and the compensation
+decision top-to-bottom — orchestration. The two topologies sit in the same
+codebase, reacting to adjacent events in the same saga (`payment.captured`
+triggers shipping; `shipment.failed` triggers the payment refund, see
+below), making the contrast concrete rather than textbook.
+
+**A structural consequence, not just a style difference:**
+`OrderStatus.CONFIRMED` now *requires* a `shipment.dispatched` event — the
+monolith's saga listener no longer sets CONFIRMED as a side effect of
+`payment.captured` in orchestrated mode, it waits for shipping-service's own
+event (DRQ-061). This is what makes shipping-service a true saga
+*participant* rather than a relocated function call.
+
+**Verdict:** CLEAN — the contrast is real and structural (different
+coordination topologies with a visible consequence on the order lifecycle),
+not a relabeling of the same mechanism.
+
+### The refund hop, closing DRQ-054
+
+**Source:** `_plans/decisions.md` DRQ-054 (r05) named the gap explicitly:
+"the already-captured payment is not refunded on ship-fail... this iteration
+explicitly defers to r06's orchestrated shipping saga, which is positioned
+to close it." This section is where that deferred debt is paid off,
+recorded now as DRQ-064.
+
+**What shipped:** payment-service gained a second Kafka consumer —
+`shipment.failed` — alongside its existing `order.placed` consumer. On
+receipt, if it holds a `CAPTURED` payment for that `order_id`, it
+transitions to a new `REFUNDED` status and emits `payment.refunded` via its
+own outbox; a status guard means an uncaptured order is never refunded and
+a redelivered `shipment.failed` refunds at most once. This is the concrete
+correctness win `_plans/r06-build-plan.md` calls out as "the r06 correctness
+win the Java sibling never built."
+
+**Why payment-service, not shipping-service, owns this:** the refund
+mutates payment data that only payment-service's schema holds; having the
+shipping orchestrator reach into another service's database to write a
+refund would violate the owned-data boundary every extraction since
+notification's DRQ-035 has respected. Modeling it as payment-service
+reacting to a fact about shipping (`shipment.failed`) keeps the pattern
+identical to every other saga reaction in the project.
+
+**Verdict:** CLEAN — **closes DRQ-054**'s named deferral at exactly the
+iteration it pointed to, with the refund proven idempotent (status guard)
+and correctly scoped (never fires for an uncaptured order).
+
+### The `AWAITING_SHIPMENT` lifecycle
+
+**Source:** `_plans/r06-build-plan.md` (DRQ-063) — a project-first addition
+to the order state machine, the first new terminal-adjacent status since
+`SHIPPING_FAILED` at r05.
+
+**What shipped:** `PENDING` then (`payment.captured`) then
+`AWAITING_SHIPMENT` then (`shipment.dispatched`) then `CONFIRMED`, or
+(`shipment.failed`) then `SHIPPING_FAILED` plus a compensating `Release`. A
+`TextChoices` addition only, no DB migration; `SHIPPING_MODE=inprocess`
+leaves the r05 PENDING-to-CONFIRMED path untouched (zero regression,
+verified by a full green Newman run in `inprocess` mode).
+
+**Reconciliation finding — the poll-script bug the live cutover caught.**
+The Newman bounded-wait poll script (the `setNextRequest` retry idiom used
+since the notification folder, DRQ-039) had hard-coded its "keep polling"
+condition to `status === "PENDING"`. Once orchestrated mode introduced a
+second non-terminal status, a poll issued while an order legitimately sat in
+`AWAITING_SHIPMENT` exited the retry loop early — a **false negative**, not
+a false positive: the suite reported failure on an order that was still
+correctly in flight. This surfaced during the live cutover run, not in a
+unit test. **Fixed** by changing the retry condition to check against the
+full set of known non-terminal statuses (`PENDING`, `AWAITING_SHIPMENT`)
+rather than a single hard-coded value; the same narrow-retry assumption was
+latent in Scenario 4's negative (N1b) and was fixed at the same time. The
+suite is **6/6 stable** after the fix, re-run against both `inprocess` and
+`orchestrated` modes.
+
+**Lesson:** a bounded-wait suite's retry condition is itself a claim about
+how many non-terminal statuses exist — that claim silently stopped being
+true the moment this iteration added a second one. The fix generalizes the
+retry condition instead of special-casing `AWAITING_SHIPMENT`, so a future
+third non-terminal status won't repeat the same bug (recorded in
+`_plans/decisions.md` DRQ-063 as a suite-design lesson, not just a one-line
+patch).
+
+**Verdict:** bug-found-and-fixed — caught by the live cutover evidence
+trail before it reached CI, consistent with this project's precedent
+(DRQ-026's chunked-body bug at r02, the Alembic-commit and Testcontainers-
+KRaft bugs at r03).
+
+### The stuck-AWAITING_SHIPMENT negative
+
+**Source:** the established RED-then-green negative-check precedent
+(the r02 502 proxy-down check, the r03 stuck-notification check, the r05
+stuck-PENDING check) extended to shipping's new intermediate status.
+
+**What shipped:** with shipping-service (or its consumer) taken down, an
+order that reaches `AWAITING_SHIPMENT` can never leave it; the bounded-wait
+poll exhausts its budget and the suite fails **RED, exit 1** — not a hang,
+not a silent pass. Restarting shipping-service and re-running recovers to
+green. This is the honesty guarantee for the new intermediate status, the
+same role DRQ-056's stuck-PENDING negative played for payment at r05.
+
+**Verdict:** CLEAN — a genuine negative, not merely a positive-only suite
+with an assumed failure mode.
+
+### Zero-regression `inprocess` mode
+
+**Source:** the established zero-regression precedent for every prior
+extraction's "off" flag state (review, notification, inventory's `local`
+mode, payment's `synchronous` mode).
+
+**What shipped:** with `SHIPPING_MODE=inprocess`, the full Newman suite runs
+byte-for-byte green against the r05 checkout path — the new orchestrator,
+the `AWAITING_SHIPMENT` status, and the refund hop all sit entirely dormant.
+
+**Verdict:** CLEAN — demonstrated by a full green suite run in the
+pre-cutover configuration, not merely argued from the code's structure.
+
+### Green evidence summary
+
+| Check | Result |
+|---|---|
+| Orchestrated saga, happy path | AWAITING_SHIPMENT then bounded-wait then CONFIRMED, one `shipment.dispatched`, one Shipment DISPATCHED |
+| Orchestrated saga, SHIP-FAIL | AWAITING_SHIPMENT then bounded-wait then SHIPPING_FAILED, compensating Release (net-zero stock), one `shipment.failed`, no `shipment.dispatched` |
+| Refund hop | SHIP-FAIL order gets payment REFUNDED exactly once plus `payment.refunded`; decline-then-no-ship path asserts no refund fires |
+| Crash-resume | kill mid-saga, restart, `resumedSagaCount=1`, resumed from persisted `step_index`, `enrich` not re-invoked |
+| Reversibility (`SHIPPING_MODE=inprocess`) | full suite green, byte-for-byte vs. r05 |
+| Stuck-AWAITING_SHIPMENT negative | RED, exit 1 — not a hang |
+| Poll-script fix | 6/6 stable after retrying through `AWAITING_SHIPMENT`, not just `PENDING` |
+| `shipping-equivalence-gate` (CI) | green, wired into `code-ci-ok` (6 gates) |
+
+### Verdicts summary
+
+CLEAN across every artifact in this section, **plus one bug found and fixed
+during the live cutover** (the poll-script's narrow `PENDING`-only retry
+condition) — consistent with this project's established practice of
+reporting defects found during Verify honestly rather than smoothing them
+over. No A/B gate was put to the user at r06 (DRQ-059 through DRQ-070 were
+all settled by the Phase-1 planner as synthesis defaults, and the user
+approved the plan as a whole with "go" — the same no-A/B posture as r04).
+No unexplained drift for ch.24/25.
+
+---
+
+*Per `build-plan.md` §J, the Order + GraphQL Gateway extraction (ch.26,
+extraction 6 of 6) is scheduled for r07 in this project's renumbered
+cadence — the **last and hardest extraction**: the core aggregate, extracted
+last, decommissions the monolith (the strangler fig completes) and
+introduces the Strawberry GraphQL gateway as the CQRS read-aggregation
+surface over the now-fully-decomposed services. r07 also authors **ch.21
+(Event Sourcing & CQRS)**, deferred from r05 (DRQ-057) specifically because
+the order/gateway extraction is the first place a CQRS read model is
+load-bearing (per the §C matrix) rather than merely illustrative. The next
+section appended to this file should be headed `ch.21/26 — Order + GraphQL
+Gateway (r07, extraction 6 of 6)`, following the per-extraction-reconcile
+shape above.*

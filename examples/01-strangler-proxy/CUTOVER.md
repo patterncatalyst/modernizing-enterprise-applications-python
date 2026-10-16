@@ -146,3 +146,33 @@ The two dimensions are verified independently — flipping
 for the same reason as Inventory: a design that requires flipping both in
 lockstep to stay correct is not actually two independent seams, it is one
 seam with an extra step.
+
+## Shipping seam (r06) — two cutover dimensions
+
+Like Inventory and Payment, Shipping is a seam with **two independent
+cutover switches**, because it has two distinct call paths into the
+monolith:
+
+1. **REST reads** (`GET /api/shipments*`, browsing/display traffic — e.g.
+   shipment status/tracking lookups) — go through *this* proxy, gated by
+   `STRANGLER_SHIPPING_ENABLED` exactly like the other four flags gate their
+   seams: `app/config.py` reads the flag and base URL, `_select_backend()`
+   in `app/main.py` matches the full path against `/api/shipments` and
+   routes to the shipping-service once cut over.
+2. **Shipment orchestration** (the write path that actually creates and
+   advances a shipment during order fulfillment) — driven internally by the
+   monolith and gated by the monolith's own `SHIPPING_MODE` setting. This
+   path never goes through the strangler proxy at all — it is internal
+   monolith-side processing, not browser/client-facing HTTP, so there is
+   nothing for `_select_backend()` to intercept.
+
+Both switches follow the identical OFF → ON → reversible → negative-check
+discipline documented above: baseline with the flag off, cut over, flip back
+to prove reversibility, then kill the shipping service and confirm the
+affected path fails loudly (a real `502` from this proxy for REST reads; the
+monolith-side equivalent for orchestration) rather than silently degrading.
+The two dimensions are verified independently — flipping
+`STRANGLER_SHIPPING_ENABLED` has no effect on `SHIPPING_MODE` or vice versa —
+for the same reason as Inventory and Payment: a design that requires
+flipping both in lockstep to stay correct is not actually two independent
+seams, it is one seam with an extra step.

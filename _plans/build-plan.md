@@ -294,9 +294,9 @@ the "Runnable via" column changes to name the Python mechanism.
 | Distributed Transactions ACID→ACD (C) | ch.22 | conceptual | **landed r05** — the `POST /api/orders` 201→202 PENDING flip (DRQ-049) is the concrete break of the one-ACID-transaction checkout into a choreographed saga, realized and taught in ch.22 |
 | Saga — general (D) | ch.23 | compensations | **landed r05** — the payment extraction's saga reaction (`order_saga_listener`) and its compensating gRPC `Release` are the first concrete saga in the project |
 | Saga — Choreographed (D) | ch.23 | aiokafka consumer/producer | **landed r05** — payment extraction (`order.placed`→`payment.captured`/`payment.declined`); deliberate contrast with r06's orchestrated shipping saga |
-| Saga — Orchestrated (D) | ch.24 | CNDP Python DB-backed saga orchestrator | + shipping extraction, DRQ-007; not started (r06) |
+| Saga — Orchestrated (D) | ch.24 | CNDP Python DB-backed saga orchestrator | **landed r06** — shipping extraction adapts + embeds the CNDP orchestrator (`select(Saga).with_for_update()`, idempotent `advance()`, reverse-order `compensate()`, DRQ-059); crash-resumable (`resume_running_sagas()`), a durability upgrade over the Java sibling's `InMemorySagaService` (DRQ-060); deliberate orchestration-vs-choreography contrast with r05's payment saga |
 | Idempotent Compensation (D) | ch.23 | inventory-service `idempotency_key` + `inventory.compensations` ledger (`ON CONFLICT DO NOTHING`), plus a client-side status-transition guard in `order_saga_listener` | **landed r05** — closes DRQ-043's explicit deferral; double-delivery proven at both layers (saga-listener guard + ledger), stock net-zero (94→94) under forced redelivery |
-| Circuit Breaker / Discovery / Health (E) | ch.25, ch.27, ch.30 | `tenacity`/`circuitbreaker` + FastAPI health routes | reframed off Netflix OSS, same as Java sibling |
+| Circuit Breaker / Discovery / Health (E) | ch.25, ch.27, ch.30 | `tenacity`/`circuitbreaker` + FastAPI health routes | reframed off Netflix OSS, same as Java sibling; **ch.25 landed r06** — the gRPC deadline, compensating `Release`, outbox at-least-once + two-layer idempotency, and the orchestrator's own timeout/crash-resume are documented as the existing chassis, plus one new concrete mechanism (a `tenacity` retry-with-timeout on the shipping saga's `enrich` HTTP call, DRQ-068/069); `pybreaker` circuit breaker + bulkhead are named but deferred (no second failure mode yet forces them) |
 | Microservices Chassis (E) | ch.27, ch.32 | FastAPI + pydantic-settings | |
 | Fixed / Rolling / Breaking-Schema / Blue-Green (F) | ch.29 | manifests (unchanged) | Fixed demoted to a paragraph |
 | Service/Schema/API registry + requirements (G) | ch.28 | Apicurio (unchanged) | |
@@ -413,7 +413,31 @@ idempotent gRPC `Release` (closing DRQ-043) on decline or on the new
 independent cutover flags `STRANGLER_PAYMENT_ENABLED` (reads) and
 `PAYMENT_MODE=synchronous|choreographed` (capture), gated green by the new
 `payment-equivalence-gate` (including a stuck-PENDING honesty negative).
-Rows 5–6 remain not started.
+**Row 5 is now done, built in r06** (`_plans/r06-build-plan.md`): the
+shipping extraction (`examples/06-shipping-service/`, :8087) — the project's
+first **orchestrated saga**, adapting the CNDP Example-17 DB-backed saga
+orchestrator (`cloud-native-design-patterns/examples/17-sagas/python/`,
+DRQ-007/DRQ-059) onto this repo's async SQLAlchemy+asyncpg+Alembic stack
+(`select(Saga).with_for_update()`, idempotent `advance()`, reverse-order
+`compensate()`, its own `shipping` schema for sagas/saga_log/shipments/
+outbox). A **durability upgrade over the Java sibling's in-memory
+orchestrator**: `resume_running_sagas()` crash-resumes from the persisted
+`step_index` at startup, proven live (kill mid-saga → restart → resume
+without re-invoking `enrich`, DRQ-060). Shipping-service consumes
+`payment.captured`, runs enrich (REST, httpx+tenacity)→dispatch→
+book_carrier (SHIP-FAIL sentinel in the address)→emit, and publishes
+`shipment.dispatched`/`shipment.failed` from its own outbox; the monolith's
+new `OrderStatus.AWAITING_SHIPMENT` sits between `payment.captured` and a
+terminal status, and `CONFIRMED` now requires a `shipment.dispatched` event
+(DRQ-061/DRQ-063). **Payment-service gains a refund hop** — it consumes
+`shipment.failed` and, if it holds a CAPTURED payment for that order,
+transitions to a new `REFUNDED` status and emits `payment.refunded`,
+**closing the stranded-payment gap DRQ-054 named and deferred** (DRQ-064).
+Behind the two independent cutover flags `STRANGLER_SHIPPING_ENABLED`
+(reads, a transparent pass-through) and `SHIPPING_MODE=inprocess|
+orchestrated` (dispatch), gated green by the new
+`shipping-equivalence-gate` (including the stuck-AWAITING_SHIPMENT honesty
+negative). Row 6 remains not started.
 
 | # | Service | Seam / mechanism | Data & transaction handling | Target runtime | Chapters | Status |
 |---|---|---|---|---|---|---|
@@ -422,7 +446,7 @@ Rows 5–6 remain not started.
 | 2 | **notification** | Event consumer; content-based routing; decorating collaborator | Outbox in monolith → Kafka; idempotent consumer; **own schema from day one** (`notification`, Alembic-migrated — first owned schema, DRQ-035); the monolith's own notification read-model survives as a decorating collaborator (`order_placed_consumer`, DRQ-038) | FastAPI + **aiokafka** | ch.16–17 | done |
 | 3 | **inventory** | Synchronous gRPC; decomposed DB; decorating collaborator | CDC (Debezium) backfill from shared schema → owned DB (transition-only, then retired), then cut writes; own `inventory` schema (Alembic, own-seed); `order_items` FK→snapshot | FastAPI + **grpcio** server (`grpc.aio`, :9004) | ch.18–19 | **done** |
 | 4 | **payment** | Event choreography (`order.placed`→`payment.captured`) | Choreographed saga via **aiokafka**; idempotent compensations (closes DRQ-043); ACID→ACD realized via the 201→202 flip | FastAPI + aiokafka | ch.20, ch.22, ch.23 | **done** |
-| 5 | **shipping** | Completes the chain; alternative orchestration | **Orchestrated saga** via the reused CNDP Python DB-backed saga orchestrator | FastAPI + saga orchestrator | ch.24 | not started |
+| 5 | **shipping** | Completes the chain; alternative orchestration | **Orchestrated saga** via the reused CNDP Python DB-backed saga orchestrator; crash-resumable; refund hop closes DRQ-054 | FastAPI + saga orchestrator | ch.24–25 | **done (r06)** |
 | 6 | **order** (+ gateway) | Core aggregate, extracted last; GraphQL read side | CQRS read model; event-sourcing optional; monolith decommissioned | FastAPI REST/aiokafka + **Strawberry** GraphQL gateway | ch.26 | not started |
 
 **Seam toolkit (consistent across all six):** an ASGI reverse-proxy façade
@@ -519,7 +543,7 @@ shifted down by one iteration, for the same total of **10 iterations**.
 | **r03** | **Notification extraction — event-driven, outbox + aiokafka, own schema — done** | `OutboxEvent` transactional outbox cures SMELLS #5/#6 (`examples/00-monolith/`); notification extraction (`examples/03-notification-service/`, ch.16–17) on aiokafka with its own Alembic-migrated `notification` schema; the monolith becomes a consumer of its own event (DRQ-038); `STRANGLER_NOTIFICATION_ENABLED` cutover; Newman async bounded-wait suite + `notification-equivalence-gate` green both flag states | Java r04 |
 | **r04** | **Inventory extraction — gRPC seam + CDC backfill + FK→snapshot — done** | Part 6 (18–19): `inventory.proto` (gRPC ACL) + drift guard; inventory extraction (`examples/04-inventory-service/`, ch.18–19) with own `inventory` Alembic schema + own-seed, atomic conditional-UPDATE Reserve (concurrency-safe, race-tested) + compensating Release issued outside the monolith's local transaction; transition-only Debezium CDC backfill (retired, NOT in CI); `order_items` FK→snapshot; two cutover flags (`STRANGLER_INVENTORY_ENABLED` + `INVENTORY_MODE`); Newman `inventory-equivalence-gate` green fully-gRPC and fully-local, plus RED-then-green negative checks | Java r05 |
 | **r05** | **Sagas — choreographed — done** | Part 7 ch.20/22/23 (ch.21 deferred to r07): **Payment extraction (`examples/05-payment-service/`, aiokafka choreography)** — `POST /api/orders` 201→202 PENDING in choreographed mode (zero-regression synchronous mode unchanged); `order_saga_listener` reacts to `payment.captured`/`payment.declined`; idempotent inventory `Release` (ledger + `idempotency_key`) closes DRQ-043; shipping-fail Option A (new `SHIPPING_FAILED` terminal, refund-on-ship-fail deferred to r06); `STRANGLER_PAYMENT_ENABLED` + `PAYMENT_MODE` two-dimension cutover; Newman converted to async bounded-wait + stuck-PENDING negative; `payment-equivalence-gate` green | Java r06 |
-| **r06** | Sagas — orchestrated + resilience | Part 7 ch.24–25 incl. **Shipping extraction (ch.24, CNDP Python saga orchestrator)** | Java r07 |
+| **r06** | **Sagas — orchestrated + resilience — done** | Part 7 ch.24–25: **Shipping extraction (`examples/06-shipping-service/`, :8087) via the reused CNDP Python DB-backed saga orchestrator** (ch.24), crash-resumable (durability upgrade over the Java sibling's in-memory orchestrator), `AWAITING_SHIPMENT` lifecycle, orchestrated-vs-choreographed contrast with r05; **payment-service refund hop closes DRQ-054** (ship-fail now refunds a captured payment); ch.25 (failure-mode taxonomy + the one new `tenacity` enrich-retry mechanism, pybreaker/bulkhead deferred); two cutover flags (`STRANGLER_SHIPPING_ENABLED` + `SHIPPING_MODE`); Newman `shipping-equivalence-gate` green both ways + stuck-AWAITING_SHIPMENT negative (and a poll-script bug the live cutover caught and fixed — retry through `AWAITING_SHIPMENT`, not just `PENDING`) | Java r07 |
 | **r07** | Comms + contracts | Part 8 (26–28) incl. **Order extraction + GraphQL gateway (strangler completes)** | Java r08 |
 | **r08** | Operate + deliver + appendices | Part 9 (29–30), ch.31; minikube substrate; port/adapt remaining reuse appendices | Java r09 |
 | **r09** | Deck + close | ch.32 conclusion; rebuild the companion deck (`lgtm-presentation`); cross-linking; final validation | Java r10 |

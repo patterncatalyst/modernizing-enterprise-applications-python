@@ -18,6 +18,15 @@ class Order(models.Model):
         # is a plain string column (no enum type in Postgres), so this new
         # value needs no migration.
         SHIPPING_FAILED = "SHIPPING_FAILED"
+        # r06: `settings.SHIPPING_MODE = "orchestrated"`'s hand-off state --
+        # `order.services.handle_payment_captured` transitions PENDING here
+        # instead of dispatching shipping in-process, and the standalone
+        # shipping-service's own saga (reacting to the SAME payment.captured
+        # event, enriched via GET /api/orders/{id}'s new `shippingAddress`
+        # field -- see order/serializers.py) resolves it from the outside via
+        # `shipment.dispatched`/`shipment.failed` -> handle_shipment_dispatched/
+        # handle_shipment_failed below. Plain string column, no migration.
+        AWAITING_SHIPMENT = "AWAITING_SHIPMENT"
 
     # SMELL[ch.18]: customer_id is a direct FK/join into the shared
     # `customers` table rather than an owned/replicated copy.
@@ -46,6 +55,9 @@ class Order(models.Model):
 
     def ship_fail(self) -> None:
         self.status = self.Status.SHIPPING_FAILED
+
+    def await_shipment(self) -> None:
+        self.status = self.Status.AWAITING_SHIPMENT
 
 
 class OrderItem(models.Model):

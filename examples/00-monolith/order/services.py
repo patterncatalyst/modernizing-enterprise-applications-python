@@ -37,6 +37,18 @@ in-process shipping dispatch, no confirm. Payment-service reacts to that
 THAT, in turn, via `order.management.commands.order_saga_listener` driving
 `handle_payment_captured`/`handle_payment_declined` below. See SMELLS.md
 SMELL[ch.22] ("ACID -> ACD realized for payment").
+
+r06: `settings.SHIPPING_MODE` is a THIRD, ORTHOGONAL axis, read only inside
+`handle_payment_captured`. `inprocess` (the default) is every byte of r05's
+behavior, UNCHANGED -- the zero-regression baseline this lane must not
+disturb. `orchestrated` stops `handle_payment_captured` at a new
+`AWAITING_SHIPMENT` status instead of dispatching shipping/confirming:
+shipping-service runs its own saga from here (also reacting to
+`payment.captured`, enriching itself via `GET /api/orders/{id}`'s new
+`shippingAddress` field), and reports its outcome back over
+`shipment.dispatched`/`shipment.failed` -- reacted to by
+`handle_shipment_dispatched`/`handle_shipment_failed` below, wired into the
+SAME `order_saga_listener` consumer group as the payment outcome events.
 """
 
 import logging
@@ -261,32 +273,53 @@ def _place_order_choreographed(
 
 
 def handle_payment_captured(event: dict) -> Order | None:
-    """Saga-listener reaction (r05/ch.23-25) to a `payment.captured` event
-    published by payment-service's own outbox relay (see
+    """Saga-listener reaction (r05/ch.23-25, branched by r06's
+    `settings.SHIPPING_MODE`) to a `payment.captured` event published by
+    payment-service's own outbox relay (see
     `examples/05-payment-service/EVENTS.md`) -- driven by
     `order.management.commands.order_saga_listener`, never called directly
-    from the checkout request. Dispatches shipping IN-PROCESS (shipping
-    extraction is r06's job, not this lane's) and confirms the order on
-    success. On a `ShippingFailed` sentinel, issues a compensating gRPC
-    Release for every line this order reserved at checkout and marks the
-    order `SHIPPING_FAILED` instead.
+    from the checkout request.
+
+    `SHIPPING_MODE = "inprocess"` (the default, r05 behavior UNCHANGED):
+    dispatches shipping IN-PROCESS and confirms the order on success. On a
+    `ShippingFailed` sentinel, issues a compensating gRPC Release for every
+    line this order reserved at checkout and marks the order
+    `SHIPPING_FAILED` instead.
+
+    `SHIPPING_MODE = "orchestrated"` (r06): does NOT dispatch shipping or
+    confirm here at all -- transitions the order to `AWAITING_SHIPMENT` and
+    returns. The standalone shipping-service reacts to this SAME
+    `payment.captured` event on its own, enriches itself via
+    `GET /api/orders/{id}` (now exposing `shippingAddress` --
+    order/serializers.py), and reports its outcome back over
+    `shipment.dispatched`/`shipment.failed`, resolved by
+    `handle_shipment_dispatched`/`handle_shipment_failed` below.
 
     Idempotent via a STATUS-TRANSITION GUARD: an order that has already left
     `PENDING` (because an earlier delivery of this exact event, or of
     `payment.declined` for the same order, already resolved it) is a no-op --
-    no second shipping dispatch, no second Release, no re-confirm. Kafka's
-    at-least-once delivery (same discipline as `outbox_relay.py`/
-    `order_placed_consumer.py`) makes this guard load-bearing, not
-    decorative.
+    no second shipping dispatch, no second Release, no re-confirm, no second
+    AWAITING_SHIPMENT transition. Kafka's at-least-once delivery (same
+    discipline as `outbox_relay.py`/`order_placed_consumer.py`) makes this
+    guard load-bearing, not decorative.
 
-    KNOWN DEFERRAL (documented, not a bug): a payment that captured and then
-    hits `ShippingFailed` here is NOT refunded -- payment-service exposes no
-    Refund RPC/event yet. That is r06's orchestrated saga's job, once
-    shipping itself is extracted; for now `SHIPPING_FAILED` leaves a captured
-    payment on the books.
+    KNOWN DEFERRAL (documented, not a bug, `inprocess` mode only): a payment
+    that captured and then hits `ShippingFailed` here is NOT refunded --
+    payment-service exposes no Refund RPC/event yet. `orchestrated` mode
+    doesn't change that deferral either -- `handle_shipment_failed` below has
+    the exact same gap.
     """
     order = _get_order_for_saga_event(event, event_type="payment.captured")
     if order is None or not _is_pending(order, event_type="payment.captured"):
+        return order
+
+    if settings.SHIPPING_MODE == "orchestrated":
+        order.await_shipment()
+        order.save(update_fields=["status"])
+        logger.info(
+            "payment.captured order_id=%s -> AWAITING_SHIPMENT (orchestrated)",
+            order.id,
+        )
         return order
 
     try:
@@ -331,6 +364,59 @@ def handle_payment_declined(event: dict) -> Order | None:
     return order
 
 
+def handle_shipment_dispatched(event: dict) -> Order | None:
+    """Saga-listener reaction (r06) to a `shipment.dispatched` event
+    published by the standalone shipping-service's own outbox relay --
+    `SHIPPING_MODE = "orchestrated"`'s counterpart to the `inprocess` flow's
+    synchronous `shipping_services.dispatch()` call inside
+    `handle_payment_captured` above. Resolves the `AWAITING_SHIPMENT`
+    hand-off that function left behind: `AWAITING_SHIPMENT` -> `CONFIRMED`.
+
+    Idempotent via a STATUS-TRANSITION GUARD mirroring `_is_pending`'s: an
+    order that has already left `AWAITING_SHIPMENT` (because an earlier
+    delivery of this exact event, or of `shipment.failed` for the same
+    order, already resolved it) is a no-op -- no re-confirm.
+    """
+    order = _get_order_for_saga_event(event, event_type="shipment.dispatched")
+    if order is None or not _is_awaiting_shipment(order, event_type="shipment.dispatched"):
+        return order
+
+    order.confirm()
+    order.save(update_fields=["status"])
+    logger.info("shipment.dispatched order_id=%s -> CONFIRMED", order.id)
+    return order
+
+
+def handle_shipment_failed(event: dict) -> Order | None:
+    """Saga-listener reaction (r06) to a `shipment.failed` event published by
+    the standalone shipping-service's own outbox relay --
+    `SHIPPING_MODE = "orchestrated"`'s counterpart to the `inprocess` flow's
+    `ShippingFailed` branch inside `handle_payment_captured` above. Issues
+    the SAME compensating gRPC Release (`_release_order_lines`, stable
+    `f"{order_id}:{sku}:release"` idempotency key) for every line this order
+    reserved at checkout, and resolves the `AWAITING_SHIPMENT` hand-off:
+    `AWAITING_SHIPMENT` -> `SHIPPING_FAILED`.
+
+    Idempotent via the same `_is_awaiting_shipment` status-transition guard
+    as `handle_shipment_dispatched`: a redelivered `shipment.failed` for an
+    order that already left `AWAITING_SHIPMENT` is a no-op -- Release is not
+    called again.
+
+    KNOWN DEFERRAL (same as the `inprocess` flow's): a payment that captured
+    and then hits `shipment.failed` here is NOT refunded yet -- see
+    `handle_payment_captured`'s docstring.
+    """
+    order = _get_order_for_saga_event(event, event_type="shipment.failed")
+    if order is None or not _is_awaiting_shipment(order, event_type="shipment.failed"):
+        return order
+
+    _release_order_lines(order)
+    order.ship_fail()
+    order.save(update_fields=["status"])
+    logger.info("shipment.failed order_id=%s -> SHIPPING_FAILED", order.id)
+    return order
+
+
 def _get_order_for_saga_event(event: dict, event_type: str) -> Order | None:
     order_id = event.get("orderId")
     try:
@@ -345,6 +431,22 @@ def _is_pending(order: Order, event_type: str) -> bool:
     PENDING resolved on an earlier delivery of this (or the other outcome's)
     event -- redelivery is a no-op, by design, not an error."""
     if order.status != Order.Status.PENDING:
+        logger.info(
+            "%s redelivered for order_id=%s status=%s -- no-op (status guard)",
+            event_type,
+            order.id,
+            order.status,
+        )
+        return False
+    return True
+
+
+def _is_awaiting_shipment(order: Order, event_type: str) -> bool:
+    """The r06 orchestrated-shipping saga-listener idempotency guard,
+    mirroring `_is_pending`'s: an order that has already left
+    `AWAITING_SHIPMENT` resolved on an earlier delivery of this (or the other
+    outcome's) event -- redelivery is a no-op, by design, not an error."""
+    if order.status != Order.Status.AWAITING_SHIPMENT:
         logger.info(
             "%s redelivered for order_id=%s status=%s -- no-op (status guard)",
             event_type,
