@@ -1,0 +1,36 @@
+{
+  "name": "meap-inventory-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "${POSTGRES_USER}",
+    "database.password": "${POSTGRES_PASSWORD}",
+    "database.dbname": "${POSTGRES_DB}",
+
+    "topic.prefix": "meap",
+    "table.include.list": "public.inventory_items",
+
+    "plugin.name": "pgoutput",
+    "slot.name": "meap_inventory_slot",
+    "publication.name": "meap_inventory_publication",
+    "publication.autocreate.mode": "filtered",
+    "snapshot.mode": "initial",
+
+    "topic.creation.enable": "true",
+    "topic.creation.default.replication.factor": "1",
+    "topic.creation.default.partitions": "3",
+    "topic.creation.default.cleanup.policy": "delete",
+
+    "tombstones.on.delete": "false",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false",
+    "decimal.handling.mode": "double",
+
+    "heartbeat.interval.ms": "5000"
+  }
+}
