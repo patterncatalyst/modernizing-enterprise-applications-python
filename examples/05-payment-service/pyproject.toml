@@ -1,0 +1,52 @@
+[project]
+name = "mea-payment-service"
+version = "0.1.0"
+description = "Modernizing Enterprise Applications (Python) -- r05 S? the payment bounded context, choreographed (no orchestrator) onto a standalone FastAPI service on :8085. An idempotent aiokafka consumer captures payment off the `order.placed` outbox event and emits `payment.captured`/`payment.declined` via this service's OWN transactional outbox, into this service's OWN `payment` Postgres schema -- the same own-schema-plus-Alembic shape 03-notification-service established, but adding this service's own outbox+relay half of the pattern (03-notification-service only ever consumes, it never publishes)."
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi==0.143.2",
+    "uvicorn[standard]==0.54.0",
+    "sqlalchemy[asyncio]==2.1.4",
+    "asyncpg==0.32.0",
+    "pydantic==2.14.1",
+    "aiokafka==0.14.0",
+    "alembic==1.20.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "httpx==0.28.1",
+    "ruff==0.17.1",
+    "testcontainers==4.15.0",
+]
+
+[tool.pytest.ini_options]
+python_files = ["test_*.py"]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+markers = [
+    "integration: tests that require Testcontainers-backed Kafka + Postgres",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# B008 (function call in argument default) is a false positive for FastAPI's
+# `Depends(...)`/`Query(...)` pattern -- that IS the idiomatic way to declare
+# a dependency, per FastAPI's own docs. Same suppression as notification- and
+# review-service.
+ignore = ["B008"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.uv]
+# A standalone FastAPI service, not a distributable library -- don't
+# build/install it as a package into its own virtualenv.
+package = false

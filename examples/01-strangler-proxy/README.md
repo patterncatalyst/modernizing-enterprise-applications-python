@@ -96,20 +96,27 @@ SSRF: no caller can redirect the proxy to an arbitrary host.
 | `STRANGLER_NOTIFICATION_BASE_URL` | `http://localhost:8002` | Notification backend, once cut over |
 | `STRANGLER_INVENTORY_ENABLED` | `false` | Cutover flag for the Inventory REST-read seam (`/api/inventory*`) |
 | `STRANGLER_INVENTORY_BASE_URL` | `http://localhost:8084` | Inventory backend, once cut over |
+| `STRANGLER_PAYMENT_ENABLED` | `false` | Cutover flag for the Payment REST-read seam (`/api/payments*`) |
+| `STRANGLER_PAYMENT_BASE_URL` | `http://localhost:8085` | Payment backend, once cut over |
 
-| Flag | Backend for `/api/reviews*` | Backend for `/api/notifications*` | Backend for `/api/inventory*` | Backend for everything else |
-|---|---|---|---|---|
-| review `false`, notification `false`, inventory `false` (default) | monolith `:8000` | monolith `:8000` | monolith `:8000` | monolith `:8000` |
-| review `true`, notification `false`, inventory `false` | review-service `:8001` | monolith `:8000` | monolith `:8000` | monolith `:8000` |
-| review `false`, notification `true`, inventory `false` | monolith `:8000` | notification-service `:8002` | monolith `:8000` | monolith `:8000` |
-| review `false`, notification `false`, inventory `true` | monolith `:8000` | monolith `:8000` | inventory-service `:8084` | monolith `:8000` |
-| review `true`, notification `true`, inventory `true` | review-service `:8001` | notification-service `:8002` | inventory-service `:8084` | monolith `:8000` |
+| Flag | Backend for `/api/reviews*` | Backend for `/api/notifications*` | Backend for `/api/inventory*` | Backend for `/api/payments*` | Backend for everything else |
+|---|---|---|---|---|---|
+| review `false`, notification `false`, inventory `false`, payment `false` (default) | monolith `:8000` | monolith `:8000` | monolith `:8000` | monolith `:8000` | monolith `:8000` |
+| review `true`, notification `false`, inventory `false`, payment `false` | review-service `:8001` | monolith `:8000` | monolith `:8000` | monolith `:8000` | monolith `:8000` |
+| review `false`, notification `true`, inventory `false`, payment `false` | monolith `:8000` | notification-service `:8002` | monolith `:8000` | monolith `:8000` | monolith `:8000` |
+| review `false`, notification `false`, inventory `true`, payment `false` | monolith `:8000` | monolith `:8000` | inventory-service `:8084` | monolith `:8000` | monolith `:8000` |
+| review `false`, notification `false`, inventory `false`, payment `true` | monolith `:8000` | monolith `:8000` | monolith `:8000` | payment-service `:8085` | monolith `:8000` |
+| review `true`, notification `true`, inventory `true`, payment `true` | review-service `:8001` | notification-service `:8002` | inventory-service `:8084` | payment-service `:8085` | monolith `:8000` |
 
-The three flags are independent: each gates its own path prefix, and any one
+The four flags are independent: each gates its own path prefix, and any one
 can be flipped without affecting the others. Note that `STRANGLER_INVENTORY_ENABLED`
 only governs the REST read surface (`/api/inventory*`) through this proxy —
 the monolith's gRPC reserve/release calls to the inventory service are a
 separate internal path that never goes through the proxy (see `CUTOVER.md`).
+Similarly, `STRANGLER_PAYMENT_ENABLED` only governs the REST read surface
+(`/api/payments*`) through this proxy — the monolith's asynchronous payment
+capture path is gated by its own `PAYMENT_MODE` setting and never goes
+through the proxy (see `CUTOVER.md`).
 
 Flipping the flag is a config change plus a restart, not a code change —
 that is what makes the cutover (and, while the monolith's Review module
@@ -179,6 +186,12 @@ To cut the Inventory REST-read surface over (independently of the others):
 STRANGLER_INVENTORY_ENABLED=true uv run uvicorn app.main:app --port 8888
 ```
 
+To cut the Payment REST-read surface over (independently of the others):
+
+```bash
+STRANGLER_PAYMENT_ENABLED=true uv run uvicorn app.main:app --port 8888
+```
+
 ## Testing
 
 ```bash
@@ -191,8 +204,8 @@ uv run ruff check .
 each wired to its own `httpx.AsyncClient` mounted onto in-process stub ASGI
 backends (no real sockets, no running servers) — proving the proxy is
 reconfigurable per-instance, not hard-wired to a single process-global flag.
-It covers: routing under the Review/Notification/Inventory flag combinations
-(each flag independent of the others), pass-through fidelity (method, path,
-query string, headers, body), a real upstream 4xx/5xx relayed unchanged, and
-upstream-down cases (Review, Notification, and Inventory) that must surface a
-real `502`, never a masked `200`.
+It covers: routing under the Review/Notification/Inventory/Payment flag
+combinations (each flag independent of the others), pass-through fidelity
+(method, path, query string, headers, body), a real upstream 4xx/5xx relayed
+unchanged, and upstream-down cases (Review, Notification, Inventory, and
+Payment) that must surface a real `502`, never a masked `200`.

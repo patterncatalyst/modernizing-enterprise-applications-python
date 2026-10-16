@@ -32,6 +32,8 @@ NOTIFICATION_URL = "http://notification.test"
 DEAD_NOTIFICATION_URL = "http://notification-down.test"
 INVENTORY_URL = "http://inventory.test"
 DEAD_INVENTORY_URL = "http://inventory-down.test"
+PAYMENT_URL = "http://payment.test"
+DEAD_PAYMENT_URL = "http://payment-down.test"
 
 
 def make_stub_app(name: str):
@@ -169,6 +171,7 @@ def _mounts() -> dict[str, httpx.AsyncBaseTransport]:
         REVIEW_URL: httpx.ASGITransport(app=make_stub_app("review")),
         NOTIFICATION_URL: httpx.ASGITransport(app=make_stub_app("notification")),
         INVENTORY_URL: httpx.ASGITransport(app=make_stub_app("inventory")),
+        PAYMENT_URL: httpx.ASGITransport(app=make_stub_app("payment")),
     }
 
 
@@ -345,6 +348,84 @@ async def test_inventory_down_surfaces_real_5xx_not_masked_200():
     }
     async with running_proxy(settings, mounts) as client:
         down_resp = await client.get("/api/inventory/5")
+        assert down_resp.status_code == 502
+        assert down_resp.status_code != 200
+
+        # The failure is scoped to the dead backend -- everything else on
+        # this same proxy instance keeps working.
+        healthy_resp = await client.get("/api/orders/1")
+        assert healthy_resp.status_code == 200
+        assert healthy_resp.json()["backend"] == "monolith"
+
+
+async def test_payment_flag_off_routes_payments_path_to_monolith():
+    settings = Settings(
+        payment_enabled=False,
+        monolith_base_url=MONOLITH_URL,
+        payment_base_url=PAYMENT_URL,
+    )
+    async with running_proxy(settings, _mounts()) as client:
+        resp = await client.get("/api/payments/5")
+        assert resp.status_code == 200
+        assert resp.json()["backend"] == "monolith"
+
+
+async def test_payment_flag_on_routes_payments_path_to_payment_service():
+    settings = Settings(
+        review_enabled=True,
+        notification_enabled=True,
+        inventory_enabled=True,
+        payment_enabled=True,
+        monolith_base_url=MONOLITH_URL,
+        review_base_url=REVIEW_URL,
+        notification_base_url=NOTIFICATION_URL,
+        inventory_base_url=INVENTORY_URL,
+        payment_base_url=PAYMENT_URL,
+    )
+    async with running_proxy(settings, _mounts()) as client:
+        resp = await client.get("/api/payments/5")
+        assert resp.status_code == 200
+        assert resp.json()["backend"] == "payment"
+
+        # A sibling path under /api/payments/* must also cut over, not just
+        # the exact prefix.
+        resp2 = await client.get("/api/payments?orderId=42")
+        assert resp2.status_code == 200
+        assert resp2.json()["backend"] == "payment"
+
+        # The payment flag must be independent of the review, notification,
+        # and inventory flags: all four cut-over paths route correctly in
+        # the same proxy instance ...
+        review_resp = await client.get("/api/reviews/5")
+        assert review_resp.status_code == 200
+        assert review_resp.json()["backend"] == "review"
+
+        notification_resp = await client.get("/api/notifications/5")
+        assert notification_resp.status_code == 200
+        assert notification_resp.json()["backend"] == "notification"
+
+        inventory_resp = await client.get("/api/inventory/5")
+        assert inventory_resp.status_code == 200
+        assert inventory_resp.json()["backend"] == "inventory"
+
+        # ... and every other path still falls through to the monolith.
+        other_resp = await client.get("/api/orders/1")
+        assert other_resp.status_code == 200
+        assert other_resp.json()["backend"] == "monolith"
+
+
+async def test_payment_down_surfaces_real_5xx_not_masked_200():
+    settings = Settings(
+        payment_enabled=True,
+        monolith_base_url=MONOLITH_URL,
+        payment_base_url=DEAD_PAYMENT_URL,
+    )
+    mounts = {
+        MONOLITH_URL: httpx.ASGITransport(app=make_stub_app("monolith")),
+        DEAD_PAYMENT_URL: httpx.MockTransport(_raise_connect_error),
+    }
+    async with running_proxy(settings, mounts) as client:
+        down_resp = await client.get("/api/payments/5")
         assert down_resp.status_code == 502
         assert down_resp.status_code != 200
 

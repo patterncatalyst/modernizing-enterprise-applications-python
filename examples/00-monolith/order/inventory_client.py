@@ -110,12 +110,26 @@ class RemoteInventoryClient:
             on_hand_qty=reply.on_hand_qty,
         )
 
-    def release(self, sku: str, quantity: int) -> ReserveResult:
+    def release(self, sku: str, quantity: int, idempotency_key: str = "") -> ReserveResult:
         """Compensating re-increment -- order.services.place_order() calls
         this for every sku it successfully reserved remotely this checkout,
         on a pre-confirmation failure (insufficient stock on a LATER line,
-        PaymentDeclined, ShippingFailed, or an outbox write failure)."""
-        request = inventory_pb2.ReleaseRequest(stock_keeping_unit=sku, requested_qty=quantity)
+        PaymentDeclined, ShippingFailed, or an outbox write failure).
+
+        r05/ch.23-25: `idempotency_key` (ReleaseRequest field 3) is now
+        OPTIONAL here too -- the pre-confirmation compensation path above
+        still calls this with none (it runs once, synchronously, inside the
+        same place_order() call that did the Reserve, so there is nothing to
+        redeliver). The saga-listener reactions in order.services
+        (`handle_payment_captured`/`handle_payment_declined`), which run
+        later off an at-least-once Kafka event and so DO need to tolerate
+        redelivery, pass a stable per-line key
+        (`f"{order_id}:{sku}:release"`) so a repeated Release against
+        inventory-service's own idempotent handling of this field is a
+        no-op, not a double credit."""
+        request = inventory_pb2.ReleaseRequest(
+            stock_keeping_unit=sku, requested_qty=quantity, idempotency_key=idempotency_key
+        )
         reply = self._unary(self._stub.Release, request)
         return ReserveResult(
             sku=reply.stock_keeping_unit,

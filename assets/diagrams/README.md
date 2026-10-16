@@ -25,6 +25,13 @@ This file is the catalogue — one row per diagram, append-only.
 | `cdc-backfill-then-retire` | ch.19 | Transaction-log tailing end to end: Postgres WAL -> replication slot -> Debezium Postgres connector -> Kafka topic -> `InventoryCdcConsumer`'s upsert into the owned schema, with the retire runbook (drain, delete connector, drop slot/publication, disable the flag) ghosted as the step that follows cutover. Source: `cdc-backfill-then-retire.py`. |
 | `reserve-release-saga-lite` | ch.19 | Where the free rollback went: before/after panels contrasting the single local `transaction.atomic()` (free rollback, SMELL[ch.22]) against the gRPC `Reserve` committing outside any local transaction, with the compensating `Release` wired explicitly to `PaymentDeclined`/`ShippingFailed`. Source: `reserve-release-saga-lite.py`. |
 | `two-cutover-dimensions` | ch.19 | The two independent cutover flags (`INVENTORY_MODE` for reserve/release, `STRANGLER_INVENTORY_ENABLED` for reads) as a 2x2 grid, marking the two exercised, locked-together corners (Run A fully-gRPC, Run B fully-local) against the two split corners that are sound only during the CDC-backfilled transition window. Source: `two-cutover-dimensions.py`. |
+| `outbox-relay-at-least-once` | ch.20 | The outbox pattern generalized past ch.17's single case: one DB transaction commits the state row and the outbox row together, a relay polls and publishes at-least-once, and the necessary counterpart is an idempotent consumer in whichever idiom fits the write (check-then-insert, upsert, or a status-transition guard). Source: `outbox-relay-at-least-once.py`. |
+| `multi-outbox-saga-topology` | ch.20 | This project's first multi-service outbox choreography: the monolith's `order.placed` outbox feeds payment-service's consumer, which writes its OWN outbox (`payment.captured`/`payment.declined`), which the monolith's `order_saga_listener` consumes in turn — two outboxes chained end to end, no orchestrator anywhere. Source: `multi-outbox-saga-topology.py`. |
+| `checkout-sync-to-async-contract` | ch.23 | Before/after panels on `POST /api/orders`: `PAYMENT_MODE=synchronous`'s one round trip ending in a terminal 201/402/422/409, versus `PAYMENT_MODE=choreographed`'s same round trip ending in a 202 PENDING promise the caller must poll `GET /api/orders/{id}` to resolve. Source: `checkout-sync-to-async-contract.py`. |
+| `choreographed-payment-saga-sequence` | ch.23 | The full choreographed saga top to bottom, branching into its three terminal outcomes (CONFIRMED, SHIPPING_FAILED, PAYMENT_DECLINED) — every arrow is an event one side reacted to, no orchestrator box anywhere, contrasted with ch.24's forward-referenced orchestrated shipping step. Source: `choreographed-payment-saga-sequence.py`. |
+| `acid-to-acd-boundary` | ch.22 | What the single `transaction.atomic()` used to span (order + payment + shipping + outbox, full ACID) versus what it spans now (order + outbox only, A/C/D kept) — naming the Isolation gap where a PENDING order is visible and real before payment or shipping have an opinion. Source: `acid-to-acd-boundary.py`. |
+| `order-pending-to-terminal-lifecycle` | ch.22 | The state machine the ACD model introduces: PENDING's three idempotent terminal exits (CONFIRMED, SHIPPING_FAILED, PAYMENT_DECLINED) plus the honest stuck-PENDING failure mode a bounded-wait poll catches rather than hides. Source: `order-pending-to-terminal-lifecycle.py`. |
+| `idempotent-compensation-two-layers` | ch.23 | DRQ-043 closed: a compensating `Release` survives redelivery at both the Kafka-event layer (the saga's status-transition guard) and the RPC layer (inventory-service's `compensations` ledger, `INSERT ... ON CONFLICT DO NOTHING`), proven live by stock held at 94 across both redelivery paths. Source: `idempotent-compensation-two-layers.py`. |
 
 ## Regenerating
 
@@ -45,6 +52,13 @@ python3 -I inventory-grpc-proto-acl.py
 python3 -I cdc-backfill-then-retire.py
 python3 -I reserve-release-saga-lite.py
 python3 -I two-cutover-dimensions.py
+python3 -I outbox-relay-at-least-once.py
+python3 -I multi-outbox-saga-topology.py
+python3 -I checkout-sync-to-async-contract.py
+python3 -I choreographed-payment-saga-sequence.py
+python3 -I acid-to-acd-boundary.py
+python3 -I order-pending-to-terminal-lifecycle.py
+python3 -I idempotent-compensation-two-layers.py
 ```
 
 Each spec validates its own output on the way out (`generate_diagram.emit()`

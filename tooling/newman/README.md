@@ -23,42 +23,54 @@ context is only "done" once it passes unchanged.
 
 | File | Purpose |
 |---|---|
-| `mea.postman_collection.json` | The collection itself: Smoke + four checkout scenarios + the r02 **Review Context Contract** folder + the r04 **Inventory Context Contract** folder + the r03 **Notification Context Contract** folder (the suite's first bounded-wait/async folder). Every request is parameterized by `{{baseUrl}}`. |
+| `mea.postman_collection.json` | The collection itself: Smoke + four checkout scenarios (the four checkout scenarios' terminal states/201→202-tolerant conversion and bounded-wait polls landed at r05, see below) + the r02 **Review Context Contract** folder + the r04 **Inventory Context Contract** folder + the r05 **Payment Context Contract** folder + the r03 **Notification Context Contract** folder (the suite's first bounded-wait/async folder). Every request is parameterized by `{{baseUrl}}`. |
 | `local.postman_environment.json` | Points `{{baseUrl}}` at the monolith, `http://localhost:8000`. |
 | `proxy.postman_environment.json` | Points `{{baseUrl}}` at the strangler proxy (`examples/01-strangler-proxy`), `http://localhost:8888` — the re-pointing target for the cutover evidence below. |
-| `GOLDEN-BASELINE.md` | The frozen record of the r01 baseline run, PLUS the r02 NEWMAN-CUTOVER lane's evidence trail (the exact `newman` summaries for the proxy flag-off/flag-on/flip-back/negative-check sequence, and the chunked-body defect discovered while proving it), PLUS the r02 PHASE-2 repair lane's evidence trail (the fix, the regression test, and the corrected re-run — fully green through the proxy in both flag states), PLUS the r03 NEWMAN-ASYNC lane's evidence trail (the Notification Context Contract's bounded-wait poll, live against a real Kafka broker, in both proxy flag states, plus its own negative check). |
+| `GOLDEN-BASELINE.md` | The frozen record of the r01 baseline run, PLUS the r02 NEWMAN-CUTOVER lane's evidence trail (the exact `newman` summaries for the proxy flag-off/flag-on/flip-back/negative-check sequence, and the chunked-body defect discovered while proving it), PLUS the r02 PHASE-2 repair lane's evidence trail (the fix, the regression test, and the corrected re-run — fully green through the proxy in both flag states), PLUS the r03 NEWMAN-ASYNC lane's evidence trail (the Notification Context Contract's bounded-wait poll, live against a real Kafka broker, in both proxy flag states, plus its own negative check), PLUS the r05 NEWMAN-ASYNC CONVERSION lane's evidence trail (converting the four checkout scenarios to tolerate the upcoming 201→202 async flip, with every new bounded-wait poll resolving on attempt 1/0 retries against today's still-synchronous monolith). |
 
 ## Scenarios asserted
 
 1. **Smoke** — the target is reachable and serves all three seeded SKUs
    (`SKU-WIDGET-001`, `SKU-GADGET-002`, `SKU-GIZMO-003`).
 2. **Scenario 1 — Happy-Path Checkout** — `POST /api/orders` with an in-stock
-   line item returns `201 Created` with `status: "CONFIRMED"` immediately (the
-   monolith's checkout is fully synchronous at r01 — there is no `PENDING`
-   state to observe), the correct total/line items, and a `Location` header
-   (`/api/orders/{id}`); a follow-up `GET /api/orders/{id}` confirms the
-   persisted status; and `GET /api/inventory/{sku}` confirms
-   `quantityOnHand` dropped by exactly the ordered quantity.
+   line item returns `201 Created` (today's synchronous monolith) **or `202
+   Accepted`** (the upcoming choreographed/async checkout, tolerated since
+   r05 — see "The r05 NEWMAN-ASYNC CONVERSION lane" in `GOLDEN-BASELINE.md`)
+   with a `Location` header (`/api/orders/{id}`); a bounded-wait poll of `GET
+   /api/orders/{id}` then strictly asserts the order reaches terminal
+   `CONFIRMED` (never a naked `2xx`, never able to pass on a stuck `PENDING`)
+   plus the correct total/line items; `GET /api/inventory/{sku}` confirms
+   `quantityOnHand` dropped by exactly the ordered quantity. Against today's
+   synchronous monolith the poll resolves on attempt 1 with 0 retries.
 3. **Scenario 2 — Out-of-Stock** — ordering more than `quantityOnHand` (against
    the low-stock seeded `SKU-GIZMO-003`, quantity 5) returns
    `409 Conflict` with `{ "error": "OUT_OF_STOCK", "message": "...<sku>...",
    "timestamp": ... }`, and stock is confirmed **unchanged** afterward —
    `inventory/services.py`'s `reserve()` raises `InsufficientStock` before any
-   write happens.
+   write happens. Left unconverted since r05 (see below) — the reservation
+   rejects before any async work could begin, so there's nothing to tolerate.
 4. **Scenario 3 — Payment-Declined** — a checkout whose `paymentMethod` is the
-   `DECLINE` sentinel returns `402 Payment Required` with
-   `{ "error": "PAYMENT_DECLINED", "message": "...", "timestamp": ... }`, and
-   stock is confirmed **not left decremented**: `order/services.py`'s single
-   `@transaction.atomic()` (SMELL[ch.22]) spans inventory + order + payment,
-   so a declined payment unwinds the stock reservation too — this is the
-   behavior the suite protects across every future extraction, where that
-   rollback stops being free and has to be rebuilt explicitly as a saga.
+   `DECLINE` sentinel returns `402 Payment Required` (today) **or `202
+   Accepted`** (async, tolerated since r05) with
+   `{ "error": "PAYMENT_DECLINED", "message": "...", "timestamp": ... }` on
+   the `402` path. Today's monolith rolls back the ENTIRE
+   `@transaction.atomic()` (SMELL[ch.22]) on a decline — including the
+   `Order` row itself — so there is no order id to poll; the suite detects
+   this and jumps straight to a bounded-wait poll of `GET
+   /api/inventory/{sku}` that strictly asserts stock nets back to zero
+   (0 retries against today's monolith). Only on the future `202` response
+   does the suite also bounded-wait poll `GET /api/orders/{id}` for terminal
+   `PAYMENT_DECLINED` first.
 5. **Scenario 4 — Shipping-Failure** — a checkout whose `shippingAddress`
-   contains the `SHIP-FAIL` sentinel returns `422 Unprocessable Entity` with
-   `{ "error": "SHIPPING_FAILED", "message": "...", "timestamp": ... }`, and
-   stock nets back to zero change: the same `transaction.atomic()` unwinds the
-   inventory reservation *and* the payment capture *and* the order row itself
-   — the deepest of the three failure-injection paths.
+   contains the `SHIP-FAIL` sentinel returns `422 Unprocessable Entity`
+   (today) **or `202 Accepted`** (async, tolerated since r05) with
+   `{ "error": "SHIPPING_FAILED", "message": "...", "timestamp": ... }` on
+   the `422` path. Same shape as Scenario 3: today's monolith rolls back the
+   order row itself too, so the suite jumps straight to the bounded-wait
+   net-zero stock poll (0 retries today); only the future `202` response also
+   bounded-wait polls the order for terminal `SHIPPING_FAILED` first — see
+   "Why Scenario 4's `SHIPPING_FAILED` poll never runs against today's
+   monolith" in `GOLDEN-BASELINE.md` for why that's by design, not a gap.
 
 6. **Review Context Contract** (added at r02, see `examples/02-review-service`)
    — `GET /api/reviews?sku=...` returns `200` with a camelCase array
@@ -159,6 +171,21 @@ context is only "done" once it passes unchanged.
    folder's terminal-only idiom affords, not a weaker one — it was the
    deliberate choice precisely because this folder does **not** occupy the
    terminal position.
+
+9. **Payment Context Contract** (added at r05) — `GET
+   /api/payments?orderId={{happyPathOrderId}}` returns `200` with a camelCase
+   array (`id, orderId, amountCents, method, status, createdAt`) scoped to
+   the Scenario 1 happy-path order, and captures the payment id; `GET
+   /api/payments/{id}` returns the same shape for that payment with
+   `status: "CAPTURED"`; `GET /api/payments/999999999` returns `404` with the
+   uniform `{error,message,timestamp}` body and `error: "NOT_FOUND"`.
+   Env-guarded by `paymentContractEnabled === 'true'`, enabled per run via
+   `--env-var paymentContractEnabled=true` — see "The r05 NEWMAN-ASYNC
+   CONVERSION lane" in `GOLDEN-BASELINE.md`. Uses the same test-script-level,
+   no-`setNextRequest` guard idiom as the Inventory Context Contract folder
+   (it sits in the same non-terminal position, between Inventory and
+   Notification, so it can never strand Notification when its own flag is
+   off).
 
 All assertions target status codes, response-body fields, and `Content-Type`
 — the externally-observable contract — never internal DB rows directly, so
@@ -379,6 +406,37 @@ service-down negative check (a real proxy `502` on every read, and the
 checkout's remote `Reserve` call failing with gRPC `UNAVAILABLE` mapped to a
 real `503 INVENTORY_UNAVAILABLE` — never a masked success) going RED then
 back to green.
+
+### Running the r05 conversion evidence against the bare monolith
+
+The Payment Context Contract folder is env-guarded the same way as Inventory
+— add `--env-var paymentContractEnabled=true` (the monolith's `/api/payments`
+surface is in-process and always up, so there's no reason to leave it off
+when running locally). No proxy, Kafka, or extracted service is needed for
+this lane; it runs straight against the bare monolith, same as r01:
+
+```bash
+docker run -d --name mea-mono-pg -p 5432:5432 \
+  -e POSTGRES_USER=monolith -e POSTGRES_PASSWORD=monolith -e POSTGRES_DB=monolith \
+  postgres:18.6-alpine
+
+cd examples/00-monolith
+uv run python manage.py migrate
+uv run python manage.py seed
+uv run python manage.py runserver 0.0.0.0:8000 &
+
+newman run tooling/newman/mea.postman_collection.json \
+    -e tooling/newman/local.postman_environment.json \
+    --env-var paymentContractEnabled=true
+```
+
+See "The r05 NEWMAN-ASYNC CONVERSION lane" in `GOLDEN-BASELINE.md` for the
+full evidence trail: the converted four checkout scenarios' `201|402|422` OR
+`202` tolerance, each new bounded-wait poll resolving on attempt 1 (0
+retries) against today's still-synchronous monolith, the Payment Context
+Contract folder's own evidence, the no-flags control run proving existing
+callers are unaffected, and why Scenario 4's `SHIPPING_FAILED` poll is gated
+behind the async branch rather than weakened to pass today.
 
 ## How this collection will be used going forward
 
