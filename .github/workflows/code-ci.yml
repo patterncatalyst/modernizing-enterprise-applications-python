@@ -50,7 +50,7 @@ jobs:
           fi
           if ! files="$(git diff --name-only "$base" "${{ github.sha }}" 2>/dev/null)"; then
             echo "run=true" >> "$GITHUB_OUTPUT"   # cannot diff: run everything
-          elif grep -qE '^(examples/00-monolith/|tooling/newman/|infra/|compose\.yaml$|\.env\.example$|\.github/workflows/code-ci\.yml$)' <<<"$files"; then
+          elif grep -qE '^(examples/00-monolith/|examples/01-strangler-proxy/|examples/02-review-service/|tooling/newman/|infra/|compose\.yaml$|\.env\.example$|\.github/workflows/code-ci\.yml$)' <<<"$files"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -164,12 +164,208 @@ jobs:
             kill "$(cat examples/00-monolith/gunicorn.pid)" || true
           fi
 
+  # r02's extraction gate: the Review bounded context (DRQ-019) behind the
+  # strangler proxy. Brings up all three processes -- monolith :8000,
+  # review-service :8001, and the proxy :8888 with the cutover flag ON
+  # (STRANGLER_REVIEW_ENABLED=true) -- and runs the Newman suite THROUGH the
+  # proxy, not directly against review-service, so the gate proves the
+  # cutover is transparent end-to-end: review traffic reaches the new
+  # service, and non-review traffic (smoke + checkout) still reaches the
+  # monolith unchanged.
+  review-equivalence-gate:
+    name: review-equivalence-gate
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-latest
+
+    # Same Postgres pin/creds as monolith-equivalence-gate -- one shared
+    # schema, migrated+seeded once by the monolith, read by both the
+    # monolith and review-service (review-service owns no schema of its own;
+    # see examples/02-review-service/AGENTS.md).
+    services:
+      postgres:
+        image: docker.io/library/postgres:18.6-alpine
+        env:
+          POSTGRES_DB: monolith
+          POSTGRES_USER: monolith
+          POSTGRES_PASSWORD: monolith
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U monolith -d monolith"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+
+    env:
+      DATABASE_URL: postgresql://monolith:monolith@localhost:5432/monolith
+      LOG_DIR: logs
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v7
+
+      - name: Install uv (pinned) + Python 3.14
+        uses: astral-sh/setup-uv@v10.3.0   # no floating v10 tag; pin exact
+        with:
+          version: "0.13.1"            # decisions.md version matrix: uv 0.13.1
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: |
+            examples/00-monolith/uv.lock
+            examples/01-strangler-proxy/uv.lock
+            examples/02-review-service/uv.lock
+
+      - name: uv sync (monolith)
+        working-directory: examples/00-monolith
+        run: uv sync --locked --group dev
+
+      - name: uv sync (strangler proxy)
+        working-directory: examples/01-strangler-proxy
+        run: uv sync --locked --group dev
+
+      - name: uv sync (review service)
+        working-directory: examples/02-review-service
+        run: uv sync --locked --group dev
+
+      - name: Migrate + seed the monolith's database
+        # Shared schema -- also creates the seeded `reviewer` auth user that
+        # review-service's POST /api/reviews HTTP Basic auth checks against.
+        working-directory: examples/00-monolith
+        run: |
+          set -euo pipefail
+          uv run python manage.py migrate
+          uv run python manage.py seed
+
+      - name: Start the monolith (gunicorn) on :8000
+        working-directory: examples/00-monolith
+        run: |
+          mkdir -p logs
+          nohup uv run gunicorn config.wsgi -b 0.0.0.0:8000 > gunicorn.out.log 2>&1 &
+          echo $! > gunicorn.pid
+
+      - name: Start the review-service (uvicorn) on :8001
+        working-directory: examples/02-review-service
+        env:
+          DATABASE_URL: postgresql://monolith:monolith@localhost:5432/monolith
+        run: |
+          mkdir -p logs
+          nohup uv run uvicorn app.main:app --host 0.0.0.0 --port 8001 > uvicorn.out.log 2>&1 &
+          echo $! > uvicorn.pid
+
+      - name: Start the strangler proxy (uvicorn) on :8888 -- cutover flag ON
+        working-directory: examples/01-strangler-proxy
+        env:
+          STRANGLER_REVIEW_ENABLED: 'true'
+          STRANGLER_MONOLITH_BASE_URL: http://localhost:8000
+          STRANGLER_REVIEW_BASE_URL: http://localhost:8001
+        run: |
+          nohup uv run uvicorn app.main:app --host 0.0.0.0 --port 8888 > uvicorn.out.log 2>&1 &
+          echo $! > uvicorn.pid
+
+      - name: Wait for the monolith to be ready on :8000
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:8000/api/orders" > /dev/null; then
+              echo "Monolith is up."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Monolith did not become ready in time." >&2
+          exit 1
+
+      - name: Wait for the review-service to be ready on :8001
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:8001/api/reviews" > /dev/null; then
+              echo "review-service is up."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "review-service did not become ready in time." >&2
+          exit 1
+
+      - name: Wait for the strangler proxy to be ready on :8888
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:8888/api/orders" > /dev/null; then
+              echo "Proxy is up."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Proxy did not become ready in time." >&2
+          exit 1
+
+      - name: Set up Node (for newman)
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Install newman
+        run: npm install -g newman@6.2.2   # pin: decisions.md version matrix
+
+      - name: Run the behavior-equivalence suite through the proxy -- the review cutover gate
+        # THE GATE: a non-zero newman exit code fails the job. Runs through
+        # the proxy on :8888 (not directly against review-service), proving
+        # the cutover is transparent: the Review Context Contract folder
+        # proves /api/reviews* now reaches review-service, while the Smoke
+        # and checkout scenario folders prove everything else still reaches
+        # the monolith unchanged.
+        # --folder may be repeated to run more than one top-level folder.
+        # "Review Context Contract" proves the cutover itself; "Smoke" and
+        # the happy-path checkout scenario prove the proxy stays transparent
+        # for everything that did NOT cut over (tooling/newman's existing
+        # top-level folder names -- see mea.postman_collection.json).
+        run: |
+          newman run tooling/newman/mea.postman_collection.json \
+            -e tooling/newman/proxy.postman_environment.json \
+            --folder "Review Context Contract" \
+            --folder "Smoke" \
+            --folder "Scenario 1 — Happy-Path Checkout"
+
+      - name: Dump service logs on failure
+        if: failure()
+        run: |
+          echo "::group::examples/00-monolith/logs/monolith.log"
+          cat examples/00-monolith/logs/monolith.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/00-monolith/gunicorn.out.log"
+          cat examples/00-monolith/gunicorn.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/02-review-service/logs/review-service.log"
+          cat examples/02-review-service/logs/review-service.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/02-review-service/uvicorn.out.log"
+          cat examples/02-review-service/uvicorn.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/01-strangler-proxy/uvicorn.out.log"
+          cat examples/01-strangler-proxy/uvicorn.out.log 2>/dev/null || true
+          echo "::endgroup::"
+
+      - name: Stop the monolith, review-service, and proxy
+        if: always()
+        run: |
+          for pidfile in \
+            examples/00-monolith/gunicorn.pid \
+            examples/02-review-service/uvicorn.pid \
+            examples/01-strangler-proxy/uvicorn.pid; do
+            if [ -f "$pidfile" ]; then
+              kill "$(cat "$pidfile")" || true
+            fi
+          done
+
   # The one check the ruleset requires. Passes when every needed job
   # succeeded or was skipped by `changes`.
   code-ci-ok:
     name: code-ci-ok
     if: always()
-    needs: [changes, monolith-equivalence-gate]
+    needs: [changes, monolith-equivalence-gate, review-equivalence-gate]
     runs-on: ubuntu-latest
     steps:
       - env:

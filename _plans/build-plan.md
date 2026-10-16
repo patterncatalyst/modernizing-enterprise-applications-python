@@ -376,12 +376,16 @@ chapter, a `DRQ-NNN`, a `build-plan.md` row, a flag-gated cutover behind the
 ASGI strangler façade, and an equivalence-gate check before the monolith's
 Django app is decommissioned. **None of rows 1–6 are built in r01** (r01 is
 the monolith + site + gates only, per `_plans/r01-build-plan.md`); they are
-recorded here as the roadmap future relays execute against.
+recorded here as the roadmap future relays execute against. **Rows 0 and 1
+are now done, built in r02** (`_plans/r02-build-plan.md`): the ASGI strangler
+façade (`examples/01-strangler-proxy/`) and the review extraction
+(`examples/02-review-service/`), behind `STRANGLER_REVIEW_ENABLED`, gated
+green by the Newman `review-equivalence-gate`. Rows 2–6 remain not started.
 
 | # | Service | Seam / mechanism | Data & transaction handling | Target runtime | Chapters | Status |
 |---|---|---|---|---|---|---|
-| 0 | — | Insert the ASGI strangler façade in front of the monolith | n/a | — | ch.14 | not started |
-| 1 | **review** | REST leaf, no sync deps; façade redirect by path; ACL | Own schema from day one; no shared-txn entanglement | FastAPI | ch.15 *(walking skeleton)* | not started |
+| 0 | — | Insert the ASGI strangler façade in front of the monolith | n/a | — | ch.14 | done |
+| 1 | **review** | REST leaf, no sync deps; façade redirect by path; ACL | Shared schema initially; DB decomposition deferred to ch.18/19 | FastAPI | ch.15 *(walking skeleton)* | done |
 | 2 | **notification** | Event consumer; content-based routing; decorating collaborator | Outbox in monolith → Kafka; idempotent consumer | FastAPI + **aiokafka** | ch.16–17 | not started |
 | 3 | **inventory** | Synchronous gRPC; decomposed DB; decorating collaborator | CDC (Debezium) backfill from shared schema → owned DB, then cut writes | FastAPI + **grpcio** server | ch.19 | not started |
 | 4 | **payment** | Event choreography (`order.placed`→`payment.captured`) | Choreographed saga via **aiokafka**; compensations; ACID→ACD realized | FastAPI + aiokafka | ch.23 | not started |
@@ -477,8 +481,8 @@ shifted down by one iteration, for the same total of **10 iterations**.
 
 | Iter | Theme | Deliverable | Mirrors (Java sibling) |
 |---|---|---|---|
-| **r01** | **Walking skeleton (this relay)** | site scaffold + Django monolith (pristine "before," all six apps/smells live) + Newman baseline + minimal Code-CI green; chapters are stubs | Java r01 (planning) **+** r02 (skeleton), combined |
-| **r02** | Front matter + ADLC | Part 0 (00–02), Part 1 (03–04), Part 2 (05–07), finish Part 3 prose (08–10) | Java r03 |
+| **r01** | **Walking skeleton** | site scaffold + Django monolith (pristine "before," all six apps/smells live) + Newman baseline + minimal Code-CI green; chapters are stubs — **done** | Java r01 (planning) **+** r02 (skeleton), combined |
+| **r02** | **Strangler proxy + review extraction — done** | ASGI strangler façade (`examples/01-strangler-proxy/`, ch.14) + Review extraction Phase A (documented) / Phase B (shipped) (`examples/02-review-service/`, ch.15), auth contract realized (Option B), Newman `review-equivalence-gate` green through the proxy flag OFF and ON | Java r03 (re-themed: this project's r02 is the first extraction, not front matter) |
 | **r03** | Seams + first event-driven | Part 4 (11–13), ch.14, ch.16, **Notification extraction (ch.17)** + outbox intro | Java r04 |
 | **r04** | Data patterns | Part 6 (18–22) incl. **Inventory extraction (ch.19)** + CDC, outbox-done-right, CQRS, ACID→ACD | Java r05 |
 | **r05** | Sagas — choreographed | Part 7 ch.23 incl. **Payment extraction (ch.23, aiokafka choreography)** | Java r06 |

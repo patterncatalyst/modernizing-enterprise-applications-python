@@ -38,10 +38,14 @@ def test_notifications_serves(api_client, confirmed_order):
     assert len(response.json()) == 1
 
 
-def test_reviews_serves(api_client, customer, widget):
+def test_reviews_serves(api_client, customer, widget, reviewer_auth_header):
+    # POST /api/reviews requires Basic auth (SMELL[ch.15], realized r02) --
+    # see tests/test_review_auth.py for the dedicated 401/201 auth-gate
+    # coverage; this smoke test just proves the context still lives.
     response = api_client.post(
         "/api/reviews",
         {"customerId": customer.id, "sku": widget.sku, "rating": 5, "comment": "Great"},
         format="json",
+        **reviewer_auth_header,
     )
     assert response.status_code == 201

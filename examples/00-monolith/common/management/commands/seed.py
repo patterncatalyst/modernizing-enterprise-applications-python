@@ -6,11 +6,18 @@ auto-incrementing PK assignment in insertion order against a fresh schema
 least one row to serve, matching the Java seed exactly (same names, emails,
 prices, quantities, timestamps, confirmed order, and reviews).
 
+Also seeds ONE fixed, documented Django auth `User` (`REVIEWER_USERNAME` /
+`REVIEWER_PASSWORD` below) so the review write endpoint's Basic-auth gate
+(SMELL[ch.15], see `review/views.py`) has known-good demo credentials to
+authenticate with -- e.g. the equivalence suite's 201 case. Fixed demo
+credentials only; never reuse these for anything real.
+
 Run with: `uv run manage.py seed`
 """
 
 from datetime import UTC, datetime
 
+from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -22,6 +29,11 @@ from payment.models import Payment
 from review.models import Review
 from shipping.models import Shipment
 
+# Fixed, documented demo credentials for the review write endpoint's Basic
+# auth gate (SMELL[ch.15]) -- NOT a production secret.
+REVIEWER_USERNAME = "reviewer"
+REVIEWER_PASSWORD = "review-pw-r02"
+
 
 def _utc(*args) -> datetime:
     return datetime(*args, tzinfo=UTC)
@@ -32,7 +44,13 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
+        reviewer_created = self._seed_reviewer_user()
+
         if Customer.objects.exists():
+            if reviewer_created:
+                self.stdout.write(
+                    self.style.SUCCESS(f"Seeded auth user '{REVIEWER_USERNAME}'.")
+                )
             self.stdout.write(self.style.WARNING("Seed data already present -- skipping."))
             return
 
@@ -117,5 +135,20 @@ class Command(BaseCommand):
             created_at=_utc(2026, 1, 9, 11, 0, 0),
         )
 
-        summary = "Seeded 2 customers, 3 inventory items, 1 confirmed order, 2 reviews."
+        summary = (
+            "Seeded 2 customers, 3 inventory items, 1 confirmed order, 2 reviews, "
+            f"1 auth user ('{REVIEWER_USERNAME}')."
+        )
         self.stdout.write(self.style.SUCCESS(summary))
+
+    def _seed_reviewer_user(self) -> bool:
+        """Idempotently create the fixed `reviewer` auth user. Returns True
+        if it was created just now, False if it already existed. Kept
+        independent of the Customer-existence guard above so re-running
+        `seed` against an older database (seeded before SMELL[ch.15] existed)
+        still backfills the auth user."""
+        user_model = get_user_model()
+        if user_model.objects.filter(username=REVIEWER_USERNAME).exists():
+            return False
+        user_model.objects.create_user(username=REVIEWER_USERNAME, password=REVIEWER_PASSWORD)
+        return True

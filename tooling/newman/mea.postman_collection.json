@@ -520,6 +520,214 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Review Context Contract",
+      "item": [
+        {
+          "name": "R1. List reviews by sku -> 200, camelCase array",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews?sku=SKU-WIDGET-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reviews"],
+              "query": [{ "key": "sku", "value": "SKU-WIDGET-001" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Review list returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Content-Type is application/json', function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Response is a non-empty array', function () {",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.length).to.be.at.least(1);",
+                  "});",
+                  "pm.test('Every review is scoped to the requested sku and uses camelCase fields', function () {",
+                  "    json.forEach(function (review) {",
+                  "        pm.expect(review.sku).to.eql('SKU-WIDGET-001');",
+                  "        pm.expect(review).to.have.all.keys('id', 'customerId', 'sku', 'rating', 'comment', 'createdAt');",
+                  "    });",
+                  "});",
+                  "pm.collectionVariables.set('seededReviewId', json[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R2. Get the seeded review by id -> 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews/{{seededReviewId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reviews", "{{seededReviewId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Review lookup returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Returned review id matches the requested id', function () {",
+                  "    pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('seededReviewId')));",
+                  "});",
+                  "pm.test('camelCase fields present', function () {",
+                  "    pm.expect(json).to.have.all.keys('id', 'customerId', 'sku', 'rating', 'comment', 'createdAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R3. Create review without auth -> 401, uniform error body",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"sku\": \"SKU-WIDGET-001\",\n  \"rating\": 5,\n  \"comment\": \"Should never be created -- no credentials supplied.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reviews"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Unauthenticated write returns 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Uniform error body: error/message/timestamp present', function () {",
+                  "    pm.expect(json.error).to.not.be.undefined;",
+                  "    pm.expect(json.message).to.not.be.undefined;",
+                  "    pm.expect(json.timestamp).to.not.be.undefined;",
+                  "});",
+                  "pm.test('Documented error contract: error=ERROR (generic auth-failure catch-all, not a dedicated UNAUTHORIZED code)', function () {",
+                  "    pm.expect(json.error).to.eql('ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R4. Create review with valid auth -> 201, camelCase echo, Location",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "reviewer", "type": "string" },
+                { "key": "password", "value": "review-pw-r02", "type": "string" }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"sku\": \"SKU-WIDGET-001\",\n  \"rating\": 5,\n  \"comment\": \"Newman cutover-suite review -- authenticated write.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reviews"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Authenticated write returns 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Location header present and references the created review', function () {",
+                  "    pm.expect(pm.response.headers.has('Location')).to.be.true;",
+                  "    pm.expect(pm.response.headers.get('Location')).to.eql('/api/reviews/' + json.id);",
+                  "});",
+                  "pm.test('camelCase echo matches the submitted review', function () {",
+                  "    pm.expect(json).to.have.all.keys('id', 'customerId', 'sku', 'rating', 'comment', 'createdAt');",
+                  "    pm.expect(json.customerId).to.eql(1);",
+                  "    pm.expect(json.sku).to.eql('SKU-WIDGET-001');",
+                  "    pm.expect(json.rating).to.eql(5);",
+                  "    pm.expect(json.comment).to.eql('Newman cutover-suite review -- authenticated write.');",
+                  "});",
+                  "pm.collectionVariables.set('newReviewId', json.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R5. Create review with invalid rating -> 400, VALIDATION_FAILED",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "reviewer", "type": "string" },
+                { "key": "password", "value": "review-pw-r02", "type": "string" }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"sku\": \"SKU-WIDGET-001\",\n  \"rating\": 99,\n  \"comment\": \"Invalid rating -- must be rejected with 400.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reviews"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invalid rating returns 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Documented error contract: error=VALIDATION_FAILED', function () {",
+                  "    pm.expect(json.error).to.eql('VALIDATION_FAILED');",
+                  "});",
+                  "pm.test('Error body carries a timestamp', function () {",
+                  "    pm.expect(json.timestamp).to.not.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "event": [
@@ -538,6 +746,8 @@
     { "key": "widgetStockBeforeHappyPath", "value": "", "type": "string" },
     { "key": "gizmoStockBeforeOverorder", "value": "", "type": "string" },
     { "key": "widgetStockBeforeDecline", "value": "", "type": "string" },
-    { "key": "widgetStockBeforeShipFail", "value": "", "type": "string" }
+    { "key": "widgetStockBeforeShipFail", "value": "", "type": "string" },
+    { "key": "seededReviewId", "value": "", "type": "string" },
+    { "key": "newReviewId", "value": "", "type": "string" }
   ]
 }
