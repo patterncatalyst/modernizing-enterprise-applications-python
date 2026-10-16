@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="30" y="60" width="1220" height="260" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="42" y="80" font-size="12" font-weight="700" fill="#1d1d1d">Panel A -- no ACL (ch.15 Review): a request into someone else&#x27;s tables</text>
+<rect x="30" y="360" width="1220" height="260" rx="12" fill="#f1f5f9" stroke="#ddd"/>
+<text x="42" y="380" font-size="12" font-weight="700" fill="#1d1d1d">Panel B -- an ACL (ch.16/17 Notification): a contract, not a request</text>
+<rect x="70" y="150" width="260" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="200.0" y="190.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">review-service :8001</text>
+<text x="200.0" y="207.5" font-size="11.5" fill="#555555" text-anchor="middle">app/models.py -- SQLAlchemy mapping</text>
+<text x="200.0" y="222.5" font-size="11.5" fill="#555555" text-anchor="middle">onto the MONOLITH&#x27;S OWN tables</text>
+<rect x="420" y="150" width="320" height="100" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="580.0" y="190.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Shared Postgres schema</text>
+<text x="580.0" y="207.5" font-size="11.5" fill="#555555" text-anchor="middle">reviews, customers,</text>
+<text x="580.0" y="222.5" font-size="11.5" fill="#555555" text-anchor="middle">inventory_items, auth_user</text>
+<rect x="820" y="150" width="300" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="970.0" y="190.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Django monolith :8000</text>
+<text x="970.0" y="207.5" font-size="11.5" fill="#555555" text-anchor="middle">writes the same tables</text>
+<text x="970.0" y="222.5" font-size="11.5" fill="#555555" text-anchor="middle">(same schema, same process)</text>
+<rect x="70" y="450" width="260" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="200.0" y="490.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Django monolith :8000</text>
+<text x="200.0" y="507.5" font-size="11.5" fill="#555555" text-anchor="middle">order.services.place_order()</text>
+<text x="200.0" y="522.5" font-size="11.5" fill="#555555" text-anchor="middle">writes an OutboxEvent row</text>
+<rect x="400" y="450" width="260" height="100" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="530.0" y="490.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Kafka topic order.placed</text>
+<text x="530.0" y="507.5" font-size="11.5" fill="#555555" text-anchor="middle">FROZEN JSON contract</text>
+<text x="530.0" y="522.5" font-size="11.5" fill="#555555" text-anchor="middle">orderId, customerId, ...</text>
+<rect x="730" y="450" width="260" height="100" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="860.0" y="490.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">app/schemas.py::OrderPlacedEvent</text>
+<text x="860.0" y="507.5" font-size="11.5" fill="#555555" text-anchor="middle">THIS SERVICE&#x27;S OWN COPY</text>
+<text x="860.0" y="522.5" font-size="11.5" fill="#555555" text-anchor="middle">of the contract -- the ACL</text>
+<rect x="1030" y="450" width="190" height="100" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="1125.0" y="490.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">notification schema</text>
+<text x="1125.0" y="507.5" font-size="11.5" fill="#555555" text-anchor="middle">OWNED, Alembic-migrated</text>
+<text x="1125.0" y="522.5" font-size="11.5" fill="#555555" text-anchor="middle">no monolith import</text>
+<path d="M330.0,200.0 L420.0,200.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="381.0" y="194.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">direct SELECT/INSERT</text>
+<text x="381.0" y="194.0" font-size="11" fill="#555" text-anchor="middle">direct SELECT/INSERT</text>
+<path d="M820.0,200.0 L740.0,200.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="786.0" y="194.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">direct ORM writes</text>
+<text x="786.0" y="194.0" font-size="11" fill="#555" text-anchor="middle">direct ORM writes</text>
+<path d="M330.0,500.0 L400.0,500.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="371.0" y="494.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">publish (at-least-once)</text>
+<text x="371.0" y="494.0" font-size="11" fill="#555" text-anchor="middle">publish (at-least-once)</text>
+<path d="M660.0,500.0 L730.0,500.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="701.0" y="494.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">consume + validate</text>
+<text x="701.0" y="494.0" font-size="11" fill="#2f5f3d" text-anchor="middle">consume + validate</text>
+<path d="M990.0,500.0 L1030.0,500.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="1016.0" y="494.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">translate -&gt; own row</text>
+<text x="1016.0" y="494.0" font-size="11" fill="#2f5f3d" text-anchor="middle">translate -&gt; own row</text>
+<text x="640.0" y="32" font-size="18" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.16 -- the ACL is a translation boundary, not just &quot;another request&quot;</text>
+<text x="50" y="600" font-size="11" fill="#555555" text-anchor="start">Panel A&#x27;s shared-schema reach is a deliberate, named deferral (ch.18/19 give review its own schema) --</text>
+<text x="50" y="618" font-size="11" fill="#555555" text-anchor="start">Panel B&#x27;s OrderPlacedEvent is what makes notification-service genuinely independent of the monolith&#x27;s schema.</text>
+</svg>

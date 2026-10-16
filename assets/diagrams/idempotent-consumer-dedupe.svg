@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 560" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="30" y="60" width="220" height="100" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="140.0" y="93.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">outbox_relay</text>
+<text x="140.0" y="110.0" font-size="11.5" fill="#555555" text-anchor="middle">publish succeeds,</text>
+<text x="140.0" y="125.0" font-size="11.5" fill="#555555" text-anchor="middle">CRASH before stamping</text>
+<text x="140.0" y="140.0" font-size="11.5" fill="#555555" text-anchor="middle">published_at</text>
+<rect x="290" y="60" width="220" height="100" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="400.0" y="93.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Next poll: row still</text>
+<text x="400.0" y="110.0" font-size="11.5" fill="#555555" text-anchor="middle">unpublished -- the</text>
+<text x="400.0" y="125.0" font-size="11.5" fill="#555555" text-anchor="middle">SAME event is</text>
+<text x="400.0" y="140.0" font-size="11.5" fill="#555555" text-anchor="middle">republished</text>
+<rect x="560" y="30" width="260" height="90" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="690.0" y="73.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Delivery #1</text>
+<text x="690.0" y="90.0" font-size="11.5" fill="#555555" text-anchor="middle">order.placed, orderId=555</text>
+<rect x="560" y="160" width="260" height="90" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="690.0" y="203.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Delivery #2 (redelivery)</text>
+<text x="690.0" y="220.0" font-size="11.5" fill="#555555" text-anchor="middle">order.placed, orderId=555</text>
+<rect x="880" y="30" width="180" height="90" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="970.0" y="65.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">get_by_order_id()</text>
+<text x="970.0" y="82.5" font-size="11.5" fill="#555555" text-anchor="middle">-&gt; None</text>
+<text x="970.0" y="97.5" font-size="11.5" fill="#555555" text-anchor="middle">INSERT row</text>
+<rect x="880" y="160" width="180" height="90" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="970.0" y="195.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">get_by_order_id()</text>
+<text x="970.0" y="212.5" font-size="11.5" fill="#555555" text-anchor="middle">-&gt; existing row</text>
+<text x="970.0" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">no-op, skip</text>
+<rect x="560" y="320" width="500" height="100" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="810.0" y="360.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Concurrent race (two deliveries check at once):</text>
+<text x="810.0" y="377.5" font-size="11.5" fill="#555555" text-anchor="middle">both see None, both INSERT -&gt; second INSERT raises IntegrityError</text>
+<text x="810.0" y="392.5" font-size="11.5" fill="#555555" text-anchor="middle">on the partial unique index -&gt; caught, rolled back, treated as a duplicate</text>
+<rect x="1120" y="95" width="140" height="150" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="1190.0" y="153.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Exactly ONE</text>
+<text x="1190.0" y="170.0" font-size="11.5" fill="#555555" text-anchor="middle">Notification</text>
+<text x="1190.0" y="185.0" font-size="11.5" fill="#555555" text-anchor="middle">row</text>
+<text x="1190.0" y="200.0" font-size="11.5" fill="#555555" text-anchor="middle">for orderId=555</text>
+<path d="M250.0,110.0 L290.0,110.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M510.0,96.72413793103448 L560.0,90.6896551724138" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M510.0,146.0344827586207 L560.0,162.41379310344828" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M820.0,75.0 L880.0,75.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M820.0,205.0 L880.0,205.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1060.0,113.86363636363637 L1120.0,139.77272727272728" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M1060.0,190.6818181818182 L1120.0,181.13636363636363" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="640.0" y="30" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.17 -- at-least-once delivery, exactly-once effect: check-then-insert plus a DB backstop</text>
+<text x="30" y="520" font-size="11" fill="#555555" text-anchor="start">Two layers, not one: the application-level check (get_by_order_id) is the common case; the partial unique index</text>
+<text x="30" y="538" font-size="11" fill="#555555" text-anchor="start">on order_id is the backstop for the narrow window where two redeliveries race the check itself.</text>
+</svg>
