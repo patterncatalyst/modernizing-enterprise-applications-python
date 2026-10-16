@@ -41,13 +41,32 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    """Order read model, camelCase to match the Java monolith's `OrderDto`."""
+    """Order read model, camelCase to match the Java monolith's `OrderDto`.
+
+    r06: `shippingAddress` is an ADDITIVE field -- every other field is
+    byte-for-byte unchanged, so this is backward-compatible for any existing
+    consumer. It exists because `settings.SHIPPING_MODE = "orchestrated"`
+    moves shipment dispatch OUT of this monolith into the standalone
+    shipping-service, which reacts to the same `payment.captured` event this
+    monolith does but has no in-process access to `Order.shipping_address`;
+    it enriches via `GET /api/orders/{id}` (this serializer) to read it back
+    over the wire instead.
+    """
 
     customerId = serializers.IntegerField(source="customer_id")
     totalCents = serializers.IntegerField(source="total_cents")
     createdAt = serializers.DateTimeField(source="created_at")
+    shippingAddress = serializers.CharField(source="shipping_address")
     items = OrderItemSerializer(many=True)
 
     class Meta:
         model = Order
-        fields = ["id", "customerId", "status", "totalCents", "createdAt", "items"]
+        fields = [
+            "id",
+            "customerId",
+            "status",
+            "totalCents",
+            "createdAt",
+            "shippingAddress",
+            "items",
+        ]

@@ -145,6 +145,24 @@ PAYMENT_CAPTURED_TOPIC = "payment.captured"
 PAYMENT_DECLINED_TOPIC = "payment.declined"
 ORDER_SAGA_CONSUMER_GROUP = "monolith-order-saga"
 
+# ---------------------------------------------------------------------------
+# Shipping saga -- r06. SHIPPING_MODE selects whether
+# order.services.handle_payment_captured() dispatches shipping IN-PROCESS,
+# synchronously (`inprocess`, the default -- r05 behavior, byte-for-byte
+# UNCHANGED) or hands the order off to the standalone shipping-service
+# (`orchestrated`), which reacts to the SAME `payment.captured` event this
+# monolith does, enriches itself via `GET /api/orders/{id}`'s
+# `shippingAddress` field (order/serializers.py), and reports its own
+# outcome back via `shipment.dispatched`/`shipment.failed` -- reacted to
+# asynchronously by `order.management.commands.order_saga_listener`
+# (`order.services.handle_shipment_dispatched`/`handle_shipment_failed`).
+# See SMELLS.md SMELL[ch.22]/[ch.26] ("shipping extracted/orchestrated").
+# ---------------------------------------------------------------------------
+
+SHIPPING_MODE = os.environ.get("SHIPPING_MODE", "inprocess")
+SHIPMENT_DISPATCHED_TOPIC = "shipment.dispatched"
+SHIPMENT_FAILED_TOPIC = "shipment.failed"
+
 # This API's contract (and the ported Newman collection) uses paths with NO
 # trailing slash (`/api/inventory/{sku}`, not `/api/inventory/{sku}/`), so
 # each app's urls.py intentionally starts its detail route with "/" against
