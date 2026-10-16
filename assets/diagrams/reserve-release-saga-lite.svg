@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 800" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="20" y="60" width="1360" height="220" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="80" font-size="12" font-weight="700" fill="#1d1d1d">BEFORE -- INVENTORY_MODE=local (r01-r03): one transaction, free rollback (SMELL[ch.22])</text>
+<rect x="20" y="320" width="1360" height="420" rx="12" fill="#f1f5f9" stroke="#ddd"/>
+<text x="32" y="340" font-size="12" font-weight="700" fill="#1d1d1d">AFTER -- INVENTORY_MODE=grpc (ch.19): Reserve crosses the boundary FIRST, outside any local transaction.atomic()</text>
+<rect x="50" y="150" width="240" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="170.0" y="195.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Reserve stock</text>
+<text x="170.0" y="212.5" font-size="11.5" fill="#555555" text-anchor="middle">in-process, SAME tx</text>
+<text x="170.0" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">pessimistic-lock query</text>
+<rect x="330" y="150" width="200" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="430.0" y="210.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Create Order row</text>
+<rect x="570" y="150" width="220" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="680.0" y="195.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Charge payment</text>
+<text x="680.0" y="212.5" font-size="11.5" fill="#555555" text-anchor="middle">decline rolls back</text>
+<text x="680.0" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">reserve + order</text>
+<rect x="830" y="150" width="240" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="950.0" y="195.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Dispatch shipping</text>
+<text x="950.0" y="212.5" font-size="11.5" fill="#555555" text-anchor="middle">SHIP-FAIL rolls back</text>
+<text x="950.0" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">everything above</text>
+<rect x="1110" y="150" width="220" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1220.0" y="210.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">OutboxEvent row</text>
+<rect x="50" y="440" width="280" height="110" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="190.0" y="485.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">gRPC Reserve()</text>
+<text x="190.0" y="502.5" font-size="11.5" fill="#555555" text-anchor="middle">OUTSIDE transaction.atomic()</text>
+<text x="190.0" y="517.5" font-size="11.5" fill="#555555" text-anchor="middle">commits in inventory-service&#x27;s OWN db</text>
+<rect x="410" y="440" width="200" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="510.0" y="493.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Create Order row</text>
+<text x="510.0" y="510.0" font-size="11.5" fill="#555555" text-anchor="middle">local tx starts here</text>
+<rect x="640" y="440" width="220" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="750.0" y="493.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Charge payment</text>
+<text x="750.0" y="510.0" font-size="11.5" fill="#555555" text-anchor="middle">decline raises</text>
+<rect x="890" y="440" width="220" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1000.0" y="493.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Dispatch shipping</text>
+<text x="1000.0" y="510.0" font-size="11.5" fill="#555555" text-anchor="middle">SHIP-FAIL raises</text>
+<rect x="1140" y="440" width="190" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1235.0" y="500.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">OutboxEvent row</text>
+<rect x="410" y="600" width="300" height="110" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="560.0" y="645.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">gRPC Release()</text>
+<text x="560.0" y="662.5" font-size="11.5" fill="#555555" text-anchor="middle">compensating RPC --</text>
+<text x="560.0" y="677.5" font-size="11.5" fill="#555555" text-anchor="middle">NOT automatic, must be called</text>
+<path d="M290.0,205.0 L330.0,205.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M530.0,205.0 L570.0,205.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M790.0,205.0 L830.0,205.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1070.0,205.0 L1110.0,205.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M330.0,495.0 L410.0,495.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="376.0" y="489.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">local transaction.atomic() begins</text>
+<text x="376.0" y="489.0" font-size="11" fill="#555" text-anchor="middle">local transaction.atomic() begins</text>
+<path d="M610.0,495.0 L640.0,495.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M860.0,495.0 L890.0,495.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1110.0,495.0 L1140.0,495.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M684.6875,550.0 L625.3125,600.0" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<text x="661.0" y="569.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">on PaymentDeclined (402)</text>
+<text x="661.0" y="569.0" font-size="11" fill="#2f5f3d" text-anchor="middle">on PaymentDeclined (402)</text>
+<path d="M890.0,535.0 L710.0,600.4545454545455" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<text x="806.0" y="561.7272727272727" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">on ShippingFailed (422)</text>
+<text x="806.0" y="561.7272727272727" font-size="11" fill="#2f5f3d" text-anchor="middle">on ShippingFailed (422)</text>
+<text x="700.0" y="32" font-size="18" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.19 -- reserve/release across the boundary: where the free rollback went</text>
+<text x="40" y="740" font-size="11" fill="#555555" text-anchor="start">Postgres&#x27;s WAL can only unwind writes inside ITS OWN transaction -- a commit in inventory-service&#x27;s own database is</text>
+<text x="40" y="758" font-size="11" fill="#555555" text-anchor="start">permanent the instant it lands. The compensating Release call is the thing doing the work now, not an artifact of one</text>
+<text x="40" y="776" font-size="11" fill="#555555" text-anchor="start">shared transaction -- proven live: quantityOnHand held at 96 across both the payment-declined AND ship-fail checkouts.</text>
+</svg>

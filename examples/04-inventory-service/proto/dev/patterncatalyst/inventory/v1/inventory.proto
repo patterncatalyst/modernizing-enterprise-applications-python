@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package dev.patterncatalyst.inventory.v1;
+
+// r04/ch.19 -- the gRPC contract IS the anti-corruption layer for the
+// synchronous order<->inventory seam: a strongly-typed, versioned wire
+// vocabulary (stock_keeping_unit/display_name/unit_price_cents/on_hand_qty)
+// deliberately DISTINCT from the monolith's domain vocabulary
+// (sku/name/priceCents/quantityOnHand) so the ACL earns its keep translating
+// between the two, rather than the two shapes happening to already agree.
+//
+// Mirrors ~/Dev/modernizing-enterprise-applications (Java/Quarkus) r05/ch.19
+// `examples/04-inventory-service/src/main/proto/.../inventory.proto`
+// byte-for-byte in service/RPC/message/field names and numbering, so the
+// Python port's ACL seam reads the same way across both repos.
+//
+// CheckStock is a read-only availability probe. Reserve performs a
+// server-side atomic check-and-decrement against the inventory service's own
+// database -- reservation_ok=false with unchanged on_hand_qty means
+// insufficient stock, no decrement happened. Release is the compensating
+// re-increment the monolith calls when a later step (payment/shipping)
+// fails after a successful Reserve -- a deliberate first taste of the
+// choreographed saga. GetStock is a full read of one sku's current stock
+// record, the content-enricher fetch target for the ACL's message
+// translator.
+service InventoryGrpcService {
+
+  // Read-only availability probe: is at least requested_qty on hand for sku?
+  // Does not mutate state.
+  rpc CheckStock (CheckStockRequest) returns (StockReply);
+
+  // Server-side atomic check-and-decrement against the inventory service's
+  // OWN database, under its own lock. reservation_ok=false + unchanged
+  // on_hand_qty means insufficient stock -- no decrement happened.
+  rpc Reserve (ReserveRequest) returns (ReserveReply);
+
+  // Compensating re-increment: once the decrement lives in this service's
+  // own DB, the monolith's local transaction can no longer roll it back on
+  // a later payment decline. The monolith calls Release to restore the
+  // observable baseline.
+  rpc Release (ReleaseRequest) returns (ReserveReply);
+
+  // Full read of one sku's current stock record -- the content-enricher
+  // fetch target for the order-side ACL (content-based router -> content
+  // enricher -> message translator into the monolith's own StockDto shape).
+  rpc GetStock (GetStockRequest) returns (StockReply);
+}
+
+message CheckStockRequest {
+  string stock_keeping_unit = 1;
+  int32 requested_qty = 2;
+}
+
+message ReserveRequest {
+  string stock_keeping_unit = 1;
+  int32 requested_qty = 2;
+}
+
+message ReleaseRequest {
+  string stock_keeping_unit = 1;
+  int32 requested_qty = 2;
+}
+
+message GetStockRequest {
+  string stock_keeping_unit = 1;
+}
+
+message StockReply {
+  string stock_keeping_unit = 1;
+  string display_name = 2;
+  int64 unit_price_cents = 3;
+  int32 on_hand_qty = 4;
+  bool available = 5;
+}
+
+message ReserveReply {
+  string stock_keeping_unit = 1;
+  bool reservation_ok = 2;
+  int32 on_hand_qty = 3;
+}

@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1480 660" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="20" y="60" width="1440" height="220" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="80" font-size="12" font-weight="700" fill="#1d1d1d">BACKFILL + SYNC (transition window) -- Debezium tails the WAL, flag-gated INVENTORY_CDC_ENABLED=true</text>
+<rect x="20" y="340" width="1440" height="220" rx="12" fill="#f1f5f9" stroke="#ddd"/>
+<text x="32" y="360" font-size="12" font-weight="700" fill="#1d1d1d">RETIRE (CUTOVER.md runbook, after both cutover dimensions have flipped) -- nothing left to tail</text>
+<rect x="30" y="150" width="220" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="140.0" y="195.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Postgres WAL</text>
+<text x="140.0" y="212.5" font-size="11.5" fill="#555555" text-anchor="middle">public.inventory_items</text>
+<text x="140.0" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">REPLICA IDENTITY FULL</text>
+<rect x="270" y="150" width="220" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="380.0" y="195.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Replication slot + publication</text>
+<text x="380.0" y="212.5" font-size="11.5" fill="#555555" text-anchor="middle">meap_inventory_slot /</text>
+<text x="380.0" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">meap_inventory_publication</text>
+<rect x="510" y="150" width="220" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="620.0" y="195.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Debezium Postgres connector</text>
+<text x="620.0" y="212.5" font-size="11.5" fill="#555555" text-anchor="middle">snapshot.mode=initial</text>
+<text x="620.0" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">register-debezium.sh</text>
+<rect x="750" y="150" width="220" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="860.0" y="195.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Kafka topic</text>
+<text x="860.0" y="212.5" font-size="11.5" fill="#555555" text-anchor="middle">meap.public.inventory_items</text>
+<text x="860.0" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">op=r once, then c/u/d</text>
+<rect x="990" y="150" width="220" height="110" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="1100.0" y="195.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">app/cdc_consumer.py</text>
+<text x="1100.0" y="212.5" font-size="11.5" fill="#555555" text-anchor="middle">InventoryCdcConsumer</text>
+<text x="1100.0" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">ON CONFLICT upsert, keyed delete</text>
+<rect x="1230" y="150" width="220" height="110" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="1340.0" y="195.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">inventory.inventory_items</text>
+<text x="1340.0" y="212.5" font-size="11.5" fill="#555555" text-anchor="middle">OWNED copy -- backfilled,</text>
+<text x="1340.0" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">then kept current</text>
+<rect x="270" y="430" width="260" height="110" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="400.0" y="475.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">1. kcat drains the topic</text>
+<text x="400.0" y="492.5" font-size="11.5" fill="#555555" text-anchor="middle">-o end -e: nothing new</text>
+<text x="400.0" y="507.5" font-size="11.5" fill="#555555" text-anchor="middle">(monolith write-silent)</text>
+<rect x="600" y="430" width="260" height="110" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="730.0" y="475.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">2. retire-debezium.sh</text>
+<text x="730.0" y="492.5" font-size="11.5" fill="#555555" text-anchor="middle">DELETE connector,</text>
+<text x="730.0" y="507.5" font-size="11.5" fill="#555555" text-anchor="middle">drop slot + publication</text>
+<rect x="930" y="430" width="260" height="110" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="1060.0" y="475.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">3. INVENTORY_CDC_ENABLED=false</text>
+<text x="1060.0" y="492.5" font-size="11.5" fill="#555555" text-anchor="middle">(already the default)</text>
+<text x="1060.0" y="507.5" font-size="11.5" fill="#555555" text-anchor="middle">own Alembic seed is now the SoR</text>
+<path d="M250.0,205.0 L270.0,205.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M490.0,205.0 L510.0,205.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M730.0,205.0 L750.0,205.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M970.0,205.0 L990.0,205.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1210.0,205.0 L1230.0,205.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M990.0,249.0 L530.0,433.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="766.0" y="335.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">gRPC Reserve/Release own all writes</text>
+<text x="766.0" y="335.0" font-size="11" fill="#555" text-anchor="middle">gRPC Reserve/Release own all writes</text>
+<path d="M530.0,485.0 L600.0,485.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M860.0,485.0 L930.0,485.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="740.0" y="32" font-size="18" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.19 -- CDC tails the WAL for a ONE-TIME backfill + transition sync, then is retired</text>
+<text x="40" y="620" font-size="11" fill="#555555" text-anchor="start">Debezium is transition-only infrastructure here: it is never part of the CI equivalence gate, and the running system</text>
+<text x="40" y="638" font-size="11" fill="#555555" text-anchor="start">does not depend on it after cutover -- inventory-service reaches its end state via its own schema and seed, not a live consumer.</text>
+</svg>

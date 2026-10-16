@@ -466,9 +466,229 @@ unexplained drift for ch.16/17.
 
 ---
 
-*Per `build-plan.md` §J, the Inventory extraction (ch.18–19, extraction 3 of
-6) — Change Data Capture via Debezium, gRPC-first inventory on a decomposed
-DB with CDC backfill — is scheduled for r04 in this project's renumbered
-cadence. The next section appended to this file should be headed
-`ch.18-19 — Inventory (r04, extraction 3 of 6)`, following the
+## ch.18-19 — Inventory (r04, extraction 3 of 6)
+
+### Proto-as-ACL + drift guard
+
+**Source:** `_plans/r04-build-plan.md` (PROTO lane, DRQ-042) — a project-first
+pattern, no external artifact reused; the design intent (author the contract
+before either side's implementation) mirrors the Java sibling's gRPC seam but
+the Python toolchain (`grpcio`/`grpcio-tools`/`protobuf`) is independently
+authored.
+
+**What shipped:** `inventory.proto` (`CheckStock`/`Reserve`/`Release`/
+`GetStock`) authored first, with wire vocabulary deliberately distinct from
+the domain model so the ACL earns its keep; `scripts/gen-proto.sh` generates
+stubs for both `examples/04-inventory-service/` and a byte-identical vendored
+copy under `examples/00-monolith/order/proto/`; `scripts/check-proto-drift.sh`
+regenerates both copies and diffs them, failing loudly on any divergence.
+Generated stubs are committed on both sides (not generated at build time),
+so the drift guard has something concrete to check.
+
+**Verdict:** CLEAN — the contract is the single source of truth, and the two
+generated-stub copies (one per deployable) have an explicit, checkable
+guarantee of staying identical rather than an implicit "they should match"
+assumption.
+
+### Reserve-outside-local-txn + compensating Release (the crux)
+
+**Source:** `_plans/r04-build-plan.md` (MONOLITH-GRPC-CLIENT+SNAPSHOT lane,
+DRQ-043) — a project-first design decision; no external precedent exists in
+this project for compensating across a transaction boundary that spans two
+separate databases.
+
+**What shipped:** `place_order()` resolves the customer, then issues the
+remote gRPC `Reserve` call **per line, before and outside**
+`transaction.atomic()`, accumulating the set of already-reserved lines plus
+the `StockReply` snapshot fields (sku/item name/unit price). Only once every
+line reserves successfully does the flow enter `with atomic():` to create the
+`Order`/`OrderItem`s (snapshotted)/payment/shipping/outbox rows. Any failure
+*inside* the atomic block (a card decline → 402, a ship failure → 422) is
+caught **outside** the block, after Django's own rollback has already run,
+and triggers a compensating `Release` call for every line that was reserved
+for this checkout — net-zero stock, proven by **directly querying the
+inventory service's database** after a decline and after a ship-fail (not
+inferred from HTTP status alone). `InventoryServiceUnavailable` (503) is kept
+distinct from `InsufficientStock` (409) so a down dependency and a legitimate
+stock conflict never share a status code.
+
+**Rejected alternative (named, not silently avoided):** wrapping the remote
+`Reserve` call inside the local `atomic()` block. Rejected because (a) it
+holds a Postgres transaction open across a network round-trip for the
+duration of the whole checkout, and (b) a local Django rollback cannot undo
+an already-committed remote decrement in another service's database — the
+"transaction" boundary would be cosmetic, not real. This is exactly the
+crux the chapter teaches: once data crosses a process/database boundary,
+ACID composition stops working and compensation becomes the only tool.
+
+**Idempotency / over-restore — named limitation, not silently dropped.**
+`Release` is not idempotent and does not guard against restoring more stock
+than was actually reserved; this is documented in the inventory-service's
+own module docs and recorded as DRQ-043's explicit deferral to the saga
+chapters (ch.23/24), where idempotency keys and proper compensation
+semantics are the chapter's actual subject matter. Not fixing it now is a
+scope decision, not an oversight.
+
+**Verdict:** CLEAN — the design is deliberate, the rejected alternative is
+named with its concrete failure mode, the net-zero property is proven by
+direct DB inspection rather than asserted, and the one real gap (idempotency)
+is named and forward-referenced rather than hidden.
+
+### CDC transition-only + NOT in CI (mirrors Java)
+
+**Source:** `_plans/r04-build-plan.md` (CDC-BACKFILL lane, DRQ-044/045) —
+confirmed against the Java sibling's own CDC/CI posture before building, per
+the build plan's explicit note: "confirmed this is exactly how the Java gate
+works."
+
+**What shipped:** Debezium Connect (`quay.io/debezium/connect:3.7.0.Final`)
+added to compose, Postgres switched to `wal_level=logical`, and
+`infra/debezium/inventory-connector.json` configured for `pgoutput`
+snapshot+stream off `public.inventory_items`. `scripts/register-debezium.sh`,
+`scripts/verify-debezium.sh`, and `scripts/retire-debezium.sh` form a
+register → verify → retire runbook, **live-verified**: register produced a
+CDC event carrying a full before-image (REPLICA IDENTITY FULL) ahead of the
+owned schema's own-seed taking over, and the idempotent retire left no
+dangling connector or replication slot. The CI `inventory-equivalence-gate`
+(`.github/workflows/code-ci.yml`) runs Postgres only, against the
+**post-cutover end state** — inventory self-seeded via its own Alembic
+migration, monolith `INVENTORY_MODE=grpc`, proxy flag ON — with **no Kafka,
+no Connect, no Debezium container** anywhere in the job.
+
+**Why this is not a gap:** CDC's entire job in this chapter is the one-time
+migration of pre-existing shared-table data into the new owned schema during
+a cutover window; once the service reaches its end state (own-seed or a
+real backfill-then-retire), there is no remaining consumer of a live CDC
+stream. Gating CI on a tool that by design doesn't run in steady state would
+pay a real resource/time cost (standing up Kafka Connect) to test a
+one-time migration aid, not the behavior-equivalence contract CI actually
+needs to protect.
+
+**Verdict:** CLEAN — CDC's scope (transition-only) and CI's scope (post-
+cutover end state only) are both named explicitly and both confirmed to
+match the Java sibling's precedent, not independently reinvented.
+
+### FK→snapshot (DRQ-046)
+
+**Source:** this project's own r02 price-snapshot precedent
+(`unit_price_cents` was already snapshotted onto `OrderItem` at r01/r02),
+extended to the full line-item identity now that inventory owns a separate
+database.
+
+**What shipped:** `order_items` drops its `inventory_item` ForeignKey and
+gains `sku`/`item_name` snapshot columns, populated from the gRPC
+`StockReply` at checkout time. A migration backfills the new columns from the
+existing FK relationship *before* dropping it (so no data is lost in the
+cutover), the DRF serializer maps `sku` via `source="sku"`, and the
+`items__inventory_item` prefetch is removed. The public wire contract is
+**unchanged** — this is purely an internal persistence change.
+
+**Verdict:** CLEAN — the snapshot pattern already established for price is
+extended consistently rather than inventing a second mechanism (e.g., a
+second FK into the inventory service's database, which isn't even possible
+across the schema boundary).
+
+### Two cutover dimensions (DRQ-047)
+
+**Source:** the r02/r03 precedent of a single strangler-proxy flag per
+extraction (`STRANGLER_REVIEW_ENABLED`, `STRANGLER_NOTIFICATION_ENABLED`) —
+inventory is the first extraction where one flag is not enough, because it
+is also the first extraction with an internal (non-HTTP, non-proxied)
+synchronous seam.
+
+**Named divergence:** reads are still proxy-routed exactly like review and
+notification (`STRANGLER_INVENTORY_ENABLED` on `/api/inventory*`), but the
+monolith's reserve/release calls never go through the proxy at all — they
+are an internal monolith→inventory-service gRPC call gated by its own
+`INVENTORY_MODE=local|grpc` setting. The two flags are moved together in
+practice (fully-local baseline, fully-gRPC cutover); a mixed state is
+explicitly unsupported and documented as breaking Newman's stock-capture
+assertions, so both the manual cutover runbook and the CI gate always flip
+both together.
+
+**Verdict:** CLEAN — the divergence from the one-flag-per-extraction
+precedent is necessary (a second, genuinely different seam exists) and
+named, not an accidental proliferation of flags.
+
+### Concurrency-safe atomic Reserve (race-tested)
+
+**Source:** no external artifact — a project-first requirement, since this
+is the first mutation seam where two concurrent checkouts can race for the
+same unit of stock.
+
+**What shipped:** `Reserve` is implemented as a single conditional
+`UPDATE inventory SET qty = qty - :q WHERE sku = :sku AND qty >= :q`, relying
+on the row lock Postgres takes for the duration of the UPDATE rather than a
+separate read-then-write check (which would race). A rowcount of 1 means
+success, 0 means insufficient stock — both are distinguishable from the same
+single statement. A dedicated concurrency test runs two racing reservations
+against the last remaining unit of a SKU and asserts exactly one wins and
+the other observes insufficient stock, never both succeeding (oversell) and
+never both failing.
+
+**Verdict:** CLEAN — concurrency safety is demonstrated by a race test, not
+argued from the shape of the SQL alone.
+
+### Newman: 71/71 green both configs, RED-then-green negative checks
+
+**Source:** the r02/r03 equivalence-gate precedent
+(`review-equivalence-gate`, `notification-equivalence-gate`), extended to a
+contract with two independent cutover dimensions for the first time.
+
+**What shipped:** the "Inventory Context Contract" Newman folder
+(list/get/404, guarded by `--env-var inventoryContractEnabled=true`) plus the
+existing Smoke + 4 checkout scenarios.
+
+| Run | `STRANGLER_INVENTORY_ENABLED` | `INVENTORY_MODE` | Result |
+|---|---|---|---|
+| Fully-gRPC | ON | `grpc` | **71/71 green** |
+| Fully-local (reversibility) | OFF | `local` | **71/71 green** |
+| Negative — reads | ON | `grpc`, inventory service killed | reads **RED (502)**, then green again on restart |
+| Negative — reserve | ON | `grpc`, inventory service killed | checkout **RED (503,** `InventoryServiceUnavailable`**)**, then green again on restart |
+
+Net-zero stock on the DECLINE (402) and SHIP-FAIL (422) scenarios is verified
+by **directly querying the inventory database** for the SKU's quantity
+before and after each scenario in fully-gRPC mode, not just by asserting the
+HTTP status code — the same discipline the reserve-outside-local-txn design
+depends on being true (see above).
+
+**Verdict:** CLEAN — equivalence proven in both cutover configurations, with
+two distinct RED-then-green negative checks (reads vs. reserve) rather than
+one, since inventory is the first extraction with two independently
+failing seams.
+
+### No integration bug surfaced (contrast with r02)
+
+Unlike r02's strangler-proxy chunked-body bug (DRQ-026 — a real production
+bug only caught when the proxy was exercised against a real socket rather
+than an in-process ASGI transport), **r04 surfaced no equivalent integration
+bug.** The gRPC seam, the reserve-outside-atomic ordering, and the two-flag
+cutover were all exercised against real running processes (inventory service,
+monolith, proxy) from the start of the NEWMAN lane, which is the most likely
+reason no "only shows up over a real socket" class of bug was hiding here —
+there was no in-process mock transport in the loop to mask one. This is
+recorded as an honest contrast, not a claim that r04's seam is inherently
+less risky than r02's.
+
+**Verdict:** CLEAN — no drift, no latent bug found and smoothed over; the
+absence of a bug is reported as an observation, not manufactured as a
+cleaner story than r02's.
+
+### Verdicts summary
+
+CLEAN across every artifact in this section. No DRQ gate was put to the user
+for an A/B choice at r04 (contrast r02's auth-contract gate, DRQ-029, and
+r03's monolith-self-consumer gate, DRQ-038) — every decision (DRQ-041 through
+DRQ-048) was settled by the Phase-1 planner as a synthesis default, and the
+user approved the plan as a whole ("go") rather than choosing between
+alternatives. No unexplained drift for ch.18/19.
+
+---
+
+*Per `build-plan.md` §J, the Payment extraction (ch.23, extraction 4 of 6) —
+a choreographed saga via aiokafka (`order.placed`→`payment.captured`/
+`payment.declined`), and the project's first move from a synchronous `201`
+checkout to an asynchronous `202 PENDING` checkout — is scheduled for r05 in
+this project's renumbered cadence. The next section appended to this file
+should be headed `ch.23 — Payment (r05, extraction 4 of 6)`, following the
 per-extraction-reconcile shape above.*
