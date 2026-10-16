@@ -11,6 +11,13 @@ class Order(models.Model):
         PENDING = "PENDING"
         CONFIRMED = "CONFIRMED"
         PAYMENT_DECLINED = "PAYMENT_DECLINED"
+        # r05/ch.23-25: the choreographed checkout's saga-listener reaction
+        # (order.services.handle_payment_captured) to a ShippingFailed
+        # sentinel raised AFTER payment already captured -- see that
+        # function's docstring for the documented refund deferral. `status`
+        # is a plain string column (no enum type in Postgres), so this new
+        # value needs no migration.
+        SHIPPING_FAILED = "SHIPPING_FAILED"
 
     # SMELL[ch.18]: customer_id is a direct FK/join into the shared
     # `customers` table rather than an owned/replicated copy.
@@ -36,6 +43,9 @@ class Order(models.Model):
 
     def decline_payment(self) -> None:
         self.status = self.Status.PAYMENT_DECLINED
+
+    def ship_fail(self) -> None:
+        self.status = self.Status.SHIPPING_FAILED
 
 
 class OrderItem(models.Model):

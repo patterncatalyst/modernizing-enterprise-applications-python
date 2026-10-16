@@ -127,6 +127,24 @@ OUTBOX_RELAY_POLL_MS = int(os.environ.get("OUTBOX_RELAY_POLL_MS", "1000"))
 INVENTORY_MODE = os.environ.get("INVENTORY_MODE", "local")
 INVENTORY_GRPC_TARGET = os.environ.get("INVENTORY_GRPC_TARGET", "localhost:9004")
 
+# ---------------------------------------------------------------------------
+# Payment saga -- r05/ch.23-25. PAYMENT_MODE selects whether
+# order.services.place_order() charges payment IN-PROCESS, synchronously
+# (`synchronous`, the default -- r01-r04 behavior, byte-for-byte UNCHANGED)
+# or defers the payment decision to the standalone payment-service
+# (`examples/05-payment-service`), reacted to asynchronously by
+# `order.management.commands.order_saga_listener` once that service's own
+# outbox relay publishes `payment.captured`/`payment.declined`
+# (`choreographed`). See order/services.py's `_place_order_choreographed`/
+# `handle_payment_captured`/`handle_payment_declined` and SMELLS.md
+# SMELL[ch.22] ("ACID -> ACD realized for payment").
+# ---------------------------------------------------------------------------
+
+PAYMENT_MODE = os.environ.get("PAYMENT_MODE", "synchronous")
+PAYMENT_CAPTURED_TOPIC = "payment.captured"
+PAYMENT_DECLINED_TOPIC = "payment.declined"
+ORDER_SAGA_CONSUMER_GROUP = "monolith-order-saga"
+
 # This API's contract (and the ported Newman collection) uses paths with NO
 # trailing slash (`/api/inventory/{sku}`, not `/api/inventory/{sku}/`), so
 # each app's urls.py intentionally starts its detail route with "/" against
@@ -218,6 +236,10 @@ LOGGING = {
         "notification": {"level": "DEBUG", "propagate": True},
         "common.management.commands.outbox_relay": {"level": "DEBUG", "propagate": True},
         "notification.management.commands.order_placed_consumer": {
+            "level": "DEBUG",
+            "propagate": True,
+        },
+        "order.management.commands.order_saga_listener": {
             "level": "DEBUG",
             "propagate": True,
         },

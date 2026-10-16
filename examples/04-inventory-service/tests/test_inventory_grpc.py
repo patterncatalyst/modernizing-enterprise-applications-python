@@ -162,6 +162,150 @@ async def test_release_unknown_sku_reports_not_ok(session_factory):
 
 
 @pytest.mark.asyncio
+async def test_release_with_fresh_idempotency_key_restores_stock(session_factory):
+    """DRQ-043: a `Release` carrying a NEW (never-seen) idempotency_key still
+    restores stock, same outcome as the empty-key path -- the dedupe ledger
+    must not block a genuinely first-time compensation."""
+    servicer = _servicer(session_factory)
+    reserved = await servicer.Reserve(
+        inventory_pb2.ReserveRequest(stock_keeping_unit="SKU-WIDGET-001", requested_qty=5),
+        None,
+    )
+    assert reserved.on_hand_qty == 95
+
+    released = await servicer.Release(
+        inventory_pb2.ReleaseRequest(
+            stock_keeping_unit="SKU-WIDGET-001",
+            requested_qty=5,
+            idempotency_key="order-1:RELEASE:SKU-WIDGET-001",
+        ),
+        None,
+    )
+    assert released.reservation_ok is True
+    assert released.on_hand_qty == 100
+
+
+@pytest.mark.asyncio
+async def test_release_replayed_same_idempotency_key_is_a_noop(session_factory):
+    """DRQ-043's core guarantee: a retried `Release` carrying the SAME
+    idempotency_key the saga already used must NOT re-increment a second
+    (or third) time -- each replay is a pure no-op returning the CURRENT
+    stock, not stock restored repeatedly."""
+    servicer = _servicer(session_factory)
+    key = "order-42:RELEASE:SKU-WIDGET-001"
+
+    await servicer.Reserve(
+        inventory_pb2.ReserveRequest(stock_keeping_unit="SKU-WIDGET-001", requested_qty=5),
+        None,
+    )
+
+    first = await servicer.Release(
+        inventory_pb2.ReleaseRequest(
+            stock_keeping_unit="SKU-WIDGET-001", requested_qty=5, idempotency_key=key
+        ),
+        None,
+    )
+    assert first.reservation_ok is True
+    assert first.on_hand_qty == 100
+
+    # Replay with the SAME key -- must be a no-op, not a second +5.
+    second = await servicer.Release(
+        inventory_pb2.ReleaseRequest(
+            stock_keeping_unit="SKU-WIDGET-001", requested_qty=5, idempotency_key=key
+        ),
+        None,
+    )
+    assert second.reservation_ok is True
+    assert second.on_hand_qty == 100  # unchanged -- NOT 105, no over-restore
+
+    # A third replay, for good measure.
+    third = await servicer.Release(
+        inventory_pb2.ReleaseRequest(
+            stock_keeping_unit="SKU-WIDGET-001", requested_qty=5, idempotency_key=key
+        ),
+        None,
+    )
+    assert third.reservation_ok is True
+    assert third.on_hand_qty == 100
+
+
+@pytest.mark.asyncio
+async def test_release_empty_idempotency_key_falls_back_to_unconditional_behavior(
+    session_factory,
+):
+    """Back-compat: an empty `idempotency_key` (the proto3 default for a
+    caller that doesn't send one) falls back to the ORIGINAL unconditional,
+    non-deduped re-increment -- repeated empty-key Releases each restore
+    stock again. This documents the KNOWN pre-existing limitation for
+    backward-compat callers (not a desired outcome for new ones), proving it
+    is distinct from the now-idempotent non-empty-key path above."""
+    servicer = _servicer(session_factory)
+    await servicer.Reserve(
+        inventory_pb2.ReserveRequest(stock_keeping_unit="SKU-WIDGET-001", requested_qty=5),
+        None,
+    )
+
+    first = await servicer.Release(
+        inventory_pb2.ReleaseRequest(stock_keeping_unit="SKU-WIDGET-001", requested_qty=5),
+        None,
+    )
+    assert first.reservation_ok is True
+    assert first.on_hand_qty == 100
+
+    # No idempotency_key -- unconditional, so a second call over-restores.
+    second = await servicer.Release(
+        inventory_pb2.ReleaseRequest(stock_keeping_unit="SKU-WIDGET-001", requested_qty=5),
+        None,
+    )
+    assert second.reservation_ok is True
+    assert second.on_hand_qty == 105
+
+
+@pytest.mark.asyncio
+async def test_release_concurrent_same_idempotency_key_exactly_one_net_increment(
+    session_factory,
+):
+    """Race-safety proof for DRQ-043's dedupe, mirroring
+    `test_reserve_concurrent_requests_for_last_unit_exactly_one_succeeds`:
+    two CONCURRENT `Release` calls carrying the SAME idempotency_key (each
+    opening its OWN session, same as two real concurrent gRPC invocations)
+    must produce exactly ONE net re-increment -- never two (double-restore)
+    and never zero (stuck/lost compensation)."""
+    servicer = _servicer(session_factory)
+    key = "order-99:RELEASE:SKU-WIDGET-001"
+
+    await servicer.Reserve(
+        inventory_pb2.ReserveRequest(stock_keeping_unit="SKU-WIDGET-001", requested_qty=5),
+        None,
+    )
+
+    request_a = inventory_pb2.ReleaseRequest(
+        stock_keeping_unit="SKU-WIDGET-001", requested_qty=5, idempotency_key=key
+    )
+    request_b = inventory_pb2.ReleaseRequest(
+        stock_keeping_unit="SKU-WIDGET-001", requested_qty=5, idempotency_key=key
+    )
+
+    reply_a, reply_b = await asyncio.gather(
+        servicer.Release(request_a, None),
+        servicer.Release(request_b, None),
+    )
+
+    # Both report success -- one by actually applying the increment, the
+    # other via the idempotent no-op path -- but net effect is exactly one
+    # +5, proven below by the stock level, not by either reply alone.
+    assert reply_a.reservation_ok is True
+    assert reply_b.reservation_ok is True
+
+    final = await servicer.GetStock(
+        inventory_pb2.GetStockRequest(stock_keeping_unit="SKU-WIDGET-001"), None
+    )
+    # 100 -> 95 after Reserve -> exactly one net +5 -> 100. NOT 105 (double-
+    # restore) and NOT 95 (lost compensation).
+    assert final.on_hand_qty == 100
+
+
+@pytest.mark.asyncio
 async def test_reserve_concurrent_requests_for_last_unit_exactly_one_succeeds(session_factory):
     """The proof that `app/repository.py::reserve`'s single conditional
     `UPDATE` is concurrency-safe WITHOUT an explicit application-level lock:

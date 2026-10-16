@@ -24,12 +24,12 @@ from contextlib import asynccontextmanager
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import update
+from sqlalchemy import delete, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app import db
 from app.errors import install_exception_handlers
-from app.models import InventoryItem
+from app.models import Compensation, InventoryItem
 from app.routes import router
 
 
@@ -91,8 +91,14 @@ async def reset_inventory_quantities(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> AsyncIterator[None]:
     """Autouse teardown: restores the three seed skus' `quantity_on_hand` to
-    `SEED_QUANTITIES` after every test, so `Reserve`/`Release` mutations in
-    one test never leak into the next regardless of test execution order."""
+    `SEED_QUANTITIES`, and empties `inventory.compensations` (DRQ-043's
+    idempotency ledger), after every test -- so `Reserve`/`Release`
+    mutations AND recorded idempotency keys in one test (or one `pytest`
+    invocation) never leak into the next, regardless of test execution order
+    or how many times the suite is re-run against the same Postgres. Without
+    the ledger wipe, a fixed idempotency-key literal reused across test runs
+    would collide with its own prior run's row and make a genuinely-first
+    `Release` call look like a replay."""
     yield
     async with session_factory() as session:
         for sku, quantity in SEED_QUANTITIES.items():
@@ -101,4 +107,5 @@ async def reset_inventory_quantities(
                 .where(InventoryItem.sku == sku)
                 .values(quantity_on_hand=quantity)
             )
+        await session.execute(delete(Compensation))
         await session.commit()

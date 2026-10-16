@@ -22,6 +22,21 @@ checkout and issues a compensating remote Release for all of them the moment
 anything later fails -- a later line's insufficient stock, or a
 PaymentDeclined/ShippingFailed raised inside the (still-local) atomic block
 that persists the order/payment/shipment/outbox rows.
+
+r05/ch.23-25: `settings.PAYMENT_MODE` is now a SECOND, ORTHOGONAL axis on top
+of `INVENTORY_MODE`. `synchronous` (the default) is every byte of the above,
+UNCHANGED -- the zero-regression baseline this lane must not disturb.
+`choreographed` cuts payment over to the standalone payment-service
+(`examples/05-payment-service`): place_order() reserves inventory over gRPC
+(the SAME `_reserve_lines_remote`/`_release_reserved` helpers `grpc`-mode
+INVENTORY_MODE already uses) and persists the order as PENDING plus its
+`order.placed` outbox event -- and stops there. No in-process charge, no
+in-process shipping dispatch, no confirm. Payment-service reacts to that
+`order.placed` event asynchronously and emits its own
+`payment.captured`/`payment.declined` outcome event; this monolith reacts to
+THAT, in turn, via `order.management.commands.order_saga_listener` driving
+`handle_payment_captured`/`handle_payment_declined` below. See SMELLS.md
+SMELL[ch.22] ("ACID -> ACD realized for payment").
 """
 
 import logging
@@ -33,7 +48,7 @@ from django.db import transaction
 import inventory.services as inventory_services
 import payment.services as payment_services
 import shipping.services as shipping_services
-from common.exceptions import ResourceNotFound
+from common.exceptions import ResourceNotFound, ShippingFailed
 from common.models import Customer, OutboxEvent
 
 from . import inventory_client
@@ -45,18 +60,22 @@ logger = logging.getLogger(__name__)
 def place_order(
     customer_id: int, items: list[dict], payment_method: str, shipping_address: str
 ) -> Order:
-    """Validate the customer, then dispatch to the `local` or `grpc`
-    inventory-reservation strategy selected by `settings.INVENTORY_MODE`. See
-    `_place_order_local`/`_place_order_remote` for the two flows; both
-    produce the SAME external contract (201 CONFIRMED, 409 OUT_OF_STOCK, 402
-    PAYMENT_DECLINED, 422 SHIPPING_FAILED) and the SAME `order.placed` outbox
-    event, written by `_write_order_placed_outbox_event` either way.
+    """Validate the customer, then dispatch on `settings.PAYMENT_MODE` first
+    (`synchronous`, the default, UNCHANGED baseline -- further dispatches on
+    `settings.INVENTORY_MODE` exactly as r04 did; `choreographed`, r05's new
+    async-checkout lane, ALWAYS reserves inventory over gRPC regardless of
+    `INVENTORY_MODE`, since the whole point of choreography is that nothing
+    downstream of the reservation runs in this request anymore). See
+    `_place_order_local`/`_place_order_remote`/`_place_order_choreographed`
+    for the three flows.
     """
     try:
         customer = Customer.objects.get(pk=customer_id)
     except Customer.DoesNotExist as exc:
         raise ResourceNotFound(f"No customer with id {customer_id}") from exc
 
+    if settings.PAYMENT_MODE == "choreographed":
+        return _place_order_choreographed(customer, items, payment_method, shipping_address)
     if settings.INVENTORY_MODE == "grpc":
         return _place_order_remote(customer, items, payment_method, shipping_address)
     return _place_order_local(customer, items, payment_method, shipping_address)
@@ -182,6 +201,191 @@ def _place_order_remote(
         client.close()
 
 
+def _place_order_choreographed(
+    customer: Customer, items: list[dict], payment_method: str, shipping_address: str
+) -> Order:
+    """r05/ch.23-25 -- the async-checkout cutover. Reserves every line over
+    gRPC exactly like `_place_order_remote` (same `_reserve_lines_remote`/
+    `_release_reserved` helpers, same net-zero-on-failure compensation story
+    for a reservation/persistence failure BEFORE the `order.placed` event is
+    committed), then persists the order/items/outbox event as ONE local
+    `transaction.atomic()` -- but stops there. Deliberately NOT charging
+    payment and NOT dispatching shipping: the order comes back PENDING, and
+    `order.views.OrderListCreateView.post` answers `202 Accepted` for it
+    instead of `201 Created`. The outbox event now carries `paymentMethod`
+    (optional on the wire -- see `examples/05-payment-service/EVENTS.md`) so
+    payment-service's own `order.placed` consumer knows what to charge.
+    Everything from here on (capture/decline, then confirm/ship or
+    decline/release) happens OUTSIDE this function and this request, reacted
+    to by `handle_payment_captured`/`handle_payment_declined` below once
+    payment-service's outcome event arrives.
+    """
+    client = inventory_client.RemoteInventoryClient()
+    try:
+        line_snapshots, reserved = _reserve_lines_remote(client, items)
+
+        try:
+            with transaction.atomic():
+                order = Order.objects.create(
+                    customer=customer,
+                    shipping_address=shipping_address,
+                    status=Order.Status.PENDING,
+                )
+
+                total_cents = 0
+                for snapshot in line_snapshots:
+                    OrderItem.objects.create(
+                        order=order,
+                        sku=snapshot["sku"],
+                        item_name=snapshot["item_name"],
+                        quantity=snapshot["quantity"],
+                        unit_price_cents=snapshot["unit_price_cents"],
+                    )
+                    total_cents += snapshot["unit_price_cents"] * snapshot["quantity"]
+
+                order.total_cents = total_cents
+                order.save(update_fields=["total_cents"])
+
+                _write_order_placed_outbox_event(customer, order, payment_method=payment_method)
+        except Exception:
+            # Same net-zero compensation as _place_order_remote's: nothing
+            # downstream of the reservation has run yet (no payment, no
+            # shipping to unwind), so a reserve/persist failure before the
+            # order.placed event commits only ever has inventory to release.
+            _release_reserved(client, reserved)
+            raise
+
+        return order
+    finally:
+        client.close()
+
+
+def handle_payment_captured(event: dict) -> Order | None:
+    """Saga-listener reaction (r05/ch.23-25) to a `payment.captured` event
+    published by payment-service's own outbox relay (see
+    `examples/05-payment-service/EVENTS.md`) -- driven by
+    `order.management.commands.order_saga_listener`, never called directly
+    from the checkout request. Dispatches shipping IN-PROCESS (shipping
+    extraction is r06's job, not this lane's) and confirms the order on
+    success. On a `ShippingFailed` sentinel, issues a compensating gRPC
+    Release for every line this order reserved at checkout and marks the
+    order `SHIPPING_FAILED` instead.
+
+    Idempotent via a STATUS-TRANSITION GUARD: an order that has already left
+    `PENDING` (because an earlier delivery of this exact event, or of
+    `payment.declined` for the same order, already resolved it) is a no-op --
+    no second shipping dispatch, no second Release, no re-confirm. Kafka's
+    at-least-once delivery (same discipline as `outbox_relay.py`/
+    `order_placed_consumer.py`) makes this guard load-bearing, not
+    decorative.
+
+    KNOWN DEFERRAL (documented, not a bug): a payment that captured and then
+    hits `ShippingFailed` here is NOT refunded -- payment-service exposes no
+    Refund RPC/event yet. That is r06's orchestrated saga's job, once
+    shipping itself is extracted; for now `SHIPPING_FAILED` leaves a captured
+    payment on the books.
+    """
+    order = _get_order_for_saga_event(event, event_type="payment.captured")
+    if order is None or not _is_pending(order, event_type="payment.captured"):
+        return order
+
+    try:
+        shipping_services.dispatch(order, order.shipping_address)
+    except ShippingFailed:
+        _release_order_lines(order)
+        order.ship_fail()
+        order.save(update_fields=["status"])
+        logger.info(
+            "payment.captured order_id=%s shipping dispatch failed -> SHIPPING_FAILED",
+            order.id,
+        )
+        return order
+
+    order.confirm()
+    order.save(update_fields=["status"])
+    logger.info("payment.captured order_id=%s -> CONFIRMED", order.id)
+    return order
+
+
+def handle_payment_declined(event: dict) -> Order | None:
+    """Saga-listener reaction (r05/ch.23-25) to a `payment.declined` event
+    published by payment-service's own outbox relay. Recovers the lines this
+    order reserved at checkout from the persisted `OrderItem` snapshot rows
+    (sku, quantity -- there is no in-memory reservation list to reuse here,
+    unlike the synchronous checkout request that did the original Reserve),
+    issues a compensating gRPC Release for every one of them, and marks the
+    order `PAYMENT_DECLINED`.
+
+    Same status-transition-guard idempotency as `handle_payment_captured`:
+    an order that already left `PENDING` is a no-op, so a redelivered
+    `payment.declined` never double-releases inventory.
+    """
+    order = _get_order_for_saga_event(event, event_type="payment.declined")
+    if order is None or not _is_pending(order, event_type="payment.declined"):
+        return order
+
+    _release_order_lines(order)
+    order.decline_payment()
+    order.save(update_fields=["status"])
+    logger.info("payment.declined order_id=%s -> PAYMENT_DECLINED", order.id)
+    return order
+
+
+def _get_order_for_saga_event(event: dict, event_type: str) -> Order | None:
+    order_id = event.get("orderId")
+    try:
+        return Order.objects.prefetch_related("items").get(pk=order_id)
+    except Order.DoesNotExist:
+        logger.warning("%s for unknown orderId=%s -- ignoring", event_type, order_id)
+        return None
+
+
+def _is_pending(order: Order, event_type: str) -> bool:
+    """The saga-listener idempotency guard: an order that has already left
+    PENDING resolved on an earlier delivery of this (or the other outcome's)
+    event -- redelivery is a no-op, by design, not an error."""
+    if order.status != Order.Status.PENDING:
+        logger.info(
+            "%s redelivered for order_id=%s status=%s -- no-op (status guard)",
+            event_type,
+            order.id,
+            order.status,
+        )
+        return False
+    return True
+
+
+def _release_order_lines(order: Order) -> None:
+    """Compensating gRPC Release for every line THIS order reserved at
+    checkout, recovered from the persisted `OrderItem` snapshot rows (sku,
+    quantity) -- the saga listener runs later, off a Kafka event, in a
+    different call stack than the checkout request that did the original
+    Reserve, so there is no in-memory `reserved` list like
+    `_place_order_remote`'s to reuse.
+
+    `idempotency_key` is a STABLE per-(order, line) key --
+    `f"{order_id}:{sku}:release"` -- so that even if the status guard above
+    were ever bypassed (or inventory-service's Release is retried for any
+    other reason), a repeated Release for the same line is a no-op against
+    inventory-service's own idempotent handling of this field, never a
+    double credit."""
+    client = inventory_client.RemoteInventoryClient()
+    try:
+        for item in order.items.all():
+            idempotency_key = f"{order.id}:{item.sku}:release"
+            try:
+                client.release(item.sku, item.quantity, idempotency_key=idempotency_key)
+            except Exception:
+                logger.exception(
+                    "compensation FAILED for order_id=%s sku=%s qty=%d -- stock NOT restored",
+                    order.id,
+                    item.sku,
+                    item.quantity,
+                )
+    finally:
+        client.close()
+
+
 def _reserve_lines_remote(
     client: inventory_client.RemoteInventoryClient, items: list[dict]
 ) -> tuple[list[dict], list[tuple[str, int]]]:
@@ -237,7 +441,9 @@ def _release_reserved(
             )
 
 
-def _write_order_placed_outbox_event(customer: Customer, order: Order) -> None:
+def _write_order_placed_outbox_event(
+    customer: Customer, order: Order, payment_method: str | None = None
+) -> None:
     """SMELL[ch.17] CURED (r03, smells #5/#6): the outbox write below is the
     ONLY notification-related side effect of checkout -- no synchronous send,
     no dual write to a second system. The frozen `order.placed` contract
@@ -247,20 +453,37 @@ def _write_order_placed_outbox_event(customer: Customer, order: Order) -> None:
     separate process (`common.management.commands.outbox_relay`) publishes
     unpublished rows to Kafka at-least-once; `notification`'s own consumer
     (`notification.management.commands.order_placed_consumer`) repopulates
-    the `Notification` read model from that event."""
-    confirmation_message = f"Order #{order.id} confirmed, total ${order.total_cents / 100:.2f}"
+    the `Notification` read model from that event.
+
+    r05/ch.23-25: `payment_method` is a net-new, OPTIONAL field on this same
+    event -- `_place_order_local`/`_place_order_remote` (synchronous mode)
+    never pass it, so their outbox payload is BYTE-FOR-BYTE unchanged from
+    r04 (zero-regression baseline). `_place_order_choreographed` DOES pass
+    it, so payment-service's own `order.placed` consumer
+    (`examples/05-payment-service/app/schemas.py::OrderPlacedEvent`) knows
+    what to charge. `confirmation_message` likewise reflects the order's
+    ACTUAL status at write time -- CONFIRMED for the synchronous flows (this
+    outbox row is written only after `order.confirm()`), PENDING for the
+    choreographed flow (this row is written before any payment decision
+    exists) -- rather than always claiming "confirmed"."""
+    confirmed = order.status == Order.Status.CONFIRMED
+    verb = "confirmed" if confirmed else "placed"
+    confirmation_message = f"Order #{order.id} {verb}, total ${order.total_cents / 100:.2f}"
+    payload = {
+        "orderId": order.id,
+        "customerId": customer.id,
+        "customerEmail": customer.email,
+        "totalCents": order.total_cents,
+        "confirmationMessage": confirmation_message,
+        "placedAt": datetime.now(tz=UTC).isoformat(),
+    }
+    if payment_method is not None:
+        payload["paymentMethod"] = payment_method
     OutboxEvent.objects.create(
         aggregate_type="order",
         aggregate_id=str(order.id),
         event_type="order.placed",
-        payload={
-            "orderId": order.id,
-            "customerId": customer.id,
-            "customerEmail": customer.email,
-            "totalCents": order.total_cents,
-            "confirmationMessage": confirmation_message,
-            "placedAt": datetime.now(tz=UTC).isoformat(),
-        },
+        payload=payload,
     )
 
 

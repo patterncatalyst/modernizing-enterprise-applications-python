@@ -685,10 +685,187 @@ alternatives. No unexplained drift for ch.18/19.
 
 ---
 
-*Per `build-plan.md` §J, the Payment extraction (ch.23, extraction 4 of 6) —
-a choreographed saga via aiokafka (`order.placed`→`payment.captured`/
-`payment.declined`), and the project's first move from a synchronous `201`
-checkout to an asynchronous `202 PENDING` checkout — is scheduled for r05 in
-this project's renumbered cadence. The next section appended to this file
-should be headed `ch.23 — Payment (r05, extraction 4 of 6)`, following the
+## ch.23 — Payment (r05, extraction 4 of 6)
+
+### The sync→async 201→202 contract change, and how the suite stayed honest
+
+**Source:** `_plans/r05-build-plan.md` (headline decision, DRQ-049) — a
+project-first: every prior extraction (review, notification, inventory)
+changed *who* served a request or *how* data was stored, never the wire
+contract's response code for an existing endpoint. Payment is the first
+extraction that deliberately changes `POST /api/orders`'s success response
+from `201 CONFIRMED` to `202 PENDING`.
+
+**What shipped:** in `PAYMENT_MODE=choreographed`, checkout reserves stock via
+gRPC, persists the order as `PENDING`, writes the `order.placed` outbox row
+(now carrying an additive optional `paymentMethod`, DRQ-050), and returns
+**202** — no in-process capture, no in-process shipping dispatch, no
+in-process confirm. The DRF view derives 202 vs. 201 purely from the
+persisted `OrderStatus`, so there is one code path, not a forked one. In
+`PAYMENT_MODE=synchronous`, checkout is **byte-for-byte unchanged**: 201
+CONFIRMED, in-process capture, zero regression — proven by running the full
+Newman suite against the unmodified synchronous monolith and getting the same
+green result as before r05 touched anything.
+
+**How the equivalence suite stayed honest across the change (DRQ-056):**
+every checkout-scenario POST became tolerant of `201|402|202`, and the
+load-bearing assertion moved from "the POST response says X" to a
+**bounded-wait poll of `GET /api/orders/{id}` to a strict terminal status**
+(reusing the notification folder's `setNextRequest` retry idiom from r03),
+plus strict side-effect assertions (stock delta / net-zero) verified by
+direct DB query, not inferred from HTTP status. Two things keep this
+honest rather than vacuous: (1) the suite was baselined **green against the
+unmodified synchronous monolith first** — the bounded-wait polls resolve on
+their very first attempt there, proving the mechanism isn't just "always
+eventually passes"; (2) a **stuck-PENDING negative** — payment-service/its
+consumer taken down, so an order can never leave `PENDING` — drives the
+bounded wait to exhaustion and fails **RED, exit 1, in ~15.1s**, not a hang
+and not a false green. A bounded-wait suite that cannot fail isn't actually
+asserting anything; this is the concrete proof that it can.
+
+**Verdict:** CLEAN — the contract change is named and user-approved (fixed,
+DRQ-049), the suite's shape change is deliberate and documented (DRQ-056),
+and both the positive baseline and the negative failure mode are
+demonstrated, not asserted.
+
+### Choreographed topology (contrast with r06's planned orchestration)
+
+**Source:** `_plans/r05-build-plan.md` (DRQ-050, DRQ-008) — the choreographed
+half of the project's saga stack-substitution mapping; `_plans/decisions.md`
+DRQ-007 names the *other* half (r06's orchestrated shipping saga, reusing the
+CNDP Python DB-backed orchestrator) as the deliberate contrast point.
+
+**What shipped:** no orchestration engine, no central saga coordinator —
+`examples/05-payment-service/` (:8085) is an aiokafka consumer of
+`order.placed` that captures/declines and publishes `payment.captured`/
+`payment.declined` from its own outbox; the monolith's new
+`order_saga_listener` management command (group `monolith-order-saga`,
+DRQ-053) is a second, independent aiokafka consumer that reacts to those
+events with its own local state-transition logic. Each side only knows the
+event contract, not the other side's internal state — the defining property
+of choreography versus orchestration.
+
+**Named divergence (none from plan):** the topology shipped exactly as
+designed in `_plans/r05-build-plan.md`'s S5/S3 lanes — no deviation surfaced
+during the build that required a new decision.
+
+**Verdict:** CLEAN — the choreographed shape is real (two independent
+reactive consumers, no coordinator), and its deliberate contrast with r06's
+upcoming orchestrated shipping saga is named up front rather than discovered
+after the fact.
+
+### Idempotent compensation, closing DRQ-043
+
+**Source:** `_plans/decisions.md` DRQ-043 (r04) explicitly deferred
+"idempotency of `Release` and over-restore protection" to "the saga chapters
+(ch.23/24)" — this section is where that deferred debt is paid off, recorded
+now as DRQ-052.
+
+**What shipped:** an `idempotency_key` field added to `inventory.proto`'s
+`ReleaseRequest` (stubs regenerated both sides, `scripts/check-proto-drift.sh`
+still green), checked against a new `inventory.compensations` ledger
+(`UNIQUE` constraint, `ON CONFLICT DO NOTHING`) inside the inventory-service's
+`Release` handler — a repeated `Release` with the same key is a database-level
+no-op, not a second increment. A **client-side status-transition guard** was
+added to `order_saga_listener` as defense-in-depth (it won't reprocess an
+order already past the relevant status), but the **server-side ledger is the
+real correctness guarantee** for the crash window the client guard cannot
+see: `Release` succeeds, the status commit fails, redelivery retries. This
+was proven, not just argued — a forced double-delivery test showed the saga
+listener's guard catching the common case *and* the ledger catching the
+crash-window case, with stock observed net-zero (**94→94**) after the
+replay.
+
+**Verdict:** CLEAN — closes an explicitly-named prior deferral (DRQ-043) at
+the exact chapter the deferral pointed to, double-delivery is demonstrated at
+both layers rather than asserted at one, and the over-restore protection
+DRQ-043 flagged as missing is now mechanically impossible (ledger-enforced),
+not just less likely.
+
+### Shipping-fail Option A, and the honestly-deferred refund gap
+
+**Source:** `_plans/r05-build-plan.md`'s USER-GATE DECISION (DRQ-054) — the
+one A/B choice put to the user this iteration.
+
+**What shipped:** shipping dispatch moved into the `payment.captured` saga
+reaction (dispatched *after* capture, not before, avoiding a ship-before-pay
+ordering smell); a shipping failure triggers a compensating gRPC `Release`
+(idempotency-key-bearing, see above) and a new terminal `OrderStatus.
+SHIPPING_FAILED` (a `TextChoices` addition, no DB migration). Scenario 4
+converts to async: checkout POST tolerant of 202 (no longer 422 at checkout
+time), bounded-wait to `SHIPPING_FAILED`, net-zero stock verified by direct
+DB query.
+
+**Named, un-silenced gap:** the payment that was already captured before
+shipping failed is **not refunded** — a second compensation hop (a payment
+refund, not just an inventory release) that this iteration deliberately does
+not build. This is recorded here exactly as `_plans/r05-build-plan.md` framed
+it: Option A was chosen *because* it turns shipping into a real saga step
+that r06's orchestrated saga can extend to include the refund hop, rather
+than solving the whole compensation chain in one iteration. Option B (reject­
+ed) would have kept shipping synchronous and byte-for-byte, but would have
+reintroduced a ship-before-pay smell inside the very chapter curing checkout's
+ACID coupling, and would never have made shipping a saga step at all.
+
+**Verdict:** CLEAN — the gap is named, scoped, and forward-referenced to a
+specific future iteration with a specific mechanism (r06's orchestrator) to
+close it, not left as an implicit todo.
+
+### Two cutover dimensions, zero-regression synchronous mode
+
+**Source:** the r04 precedent of two independent cutover flags
+(`STRANGLER_INVENTORY_ENABLED` + `INVENTORY_MODE`, DRQ-047) extended to
+payment (DRQ-055): proxy `STRANGLER_PAYMENT_ENABLED` routes `/api/payments`
+reads to `:8085`; monolith `PAYMENT_MODE=synchronous|choreographed` selects
+checkout's capture behavior. As with inventory, the two flags are moved
+together in the cutover runbook and in CI; a mixed state is unsupported.
+
+**Zero-regression claim, verified not asserted:** with `PAYMENT_MODE=
+synchronous`, the full Newman suite runs byte-for-byte green against the
+unmodified checkout path — the new choreographed machinery (payment-service,
+`order_saga_listener`, the idempotent `Release` path) sits entirely dormant
+when the flag is off, so introducing it carries no regression risk for
+readers who haven't cut over yet.
+
+**Verdict:** CLEAN — extends an established two-flag pattern consistently
+rather than inventing a third flag shape; the zero-regression claim is
+demonstrated by a full green suite run in the pre-cutover configuration, not
+merely argued from the code's structure.
+
+### Green evidence summary
+
+| Check | Result |
+|---|---|
+| Scenario 1 (happy path), choreographed | 202 → bounded-wait → CONFIRMED, attempt 2 of 20 |
+| Scenario 3 (card decline), choreographed | 202 → bounded-wait → PAYMENT_DECLINED, stock net-zero |
+| Scenario 4 (ship-fail), choreographed, Option A | 202 → bounded-wait → SHIPPING_FAILED, stock net-zero |
+| Reversibility (`PAYMENT_MODE=synchronous`) | full suite green, byte-for-byte |
+| Stuck-PENDING negative (consumer down) | RED, exit 1, ~15.1s — not a hang |
+| Double-delivery idempotency (forced redelivery) | saga-listener guard + inventory ledger both catch it; stock 94→94 |
+| `payment-equivalence-gate` (CI) | green, wired into `code-ci-ok` |
+
+### Verdicts summary
+
+CLEAN across every artifact in this section. One DRQ gate was put to the user
+at r05 — shipping-fail Option A vs. Option B (DRQ-054) — resolved in favor of
+the planner's recommended Option A; every other r05 decision (the 201→202
+contract change itself, DRQ-049; the choreographed topology, DRQ-050; the
+payment-service shape, DRQ-051; idempotent compensation, DRQ-052; the saga
+reaction location, DRQ-053; the two cutover dimensions, DRQ-055; the suite
+conversion, DRQ-056; the chapter scope, DRQ-057; no new pins, DRQ-058) was
+settled by the Phase-1 planner as a synthesis default or as the plan's own
+stated headline. No unexplained drift for ch.20/22/23.
+
+---
+
+*Per `build-plan.md` §J, the Shipping extraction (ch.24, extraction 5 of 6)
+— an **orchestrated saga**, the deliberate contrast with r05's choreographed
+payment saga, reusing the CNDP Python DB-backed saga orchestrator
+(`~/Dev/cloud-native-design-patterns/examples/17-sagas/python/`, DRQ-007) —
+is scheduled for r06 in this project's renumbered cadence. r06 should also
+close the stranded-payment refund gap honestly deferred at DRQ-054 above
+(shipping-fail Option A captures payment but does not refund it on ship-fail;
+the orchestrator's compensation chain is the natural place to add that
+second hop). The next section appended to this file should be headed
+`ch.24 — Shipping (r06, extraction 5 of 6)`, following the
 per-extraction-reconcile shape above.*

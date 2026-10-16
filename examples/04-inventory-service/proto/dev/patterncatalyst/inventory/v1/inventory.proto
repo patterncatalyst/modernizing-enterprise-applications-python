@@ -37,7 +37,9 @@ service InventoryGrpcService {
   // Compensating re-increment: once the decrement lives in this service's
   // own DB, the monolith's local transaction can no longer roll it back on
   // a later payment decline. The monolith calls Release to restore the
-  // observable baseline.
+  // observable baseline. Idempotent when `idempotency_key` is set (DRQ-043):
+  // a retried Release carrying the SAME key is a no-op, so the payment saga
+  // can safely retry this call at least once.
   rpc Release (ReleaseRequest) returns (ReserveReply);
 
   // Full read of one sku's current stock record -- the content-enricher
@@ -59,6 +61,15 @@ message ReserveRequest {
 message ReleaseRequest {
   string stock_keeping_unit = 1;
   int32 requested_qty = 2;
+
+  // DRQ-043, IDEMPOTENT-COMPENSATION lane: an opaque key the caller (the
+  // payment saga) generates once per logical compensation and resends
+  // unchanged on every retry of the SAME Release. A retried call carrying
+  // the SAME key is a no-op (returns the current stock, does not
+  // re-increment); unset/empty falls back to the original unconditional,
+  // non-idempotent re-increment for backward compatibility with callers
+  // that predate this field.
+  string idempotency_key = 3;
 }
 
 message GetStockRequest {

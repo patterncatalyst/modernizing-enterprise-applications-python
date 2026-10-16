@@ -10,10 +10,11 @@ SQLAlchemy Core's `Update` construct, same single-statement shape.
 
 from __future__ import annotations
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import InventoryItem
+from app.models import Compensation, InventoryItem
 
 
 async def list_all(session: AsyncSession) -> list[InventoryItem]:
@@ -65,32 +66,94 @@ async def reserve(session: AsyncSession, sku: str, qty: int) -> int:
     return result.rowcount
 
 
-async def release(session: AsyncSession, sku: str, qty: int) -> int:
-    """Compensating re-increment (DRQ-042 -- a deliberate first taste of
-    saga, forward-ref ch.23). `UPDATE ... SET quantity_on_hand =
-    quantity_on_hand + :qty WHERE sku = :sku`, UNCONDITIONAL (no upper-bound
-    check). Returns the rows-affected count: 1 if the sku existed and was
-    restored, 0 if the sku is unknown.
+async def release(session: AsyncSession, sku: str, qty: int, idempotency_key: str = "") -> bool:
+    """Compensating re-increment (DRQ-042, now made idempotent by DRQ-043 --
+    the IDEMPOTENT-COMPENSATION lane -- so the payment saga can safely retry
+    this call).
 
-    Idempotency / at-least-once consideration (an honest limitation,
-    documented rather than silently built around -- NOT speculative saga
-    infrastructure, which is explicitly out of scope here): unlike
-    `reserve`'s conditional `UPDATE`, this increment carries no dedupe/
-    idempotency key. A retried `Release` call whose effect already landed
-    server-side would over-restore stock. A full fix -- an idempotency key
-    per reservation/compensation, or a saga ledger -- is deliberately
-    deferred to a later choreographed-saga chapter; see
-    `app/grpc_server.py::InventoryGrpcServiceServicer.Release`'s docstring
-    for this deferral's record.
+    When `idempotency_key` is NON-EMPTY, the re-increment is applied AT MOST
+    ONCE per key, in ONE transaction:
+
+      1. `INSERT INTO inventory.compensations (...) ON CONFLICT
+         (idempotency_key) DO NOTHING RETURNING id` -- a SINGLE statement,
+         NOT a `SELECT` followed by an `INSERT` (which would race under
+         concurrent identical-key callers, the exact bug class `reserve`'s
+         conditional `UPDATE` already avoids for the decrement side). The
+         unique index on `idempotency_key`
+         (`migrations/versions/0003_create_compensations_table.py`) is the
+         arbiter: Postgres serializes concurrent inserts targeting the same
+         key, so of two racing identical-key `Release` calls, exactly one
+         gets a row back from this `INSERT` and goes on to step 2; the other
+         sees no row (conflict) and short-circuits as a no-op.
+      2. ONLY if step 1 actually inserted a new row: the same unconditional
+         `UPDATE ... SET quantity_on_hand = quantity_on_hand + :qty WHERE
+         sku = :sku` as the backward-compat path below.
+
+    Both statements commit together as one unit of work, so a crash between
+    them can never leave a ledger entry with no matching stock mutation (or
+    vice versa) -- see `app/grpc_server.py::InventoryGrpcServiceServicer
+    .Release` for the one-session-per-call wiring this relies on.
+
+    Returns True if stock was restored THIS call, or a prior `Release` under
+    the SAME key already restored it (an idempotent no-op is a logical
+    success, not a failure); False if the sku is unknown and this is the
+    first time this key is seen (nothing to compensate, and in that case
+    nothing is recorded either).
+
+    Honest, documented edge case (not engineered around -- see
+    `feedback_scope_discipline`): an unknown sku's FIRST call under a given
+    key still inserts a ledger row, because the dedupe check can't know the
+    `sku` lookup will fail without a second round trip that would reopen the
+    exact race this design avoids. A retried identical-key call against that
+    SAME unknown sku would then report a no-op `True` instead of repeating
+    `False`. `Release` against an unknown sku is already a degenerate path
+    outside the saga's happy path -- the monolith only calls `Release` for a
+    sku a prior `Reserve` already proved exists.
+
+    Backward compatibility: an EMPTY/absent `idempotency_key` (the proto3
+    default for a caller that predates this field) falls back to the
+    ORIGINAL unconditional, non-deduped re-increment below -- no ledger row
+    at all. New callers (the payment saga) should always pass a key.
     """
-    stmt = (
+    if not idempotency_key:
+        stmt = (
+            update(InventoryItem)
+            .where(InventoryItem.sku == sku)
+            .values(quantity_on_hand=InventoryItem.quantity_on_hand + qty)
+        )
+        result = await session.execute(stmt)
+        await session.commit()
+        return result.rowcount == 1
+
+    insert_ledger_stmt = (
+        pg_insert(Compensation)
+        .values(
+            idempotency_key=idempotency_key,
+            order_id=None,
+            sku=sku,
+            kind="RELEASE",
+            applied_at=func.now(),
+        )
+        .on_conflict_do_nothing(index_elements=["idempotency_key"])
+        .returning(Compensation.id)
+    )
+    newly_recorded = (
+        await session.execute(insert_ledger_stmt)
+    ).scalar_one_or_none() is not None
+
+    if not newly_recorded:
+        # Same key already compensated -- NO-OP, do not re-increment again.
+        await session.commit()
+        return True
+
+    update_stmt = (
         update(InventoryItem)
         .where(InventoryItem.sku == sku)
         .values(quantity_on_hand=InventoryItem.quantity_on_hand + qty)
     )
-    result = await session.execute(stmt)
+    result = await session.execute(update_stmt)
     await session.commit()
-    return result.rowcount
+    return result.rowcount == 1
 
 
 async def get_stock(session: AsyncSession, sku: str) -> InventoryItem | None:
