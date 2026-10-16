@@ -1541,6 +1541,187 @@
       ]
     },
     {
+      "name": "Order Context Contract",
+      "item": [
+        {
+          "name": "O1. Checkout for the order contract -> 201 or 202 Accepted",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"items\": [ { \"sku\": \"SKU-WIDGET-001\", \"quantity\": 1 } ],\n  \"paymentMethod\": \"CARD-VISA\",\n  \"shippingAddress\": \"1 Order Contract Way, Testville\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// r07 NEWMAN-BASELINE: the FINAL monolith-anchored baseline for the",
+                  "// order context -- the order-service + GraphQL gateway extraction",
+                  "// happens in a LATER lane. Same inert-by-default guard pattern as the",
+                  "// Inventory/Payment/Shipping Context Contract folders (see README.md):",
+                  "// test-script-level only, no setNextRequest, so this non-terminal",
+                  "// folder can never strand the Notification Context Contract folder",
+                  "// that follows it. The request itself is a plain checkout -- the same",
+                  "// kind of request Scenario 1/N1 already fire unconditionally on every",
+                  "// run, flag or no flag -- so firing it here too cannot break an",
+                  "// existing run.",
+                  "if (pm.environment.get('orderContractEnabled') !== 'true') {",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Order creation returns 201 (synchronous) or 202 (choreographed)', function () {",
+                  "    pm.expect([201, 202]).to.include(pm.response.code);",
+                  "});",
+                  "pm.test('Content-Type is application/json', function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Location header present and references the created order', function () {",
+                  "    pm.expect(pm.response.headers.has('Location')).to.be.true;",
+                  "    pm.expect(pm.response.headers.get('Location')).to.eql('/api/orders/' + json.id);",
+                  "});",
+                  "pm.test('Order id is a number', function () {",
+                  "    pm.expect(json.id).to.be.a('number');",
+                  "});",
+                  "pm.collectionVariables.set('orderContractOrderId', String(json.id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "O2. Get the created order by id -> 200, read-model shape (camelCase)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderContractOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{orderContractOrderId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Same inert-by-default guard as O1 -- see README.md.",
+                  "if (pm.environment.get('orderContractEnabled') !== 'true') {",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Order lookup returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Returned order id matches the created id', function () {",
+                  "    pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('orderContractOrderId')));",
+                  "});",
+                  "pm.test('Read-model shape is camelCase: id, customerId, status, totalCents, createdAt, shippingAddress, items', function () {",
+                  "    pm.expect(json).to.have.all.keys('id', 'customerId', 'status', 'totalCents', 'createdAt', 'shippingAddress', 'items');",
+                  "});",
+                  "pm.test('Items are camelCase: sku, quantity, unitPriceCents', function () {",
+                  "    pm.expect(json.items).to.be.an('array');",
+                  "    pm.expect(json.items.length).to.be.at.least(1);",
+                  "    json.items.forEach(function (item) {",
+                  "        pm.expect(item).to.have.all.keys('sku', 'quantity', 'unitPriceCents');",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "O3. List all orders -> 200, array",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Same inert-by-default guard as O1 -- see README.md.",
+                  "if (pm.environment.get('orderContractEnabled') !== 'true') {",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Order list returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Response is an array containing the order created by O1', function () {",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    var ids = json.map(function (o) { return o.id; });",
+                  "    pm.expect(ids).to.include(Number(pm.collectionVariables.get('orderContractOrderId')));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "O4. Get unknown order id -> 404, uniform error body",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/999999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "999999999"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Same inert-by-default guard as O1 -- see README.md.",
+                  "if (pm.environment.get('orderContractEnabled') !== 'true') {",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Unknown order id returns 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Uniform error body: error/message/timestamp present', function () {",
+                  "    pm.expect(json.error).to.not.be.undefined;",
+                  "    pm.expect(json.message).to.not.be.undefined;",
+                  "    pm.expect(json.timestamp).to.not.be.undefined;",
+                  "});",
+                  "pm.test('Documented error contract: error=NOT_FOUND', function () {",
+                  "    pm.expect(json.error).to.eql('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Notification Context Contract",
       "item": [
         {
@@ -1774,6 +1955,102 @@
           ]
         }
       ]
+    },
+    {
+      "name": "GraphQL Gateway Contract",
+      "item": [
+        {
+          "name": "G1. Query order via GraphQL gateway -> 200, aggregated shape",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"{ order(id: {{orderContractOrderId}}) { id status totalCents items { sku stock { onHandQty } reviews { rating } } payments { status } shipments { status } } }\"\n}"
+            },
+            "url": {
+              "raw": "{{graphqlUrl}}/graphql",
+              "host": ["{{graphqlUrl}}"],
+              "path": ["graphql"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// LIVE as of r07's decommission lane (previously STAGED/inert in the",
+                  "// r07 NEWMAN-BASELINE lane, before examples/07-order-service and",
+                  "// examples/08-graphql-gateway existed). The guard mechanism is",
+                  "// unchanged: this is the collection's LAST folder, so ending the run",
+                  "// here when the guard isn't set leaves every existing folder's own",
+                  "// pass/fail outcome untouched, same idiom as the Notification Context",
+                  "// Contract folder's own N1/N2 guard. A pre-request script cannot skip",
+                  "// the CURRENT request's send, only choose what runs NEXT, so this",
+                  "// folder is placed terminal specifically so the guard can stop the run",
+                  "// BEFORE this item is ever reached when the gateway isn't part of the",
+                  "// topology being exercised (e.g. the r07 STEP A reversibility proofs,",
+                  "// which don't bring the gateway up at all) -- rather than firing a",
+                  "// request against a dead :8090 and turning a connection refusal into a",
+                  "// spurious request-level failure.",
+                  "if (pm.environment.get('graphqlContractEnabled') !== 'true') {",
+                  "    postman.setNextRequest(null);",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Defense-in-depth, same shape as Notification's own test-script guard:",
+                  "// no-op if this item is ever reached directly (e.g. --folder) without",
+                  "// the flag set.",
+                  "if (pm.environment.get('graphqlContractEnabled') !== 'true') {",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('GraphQL query returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('No GraphQL errors (schema-valid query, order resolves)', function () {",
+                  "    pm.expect(json.errors, JSON.stringify(json.errors)).to.be.undefined;",
+                  "});",
+                  "var order = json.data && json.data.order;",
+                  "// NOTE: `reviews` is federated PER-ITEM (app/schema.py::OrderItemView.reviews),",
+                  "// not a top-level OrderView field -- a review is posted against a sku,",
+                  "// not an order. The original STAGED draft of this query/assertion",
+                  "// (written before the gateway existed) guessed a top-level `order.reviews`",
+                  "// and `stock { quantityOnHand }`; both were corrected against the REAL",
+                  "// schema (`onHandQty`, items[].reviews) once 08-graphql-gateway landed.",
+                  "pm.test('Aggregated order shape present: id, status, totalCents, items, payments, shipments', function () {",
+                  "    pm.expect(order).to.not.be.undefined;",
+                  "    pm.expect(order).to.have.all.keys('id', 'status', 'totalCents', 'items', 'payments', 'shipments');",
+                  "});",
+                  "pm.test('Items carry nested inventory stock and per-sku reviews', function () {",
+                  "    order.items.forEach(function (item) {",
+                  "        pm.expect(item).to.have.all.keys('sku', 'stock', 'reviews');",
+                  "        pm.expect(item.stock).to.have.property('onHandQty');",
+                  "        pm.expect(item.reviews).to.be.an('array');",
+                  "    });",
+                  "});",
+                  "pm.test('Payments carry status', function () {",
+                  "    order.payments.forEach(function (p) { pm.expect(p).to.have.property('status'); });",
+                  "});",
+                  "pm.test('Shipments carry status', function () {",
+                  "    order.shipments.forEach(function (s) { pm.expect(s).to.have.property('status'); });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "event": [
@@ -1787,7 +2064,7 @@
     }
   ],
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8000", "type": "string" },
+    { "key": "baseUrl", "value": "http://localhost:8888", "type": "string" },
     { "key": "happyPathOrderId", "value": "", "type": "string" },
     { "key": "happyPathPollAttempt", "value": "0", "type": "string" },
     { "key": "widgetStockBeforeHappyPath", "value": "", "type": "string" },
@@ -1813,6 +2090,8 @@
     { "key": "seededReviewId", "value": "", "type": "string" },
     { "key": "newReviewId", "value": "", "type": "string" },
     { "key": "paymentId", "value": "", "type": "string" },
+    { "key": "orderContractOrderId", "value": "", "type": "string" },
+    { "key": "graphqlUrl", "value": "http://localhost:8090", "type": "string" },
     { "key": "notificationCustomerId", "value": "", "type": "string" },
     { "key": "notificationOrderId", "value": "", "type": "string" },
     { "key": "notificationOrderPollAttempt", "value": "0", "type": "string" },

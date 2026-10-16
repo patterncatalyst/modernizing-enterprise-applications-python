@@ -56,8 +56,12 @@ uv run pytest -m integration         # Testcontainers-managed Kafka + Postgres, 
 `DATABASE_URL` (same convention as every other service in this project,
 default `postgresql://monolith:monolith@localhost:5432/monolith`) is
 normalized onto the asyncpg driver scheme by `app/db.py::resolve_database_url`.
-`KAFKA_BOOTSTRAP_SERVERS` defaults to `localhost:9092`. `MONOLITH_BASE_URL`
-defaults to `http://localhost:8000` -- the `enrich` step's target. All
+`KAFKA_BOOTSTRAP_SERVERS` defaults to `localhost:9092`. `ORDER_BASE_URL`
+defaults to `http://localhost:8088` -- the `enrich` step's target (r07
+re-point; order-service's `order_view` serves the same `shippingAddress`
+field the monolith used to). `MONOLITH_BASE_URL` (default
+`http://localhost:8000`) is kept as a documented, operator-only fallback --
+see `app/config.py`'s module docstring -- but is not read by `enrich()`. All
 settings are read via `app/config.py::Settings.from_env()`.
 
 ## Structure
@@ -90,7 +94,8 @@ settings are read via `app/config.py::Settings.from_env()`.
   persisted `context` by the orchestrator.
 - `app/enrich_client.py` -- the `enrich` step's HTTP client: `httpx` +
   `tenacity` retry-with-timeout around `GET
-  {MONOLITH_BASE_URL}/api/orders/{orderId}`, reading back `shippingAddress`.
+  {ORDER_BASE_URL}/api/orders/{orderId}`, reading back `shippingAddress`
+  (r07 re-point, from order-service's `order_view` -- see `app/config.py`).
 - `app/relay.py` -- `OutboxRelay`, an `aiokafka` producer lifecycle wrapper
   polling `shipping.outbox` on a background task, publishing to
   `shipment.dispatched`/`shipment.failed` per row's `event_type`, keyed by

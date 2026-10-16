@@ -11,6 +11,42 @@ Python sibling of
 (Java/Spring Boot), built to that project's *original* schema/seed/smell
 intent.
 
+## FROZEN STATUS (r07) — decommissioned from the running topology
+
+As of r07, every bounded context this monolith ever owned has an extracted,
+independently deployable sibling: review (`02-review-service`), notification
+(`03-notification-service`), inventory (`04-inventory-service`), payment
+(`05-payment-service`), shipping (`06-shipping-service`), and — the last and
+hardest, order (`07-order-service`, CQRS). The strangler proxy
+(`01-strangler-proxy`) is now a **flagless edge router**: every `/api/*`
+prefix routes unconditionally to its one owning service; there is no
+monolith fallback left in `_select_backend()`, and an unmatched path is a
+real `404`. `compose.yaml`, `scripts/`, and `demos/` no longer start this
+monolith, its `outbox_relay`, `order_placed_consumer`, or
+`order_saga_listener` management commands as part of the live topology.
+
+**This module is PRESERVED, not deleted.** It stays in-repo as:
+
+1. The **golden-baseline referent** — the "before" picture every one of the
+   six extractions was held equivalent to, one seam at a time
+   (`tooling/newman/GOLDEN-BASELINE.md`, `GOLDEN-BASELINE-r07.md`).
+2. A **break-glass fallback** — the code still runs (`uv sync && uv run
+   python manage.py migrate && ... runserver`) against the same Postgres
+   instance, for a learner (or an operator in a genuine incident) who wants
+   to stand the "before" system back up and compare it directly to the
+   "after" mesh. It is not part of CI's steady-state gate and not started by
+   any `scripts/`/`demos/` script anymore.
+3. The **learner reference branch**: `reference/monolith-before` (+ the
+   `v0-monolith` and `stage/NN` tags cut before this decommission) preserves
+   the pristine, pre-extraction monolith exactly as it stood before any
+   seam was cut, independent of this frozen-in-main copy.
+
+Decommissioning this module is the ONE deliberate irreversible move in this
+project's whole strangler-fig arc — see `examples/01-strangler-proxy/CUTOVER.md`'s
+"Order seam (r07)" section for the reversibility proof recorded immediately
+before this cut, and `SMELLS.md` for the two smells (#1 god checkout service,
+#2 the one-ACID-transaction) this decommission finally strikes.
+
 ## Six deliberate smells
 
 Every smell below is intentional -- see [`SMELLS.md`](./SMELLS.md) for the full

@@ -1,0 +1,57 @@
+[project]
+name = "mea-graphql-gateway"
+version = "0.1.0"
+description = "Modernizing Enterprise Applications (Python) -- r08, the finale's GraphQL lane: a Strawberry data-less aggregation gateway on :8090, its OWN front door (never routed through the strangler proxy). The single `order(id)` query federates reads across every already-extracted service -- order (REST :8088), payment (REST :8085), shipping (REST :8087), review (REST :8001), and per-item stock from inventory (gRPC :9004) -- into one stitched response. Owns no database, no migrations, no write path. Query depth/complexity are bounded (Strawberry's QueryDepthLimiter + MaxTokensLimiter); a failing downstream nulls only its own field plus a GraphQL errors[] entry, never a whole-query 500."
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi==0.143.2",
+    "uvicorn[standard]==0.54.0",
+    "strawberry-graphql==0.335.0",
+    "httpx==0.28.1",
+    "grpcio==1.84.0",
+    "protobuf==7.36.2",
+    "pydantic==2.14.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "ruff==0.17.1",
+    "testcontainers==4.15.0",
+    "grpcio-tools==1.84.0",
+]
+
+[tool.pytest.ini_options]
+python_files = ["test_*.py"]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# B008 (function call in argument default) is a false positive for FastAPI's
+# `Depends(...)` pattern -- same suppression as every other FastAPI service
+# in this project (even though this gateway has no REST write routes of its
+# own, GraphQLRouter wiring in app/main.py follows the same FastAPI idiom).
+ignore = ["B008"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.lint.per-file-ignores]
+# Generated protobuf/gRPC stubs -- vendored from the canonical
+# `04-inventory-service/proto/.../inventory.proto` via `scripts/gen-proto.sh`'s
+# conventions (this service generates its OWN copy into app/grpc_gen/, kept
+# self-contained rather than importing the inventory service's stubs
+# cross-project); not ours to lint.
+"app/grpc_gen/*.py" = ["E", "F", "I", "UP", "B"]
+
+[tool.uv]
+# A standalone FastAPI + Strawberry GraphQL gateway, not a distributable
+# library -- don't build/install it as a package into its own virtualenv.
+package = false

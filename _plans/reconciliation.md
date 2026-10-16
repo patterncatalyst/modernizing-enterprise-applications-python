@@ -1075,15 +1075,329 @@ No unexplained drift for ch.24/25.
 
 ---
 
-*Per `build-plan.md` §J, the Order + GraphQL Gateway extraction (ch.26,
-extraction 6 of 6) is scheduled for r07 in this project's renumbered
-cadence — the **last and hardest extraction**: the core aggregate, extracted
-last, decommissions the monolith (the strangler fig completes) and
-introduces the Strawberry GraphQL gateway as the CQRS read-aggregation
-surface over the now-fully-decomposed services. r07 also authors **ch.21
-(Event Sourcing & CQRS)**, deferred from r05 (DRQ-057) specifically because
-the order/gateway extraction is the first place a CQRS read model is
-load-bearing (per the §C matrix) rather than merely illustrative. The next
-section appended to this file should be headed `ch.21/26 — Order + GraphQL
-Gateway (r07, extraction 6 of 6)`, following the per-extraction-reconcile
-shape above.*
+## ch.21/26 — Order + GraphQL Gateway (r07, extraction 6 of 6) — THE FINALE
+
+### CQRS: same-DB read model, same-transaction projection
+
+**Source:** `_plans/r07-build-plan.md`'s user-approved recommendations #1
+and #2 (DRQ-072), authoring ch.21 (Event Sourcing & CQRS) deferred from r05
+specifically to have a load-bearing anchor (DRQ-057).
+
+**What shipped:** `examples/07-order-service/` (:8088) is CQRS from day
+one — a normalized write aggregate (`orders`/`order_items`, plus `outbox`
+and the owned `customers` table) and a denormalized `order_view` read
+table. Every write path (`create_order_with_outbox_and_view`,
+`transition_order_status_with_view`) upserts `order_view` inside the SAME
+local transaction as the aggregate mutation it pairs with — never a second,
+asynchronously-lagging source of truth. `app/routes.py`'s `GET` handlers
+read `order_view` exclusively; the write tables are never queried for a
+response. `rebuild_order_view` proves the projection is mechanically
+rebuildable from the aggregate, not an independently-maintained shadow
+copy.
+
+**Reconciliation finding — the projection-disabled negative.** The suite's
+honesty requirement (established at DRQ-056/DRQ-063's stuck-status
+negatives) needed a CQRS-specific failure mode: a stale read model, not a
+stuck write-side status. Commenting out the `order_view` upsert call in
+`transition_order_status_with_view` (aggregate still transitions correctly;
+only the read-side projection stops syncing) and re-running Scenario 1
+alone produced a clean, bounded-wait RED: `GET /api/orders/{id}` exhausted
+its full 40-attempt budget still reporting `PENDING` while the aggregate had
+genuinely reached `CONFIRMED` — 1/53 assertions failed, newman exit 1.
+Restoring the line and re-running returned a clean 0-failed pass. This is
+the proof that `order_view` has no fallback path to the write tables; a
+bounded-wait suite that can't catch a stale read isn't actually testing the
+CQRS contract.
+
+**Verdict:** CLEAN — the same-transaction design choice is demonstrated, not
+merely argued: the projection-disabled negative is the concrete evidence
+that read-your-writes depends on the projection actually running.
+
+### Lifting the four saga reactions (preserving r05/r06 behavior)
+
+**Source:** the monolith's `order/management/commands/order_saga_listener.py`
+(DRQ-053/DRQ-061/DRQ-063), the project's own prior artifact — not an
+external reuse.
+
+**What shipped:** `app/consumer.py` lifts the same four-stage reaction table
+(`payment.captured`→`AWAITING_SHIPMENT`, `payment.declined`→
+`PAYMENT_DECLINED` + compensating Release, `shipment.dispatched`→
+`CONFIRMED`, `shipment.failed`→`SHIPPING_FAILED` + compensating Release)
+into order-service's own `aiokafka` consumer (group `order-service`), with
+every transition an atomic conditional `UPDATE ... WHERE status = <expected>`
+(idempotent, extending the DRQ-066 status-guard pattern) and every
+compensating `Release` carrying a stable `{order_id}:{sku}:release`
+idempotency key (extending DRQ-052's ledger-based guarantee to this side of
+the gRPC seam). The refund-on-ship-fail behavior closed at DRQ-064 is
+**preserved unchanged** — order-service's own `handle_shipment_failed` only
+releases inventory and transitions status (by design, documented in its own
+docstring as a "KNOWN DEFERRAL"); the refund itself still fires from
+`05-payment-service`'s independent `shipment.failed` consumer, reacting to
+the identical event. No regression: a captured-then-failed order is still
+refunded exactly once, by the same service that always owned that
+responsibility.
+
+**Named divergence:** none structural — this is a same-project relocation
+(monolith Django management command → order-service's own FastAPI/aiokafka
+consumer), not an external adaptation; the reaction table, guards, and
+compensation targets are unchanged.
+
+**Verdict:** CLEAN — unit-level guard re-assertion plus the live contract
+suite (Scenario 3/4 and the forced-redelivery negatives below) confirm the
+lift regressed nothing.
+
+### Customer FK → snapshot, and the order-service-seeds-customers divergence from Java
+
+**Source:** `00-monolith/order/models.py::Order.customer` (a hard FK into
+the shared `common.Customer` table, SMELL[ch.18]) and the inventory
+extraction's own FK→snapshot precedent (DRQ-046).
+
+**What shipped:** order-service owns a forward-filled copy of the
+customer table (`order_svc.customers`, migrated and seeded via
+`migrations/versions/0002_seed_customers.py` with the same Ada/Grace rows
+the monolith's seed creates); `orders.customer_id` is a real FK into this
+OWNED table, never a live cross-service reference, and `orders.customer_email`
+is additionally captured as its own point-in-time snapshot so a later email
+change never rewrites a historical order's outbox payload (DRQ-073).
+
+**Named divergence from the Java sibling, recorded deliberately:** the
+Python order-service **seeds** its own customer rows; the Java sibling's
+`08-order-service` ships **no demo seed** of its own, because in the Java
+book customer data remained monolith-shared-schema even after
+decommission. The Python sibling instead makes order-service the genuine
+owner of customer master data once the monolith is frozen off — a
+from-scratch Python order-service has to be able to stand up and seed
+itself with no live monolith left to read from, which the Java topology
+never required of its own order-service. This is a real behavioral
+difference between the two sibling books' end states, not an oversight —
+recorded at DRQ-073.
+
+**Verdict:** CLEAN adaptation, with the seed divergence named and traced to
+DRQ-073 rather than left as a silent gap against the Java sibling.
+
+### The data-less GraphQL gateway, and partial-failure handling
+
+**Source:** the house Strawberry aggregation style in
+`~/Dev/datamesh-reference-arch-python/examples/lgtm-datamesh/services/
+graphql-gateway` and the role played by the Java/Quarkus sibling's own
+`examples/08-graphql-gateway` (SmallRye GraphQL) — re-authored on
+Strawberry, not ported line-for-line (DRQ-074, user rec #3).
+
+**What shipped:** `examples/08-graphql-gateway/` (:8090) owns no data; it
+answers `Query.order(id)` by federating order-service (REST), payment-
+service (REST), shipping-service (REST), review-service (REST), and
+inventory-service (gRPC `GetStock`) — each field resolved by calling the
+service that owns it, the same protocol that service's other consumers use.
+It sits alongside every other service's own REST surface and the strangler
+proxy, with its own front door, never routed through either. Query depth
+(`strawberry.extensions.QueryDepthLimiter`) and total-token
+(`MaxTokensLimiter`) bounds are wired in, both in-package — no new
+dependency beyond `strawberry-graphql` itself needed for the bound. A
+downstream failure on a federated field (`payments`, `shipments`, `stock`,
+`reviews`) raises `DownstreamUnavailable`, left uncaught on purpose;
+Strawberry's own null-propagation nulls just that field and appends an
+entry to the response's top-level `errors[]` — siblings still resolve, the
+whole query never crashes into a 500. An unknown order id returns a plain
+`data.order: null` with **no** `errors[]` entry (a missing order is a
+legitimate answer, not a downstream failure).
+
+**Named divergence:** re-authored on Strawberry rather than SmallRye
+GraphQL (the project's standing stack-substitution mapping, DRQ-019); no
+federation router or schema-stitching framework introduced — a single
+data-less resolver module is sufficient at this scale (rejected alternative
+named at DRQ-074).
+
+**Verdict:** CLEAN adaptation — the aggregation role is reused, the
+implementation is idiomatically Python-native, and partial-failure
+behavior is proven (see the bug below), not just asserted.
+
+### A real integration bug found and fixed: the GraphQL contract query didn't match the live schema
+
+**Source:** the GraphQL Gateway Contract folder (G1) was authored STAGED,
+inert-by-default, in an earlier lane (`tooling/newman/GOLDEN-BASELINE-r07.md`)
+*before* `08-graphql-gateway` existed — a speculative guess at the schema
+shape.
+
+**What broke:** the staged query guessed `stock { quantityOnHand }` (the
+real field, per `app/schema.py::StockView`, is `onHandQty`) and a top-level
+`order.reviews` (reviews are federated PER-ITEM —
+`OrderItemView.reviews` — not a top-level `OrderView` field, because a
+review is posted against a sku, not an order). Running the staged query for
+real, for the first time, against the live gateway produced `data.order:
+null` with two `errors[]` entries (`Cannot query field 'quantityOnHand' on
+type 'StockView'`, `Cannot query field 'reviews' on type 'OrderView'`),
+confirmed by hand with a direct `curl` against `:8090/graphql`.
+
+**Root cause:** the query was authored speculatively against a schema that
+didn't exist yet; it was never run against a live gateway until the
+decommission lane's contract-suite conversion pass.
+
+**Fix:** corrected the query to the real, per-item-nested shape
+(`items { sku stock { onHandQty } reviews { rating } } }`), rewrote the
+test-script assertions to match it, and added an explicit "No GraphQL
+errors" assertion so a future schema drift fails loudly instead of
+producing a confusing `TypeError` on `order.items`. Verified by hand against
+the live gateway post-fix (order id 29: real nested stock + 5 reviews + 1
+payment + 1 shipment, zero errors) before re-running the suite, which then
+passed green (see the stability table below).
+
+**Lesson:** a STAGED, never-executed contract request is not a verified
+contract — it's a hypothesis. This is the same lesson this project's
+earlier bug catches (DRQ-026's chunked-body bug, the r06 poll-script's
+narrow retry condition) keep teaching: equivalence/contract claims are only
+real once proven against the live system, not an in-process mock or an
+authored-but-unrun guess.
+
+**Verdict:** bug-found-and-fixed — caught during the decommission lane's
+contract-suite conversion, before it reached CI, consistent with this
+project's established practice of reporting defects found during Verify
+honestly.
+
+### The decommission: reversibility proven, then the one irreversible move
+
+**Source:** `_plans/r07-build-plan.md`'s user rec #4 (monolith end state,
+the plan's explicitly highest-stakes question, DRQ-075) and rec #5
+(reversibility, DRQ-077).
+
+**What shipped, in order:** (1) `STRANGLER_ORDER_ENABLED` was added to the
+proxy and shipping-service's `enrich` call was re-pointed from
+`MONOLITH_BASE_URL` to order-service's `ORDER_BASE_URL` — both reversible
+changes. (2) **The last reversible proof in this project's strangler-fig
+history** was captured: full extracted topology with every strangler flag
+on (no monolith process running at all) — 44 requests/117 assertions, 0
+failed; vs. every flag off, only the bare monolith running — 33
+requests/105 assertions, 0 failed. Both configurations produced a correct
+answer; turning `STRANGLER_ORDER_ENABLED` off and restarting still worked,
+right up to this point. (3) **The irreversible step:** the strangler proxy
+was rewritten flagless — every `*_enabled` boolean and `monolith_base_url`
+removed from `Settings`; `_select_backend()` became an unconditional
+six-way lookup (review/notification/inventory/payment/shipping/order),
+returning `None` (→ a real `404`) for anything else; `test_routing.py` was
+rewritten from scratch (29/29 green, `ruff check` clean) — a parametrized
+all-12-path-variants test, an all-six-coexist test, an unmatched-path test
+(including near-miss prefixes like `/api/order` that must NOT match
+`/api/orders`), and six independent backend-down tests. (4) The monolith
+itself was frozen, not deleted: `README.md`/`AGENTS.md` gained a "FROZEN
+STATUS (r07)" section; `compose.yaml`/`scripts/`/`demos/` no longer start
+it or its `outbox_relay`/`order_placed_consumer`/`order_saga_listener`
+management commands. (5) Learner-reference preservation: a
+`reference/monolith-before` branch plus `v0-monolith` and `stage/01..06`
+tags (`stage/06-order` cut at merge) — a re-bootable break-glass path, not
+a deleted-and-gone history. (6) The proto-drift guard was extended from 2
+to 4 vendored copies (monolith, order-service, graphql-gateway, plus the
+canonical inventory-service original) — verified live, including a
+deliberate drift injection that correctly failed.
+
+**Verdict:** CLEAN — the one deliberate, system-wide irreversible move in
+this project's history was de-risked exactly as planned: proven reversible
+right up to the moment before it wasn't, with a frozen, re-bootable
+break-glass path recorded rather than destroyed.
+
+### SMELL #1/#2 struck — ACID→ACD for all six contexts
+
+**Source:** `examples/00-monolith/SMELLS.md`, the project's own standing
+smell ledger, created at r01 and updated at every extraction since.
+
+**What shipped:** SMELL #1 (the god checkout service, `order/services.py::
+place_order()`) and SMELL #2 (one in-process ACID transaction spanning six
+contexts) are both marked **STRUCK (r07)** in `SMELLS.md` (DRQ-080). The
+monolith's own `place_order()` is now frozen, decommissioned code with a
+real replacement: `07-order-service/app/service.py::place_order` reaches
+inventory only over a versioned gRPC contract and never touches payment/
+shipping/notification's code or tables directly. Its own local transaction
+spans ONLY the `order_svc` schema (aggregate + `order_view` + the
+`order.placed` outbox row); the four downstream reactions are each their
+own local transaction in their own service's own schema, coordinated purely
+through Kafka events and idempotent status guards. This completes the
+ACID→ACD arc that began at r05 (payment's 201→202 flip) and continued at
+r06 (shipping's AWAITING_SHIPMENT handoff) — **every one of the six
+contexts** now reaches its terminal state through a real saga with real
+compensating actions, never a shared-transaction rollback. SMELL #3/#4
+(shared schema / cross-context FKs) and SMELL #7 (review auth coupling)
+remain `open` in the ledger — they describe the frozen monolith's own
+code, which is out of scope for this extraction.
+
+**Verdict:** CLEAN — the two smells SMELLS.md named at r01 as the specific
+motivation for making order the hardest/last extraction are struck with
+concrete evidence (a frozen function, a real replacement, a transaction
+boundary that now spans one schema), not a label change.
+
+### Equivalence → contract suite, monolith-free
+
+**Source:** DRQ-010's standing requirement (the Newman suite is the one
+equivalence gate every extraction is re-measured against) and DRQ-076's
+reframing of it for the post-decommission state.
+
+**What shipped:** with no live monolith left to compare against,
+`tooling/newman/proxy.postman_environment.json` now bakes in every
+context's contract flag as always-on (review/notification/inventory/
+payment/shipping/order/graphql); the collection's own default `{{baseUrl}}`
+re-points from the monolith (`:8000`) to the proxy edge (`:8888`);
+`local.postman_environment.json` (bare monolith) is kept, unchanged, for
+break-glass use only. The suite's assertions now mean "does the live system
+satisfy its contract," not "does it match the monolith."
+
+**Green evidence summary**
+
+| Check | Result |
+|---|---|
+| Final monolith-anchored baseline (pre-cutover) | `tooling/newman/GOLDEN-BASELINE-r07.md`, Order Context Contract O1–O4 green against the live monolith |
+| Reversibility proof | extracted-topology ON: 44 req/117 assertions, 0 failed; monolith-only OFF: 33 req/105 assertions, 0 failed |
+| Flagless proxy routing | 29/29 tests green, `ruff check` clean |
+| Proto-drift guard (4 copies) | `OK`, byte-identical; drift injection correctly detected and reverted |
+| Contract suite, monolith-free, post-fix | 50 req/133 assertions, 0 failed (×2 stable) |
+| Contract suite, post negative-check restores | 45 req/128 assertions, 0 failed (×2 stable) |
+| Negative 1 — consumer-down (order-service killed) | 59/111 assertions failed, exit 1; recovered 0 failed on restart |
+| Negative 2 — compensation-disabled | 1/30 assertions failed (stock non-net-zero), exit 1; recovered 0 failed on restore |
+| Negative 3 — projection-disabled → stale read | 1/53 assertions failed (stuck PENDING past the bounded-wait budget), exit 1; recovered 0 failed on restore |
+| `demos/demo-final-topology.sh` | standalone from-scratch run, 50 req/133 assertions, 0 failed, clean teardown |
+| GraphQL gateway, live | `order(id)` stitches order+payment+shipment+per-item-stock+per-item-reviews, zero errors post-fix |
+
+**Verdict:** CLEAN — contract suite green ≥2× against the fully
+monolith-free mesh (four total clean runs, two before and two after the
+three negative-check interventions), all three required negatives
+independently proven RED when broken and GREEN when restored, one real
+integration bug found and fixed along the way.
+
+### Verdicts summary
+
+CLEAN across every artifact in this section, **plus one bug found and
+fixed** (the staged GraphQL contract query not matching the real, as-built
+schema) — consistent with this project's established practice of reporting
+defects found during Verify honestly rather than smoothing them over. Five
+A/B gates were put to the user at r07's header — CQRS shape, projection
+timing, the gateway's shape, the monolith's end state (the plan's
+explicitly highest-stakes question), and reversibility — and all five were
+resolved in favor of the planner's recommended option (DRQ-072, DRQ-074,
+DRQ-075, DRQ-077); every other r07 decision was a synthesis default. No
+unexplained drift for ch.21/26.
+
+---
+
+## CAPSTONE
+
+**The strangler-fig is complete — the Django monolith is decommissioned;
+six FastAPI services plus a GraphQL gateway sit behind a flagless edge
+router; ACID→ACD everywhere.** Review, notification, inventory, payment,
+shipping, and order have each been extracted in rising order of difficulty
+(DRQ-013), each behind its own reversible cutover flag, each gated green by
+its own equivalence check before the next extraction began. The monolith
+that was once the single point of truth for all six contexts — one shared
+Postgres schema, one god checkout function, one ACID transaction spanning
+everything — is now frozen, in-repo, unreachable from the running topology,
+its own `SMELLS.md` crossed out line by line as each cure landed (#5/#6 at
+r03, #1/#2 at r07; #3/#4/#7 remain, by design, describing only the frozen
+code). What runs today is seven independently deployable services —
+review, notification, inventory, payment, shipping, order, and the GraphQL
+gateway — coordinated through Kafka sagas (choreographed at r05, orchestrated
+at r06, both lifted into order-service's own reactions at r07) and gRPC
+contracts, fronted by one flagless edge router with no monolith fallback
+left to fall back to. This is the payoff the whole roadmap (§E) was built
+toward from r01's walking skeleton onward.
+
+**What remains, non-extraction:** Part 8–10 chapters (ch.27–32: the FastAPI
+microservices chassis, deployment strategies, registries, service mesh/
+observability, GitOps/supply-chain, and the closing chapter); the
+OpenShift/CRC appendix (ch.33, per the standing OpenShift/CRC Appendix
+Standard); and the three companion decks. None of these are extractions —
+the decomposition roadmap itself (§E) is finished as of this section.

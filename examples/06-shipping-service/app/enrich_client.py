@@ -1,10 +1,14 @@
 """HTTP client backing the saga's `enrich` step (`app/steps.py::enrich`) --
 the ch.25 resilience anchor this service introduces (none of the
 choreographed services in this project make an outbound HTTP call; this is
-the first one). `GET {MONOLITH_BASE_URL}/api/orders/{orderId}` and reads back
-`shippingAddress`, the ADDITIVE field a sibling lane added to the monolith's
-`order/serializers.py::OrderSerializer` specifically so this saga can enrich
-itself without reaching into the monolith's database directly.
+the first one). `GET {ORDER_BASE_URL}/api/orders/{orderId}` and reads back
+`shippingAddress` -- r07 re-points this from the monolith's
+`order/serializers.py::OrderSerializer` (which added the field specifically
+so this saga could enrich itself without reaching into the database
+directly) onto `examples/07-order-service`'s `order_view` CQRS read model,
+which serves the exact same field under the exact same name. See
+`app/config.py`'s module docstring for the documented, operator-only
+fallback onto the (now frozen) monolith.
 
 Wrapped in `tenacity` (per this project's resilience-library convention: ch14
 pins tenacity for retry in Python services) retrying only the TRANSIENT

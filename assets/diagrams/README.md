@@ -37,6 +37,11 @@ This file is the catalogue — one row per diagram, append-only.
 | `saga-state-machine-crash-resume` | ch.24 | The saga's own status state machine (RUNNING/COMPENSATING/COMPLETED/COMPENSATED), the `saga_log` row each step appends, and the crash-resume path (`resume_running_sagas()`) that is this service's durability upgrade over the Java sibling's in-memory Camel Saga coordinator — cites the live `resumedSagaCount: 1` proof. Source: `saga-state-machine-crash-resume.py`. |
 | `order-lifecycle-awaiting-shipment-refund` | ch.24 | The full order lifecycle once `SHIPPING_MODE=orchestrated` (PENDING -> AWAITING_SHIPMENT -> CONFIRMED/SHIPPING_FAILED) plus the refund hop that closes r05's stranded-payment gap (DRQ-054): the same `shipment.failed` event that drives SHIPPING_FAILED also drives payment-service's CAPTURED -> REFUNDED. Source: `order-lifecycle-awaiting-shipment-refund.py`. |
 | `shipping-resilience-chassis` | ch.25 | The resilience chassis: four mechanisms already load-bearing (gRPC deadline, outbox at-least-once + two-layer idempotency, the proxy's 502 fail-safe, saga crash-resume), the one concrete new mechanism (tenacity retry-with-timeout on `enrich`), and pybreaker/`asyncio.Semaphore` named as deliberately deferred. Source: `shipping-resilience-chassis.py`. |
+| `order-cqrs-write-read-split` | ch.21 | The CQRS command/query split inside `07-order-service`: the command path reserves over gRPC outside any local transaction, then persists the write aggregate, the `order_view` projection, and the `order.placed` outbox row in ONE transaction; the query path reads `order_view` exclusively, never the write tables. Source: `order-cqrs-write-read-split.py`. |
+| `order-view-rebuildable-projection` | ch.21 | The rebuildable read model: aggregate -> projection -> view kept current by every write, `rebuild_order_view` proving it's a cache and not a second source of truth, and the projection-disabled negative test showing exactly what goes stale (and how it's proven, not asserted) when the sync stops. Source: `order-view-rebuildable-projection.py`. |
+| `rest-grpc-graphql-protocol-fit` | ch.26 | REST, gRPC, and GraphQL side by side, each labeled with the real seam this project chose it for: REST's request/reply for every service's own surface, gRPC's strongly-typed hot path for order-service's inventory reservation, GraphQL's bounded aggregation for the gateway's one query. Source: `rest-grpc-graphql-protocol-fit.py`. |
+| `graphql-gateway-five-source-fanout` | ch.26 | The data-less aggregation gateway fanning one `order(id)` query out to five sources (order/payment/shipping REST, inventory gRPC, review REST per item), each field resolved lazily and nullable, bounded by depth/token limiters fixed in operator config. Source: `graphql-gateway-five-source-fanout.py`. |
+| `final-monolith-free-topology` | ch.26 | The end-state topology: six independently deployable services plus the GraphQL gateway, reached through one flagless edge router with no monolith fallback left, and the monolith itself frozen and unwired -- the golden-baseline referent, not deleted. Source: `final-monolith-free-topology.py`. |
 
 ## Regenerating
 
@@ -69,6 +74,11 @@ python3 -I choreography-vs-orchestration-contrast.py
 python3 -I saga-state-machine-crash-resume.py
 python3 -I order-lifecycle-awaiting-shipment-refund.py
 python3 -I shipping-resilience-chassis.py
+python3 -I order-cqrs-write-read-split.py
+python3 -I order-view-rebuildable-projection.py
+python3 -I rest-grpc-graphql-protocol-fit.py
+python3 -I graphql-gateway-five-source-fanout.py
+python3 -I final-monolith-free-topology.py
 ```
 
 Each spec validates its own output on the way out (`generate_diagram.emit()`

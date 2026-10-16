@@ -12,6 +12,17 @@ one god checkout function. It is the Python sibling of
 Boot), built to the SAME original schema/seed/smell intent -- not that
 project's later, decomposed `main` state.
 
+**FROZEN as of r07** -- all six contexts are now extracted
+(`02`-`07-order-service`); the strangler proxy is a flagless edge router with
+no monolith fallback; this module is decommissioned from the running
+topology (`compose.yaml`/`scripts/`/`demos/` no longer start it or its
+`outbox_relay`/`order_placed_consumer`/`order_saga_listener` commands) but
+kept in-repo as the golden-baseline referent and a break-glass fallback --
+see `README.md`'s "FROZEN STATUS (r07)" section for the full picture, and
+`SMELLS.md` for the two smells this decommission strikes (#1, #2). An agent
+picking this module up going forward should treat it as read-mostly history,
+not a module to keep extending.
+
 Every smell is intentional. See `SMELLS.md` and `grep -rn 'SMELL\[ch\.' .`
 before "fixing" anything that looks like bad design -- it is bad design, on
 purpose, planted as teaching material for the chapters that later cure it.

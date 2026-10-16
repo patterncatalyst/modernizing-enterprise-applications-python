@@ -117,6 +117,7 @@ async def orchestrated_saga(database_url: str, kafka_bootstrap_servers: str, mon
         http_port=8087,
         database_url=database_url,
         kafka_bootstrap_servers=kafka_bootstrap_servers,
+        order_base_url="http://order.invalid",
         monolith_base_url="http://monolith.invalid",
         payment_captured_topic=PAYMENT_CAPTURED_TOPIC,
         shipment_dispatched_topic=SHIPMENT_DISPATCHED_TOPIC,
