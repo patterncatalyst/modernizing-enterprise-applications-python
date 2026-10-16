@@ -1,8 +1,8 @@
 """The strangler-fig edge: a thin ASGI reverse proxy in front of the monolith.
 
 One catch-all route forwards every request -- method, full path, raw query
-string, headers, and streamed body -- to whichever backend is configured for
-it, and relays that backend's real status code, body, and headers back
+string, headers, and body -- to whichever backend is configured for it, and
+relays that backend's real status code, body, and headers back (streamed)
 unchanged. This is the ASGI analogue of a Camel `platform-http` consumer
 paired with an `http` producer using `bridgeEndpoint=true&
 throwExceptionOnFailure=false`: the proxy never raises on an upstream 4xx/5xx,
@@ -42,13 +42,20 @@ logger = logging.getLogger("strangler_proxy")
 
 # Hop-by-hop / framing headers that must never be blindly forwarded: their
 # value on one hop (e.g. a Content-Length computed for the client's framing)
-# is not valid on the other hop once the proxy re-frames the message (we
-# stream the request body as chunked, and stream the response body back as
-# it arrives). RFC 9110 section 7.6.1 lists Connection and friends; we also
-# drop Host (it must name the upstream, not the proxy) and the framing pair
-# Content-Length/Transfer-Encoding (recomputed by httpx and the ASGI server
-# respectively). Every other header -- including caller-specific ones -- is
-# forwarded verbatim.
+# is not valid on the other hop once the proxy re-frames the message. RFC
+# 9110 section 7.6.1 lists Connection and friends; we also drop Host (it
+# must name the upstream, not the proxy) and the framing pair
+# Content-Length/Transfer-Encoding. The request body is read into memory and
+# forwarded as a plain `bytes` payload (see `proxy_handler`), so httpx always
+# computes its own correct Content-Length for the upstream request -- the
+# inbound Content-Length (sized for the client's own framing, which may
+# differ, e.g. if the client itself used chunked transfer-encoding) and any
+# inbound Transfer-Encoding are both dropped rather than forwarded. This
+# also sidesteps a real WSGI-upstream defect: Django's WSGI handler treats a
+# chunked request (no Content-Length) as a zero-length body, since it does
+# not honor gunicorn's non-standard `wsgi.input_terminated` signal -- see
+# CUTOVER.md. Response-side, Content-Length is recomputed implicitly by the
+# ASGI server for the streamed response.
 _HOP_BY_HOP_REQUEST_HEADERS = {"host", "content-length", "transfer-encoding", "connection"}
 _HOP_BY_HOP_RESPONSE_HEADERS = {"content-length", "transfer-encoding", "connection"}
 
@@ -101,11 +108,19 @@ async def proxy_handler(request: Request) -> Response:
     query = request.scope.get("query_string", b"")
     target_url = base_url.rstrip("/") + path + (f"?{query.decode('latin-1')}" if query else "")
 
+    # Buffer the inbound body rather than forwarding `request.stream()`
+    # unread: for the small, API-sized payloads this teaching proxy handles,
+    # this lets httpx compute a correct Content-Length for the upstream
+    # request instead of falling back to chunked transfer-encoding, which a
+    # WSGI upstream (the monolith) does not reliably decode -- see the note
+    # above `_HOP_BY_HOP_REQUEST_HEADERS`.
+    body = await request.body()
+
     upstream_request = client.build_request(
         method=request.method,
         url=target_url,
         headers=_forward_request_headers(request),
-        content=request.stream(),
+        content=body,
     )
 
     try:

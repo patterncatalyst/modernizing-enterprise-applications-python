@@ -43,8 +43,21 @@ created and closed by the app's `lifespan`:
 2. **Forward** — `client.build_request()` + `client.send(..., stream=True)`
    rebuilds the upstream request from the inbound one: same method, same
    target path + raw query string, same headers (minus the hop-by-hop ones
-   listed below), and the request body streamed through unread/untouched via
-   `request.stream()`.
+   listed below), and the request body **buffered** via `await
+   request.body()` and forwarded as plain `bytes`. Buffering (rather than
+   forwarding `request.stream()` unread) is deliberate: it lets httpx compute
+   a correct `Content-Length` for the upstream request instead of falling
+   back to `Transfer-Encoding: chunked`. That distinction matters here
+   because the monolith is WSGI (Django) — its handler reads `CONTENT_LENGTH`
+   and treats a missing one (always the case for a chunked request) as a
+   **zero-length body**, since it does not honor the non-standard
+   `wsgi.input_terminated` signal gunicorn sets for chunked requests. Without
+   this, every `POST`/`PUT`/`PATCH` routed to the monolith through the proxy
+   would silently arrive empty. Buffering the whole body in memory is the
+   right trade for this teaching proxy's small, API-sized JSON payloads; a
+   production proxy fronting large uploads would need a different strategy
+   (e.g. forwarding the inbound `Content-Length` when present, or a real
+   chunked-aware upstream).
 3. **Relay** — the upstream's real `status_code`, headers (same hop-by-hop
    exclusions), and body (streamed back via `StreamingResponse` +
    `upstream.aiter_raw()`) are returned unchanged. A 4xx/5xx from the
@@ -61,8 +74,8 @@ Hop-by-hop adjustments (the only headers NOT forwarded verbatim):
 | Direction | Dropped | Why |
 |---|---|---|
 | Request | `Host` | Must name the upstream, not the proxy |
-| Request | `Content-Length` | The body is re-framed as a stream; httpx computes its own framing |
-| Request/Response | `Transfer-Encoding`, `Connection` | Hop-by-hop per RFC 9110 §7.6.1; re-framed by httpx/the ASGI server on each hop |
+| Request | `Content-Length` | The body is buffered and re-sent as `bytes`; httpx computes a fresh, correct `Content-Length` for the upstream request |
+| Request/Response | `Transfer-Encoding`, `Connection` | Hop-by-hop per RFC 9110 §7.6.1; an inbound chunked `Transfer-Encoding` must never leak to the (buffered) upstream request, and the response is re-framed by the ASGI server on its own hop |
 | Response | `Content-Length` | Recomputed implicitly by the ASGI server for the streamed response |
 
 ## Configuration (operator-only — never request-derived)

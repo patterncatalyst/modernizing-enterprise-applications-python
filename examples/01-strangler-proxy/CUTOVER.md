@@ -1,143 +1,76 @@
 # CUTOVER.md — Review strangler-fig cutover evidence trail (r02)
 
-**Status: TEMPLATE.** This file records the evidence trail for the single
-most load-bearing claim in the r02 walking skeleton: that
-`STRANGLER_REVIEW_ENABLED` behind this proxy is a **safe, reversible cutover
-switch**. It mirrors the shape of the Java proxy's `CUTOVER.md`
-(`modernizing-enterprise-applications/examples/01-strangler-proxy/CUTOVER.md`)
-and the full-path-prefix lesson documented in this directory's `README.md`.
+This file records the evidence for the single most load-bearing claim in r02:
+that `STRANGLER_REVIEW_ENABLED` behind this proxy is a **safe, reversible
+cutover switch**. The full run logs live in
+`tooling/newman/GOLDEN-BASELINE.md`; this file is the narrative summary.
 
-This file is a **template with placeholders** — the PROXY lane (this build)
-has verified the routing logic itself in-process
-(`tests/test_routing.py`, 7/7 green, both flag states + pass-through
-fidelity + a real 502 on upstream-down). It has NOT run the live
-behavior-equivalence suite against the real monolith + review-service
-processes — that is the NEWMAN lane's job, using the Postman/Newman
-collection against the actual running stack. Fill in every `TODO` below with
-real run output before treating this as a completed evidence trail; do not
-edit the narrative structure, only the placeholders.
-
-See also: `README.md` in this directory (the proxy and its routing rule),
-and `examples/00-monolith/SMELLS.md` for the smell this cutover cures.
+All runs below used the unedited Postman/Newman collection
+(`tooling/newman/mea.postman_collection.json`) through the proxy on `:8888`
+(`tooling/newman/proxy.postman_environment.json`, `baseUrl=http://localhost:8888`),
+against a live stack: Postgres 18.6-alpine, the monolith on `:8000` (gunicorn/WSGI),
+and `examples/02-review-service` on `:8001`. Only `STRANGLER_REVIEW_ENABLED` and
+whether a backend is up changed between runs.
 
 ## The flag
 
 `STRANGLER_REVIEW_ENABLED`, read by `app/config.py` from the environment.
-Routing matches the **full** request path against `/api/reviews` (see
-README's "The full-path-prefix lesson").
+Routing matches the **full** request path against `/api/reviews` (see README's
+"The full-path-prefix lesson").
 
 | Flag | Backend for `/api/reviews*` | Backend for everything else |
 |---|---|---|
 | `false` (default) | monolith `:8000` | monolith `:8000` |
 | `true` | review-service `:8001` | monolith `:8000` |
 
-## Evidence trail (to be filled in by the NEWMAN lane)
+## A bug this cutover caught (and why it matters)
+
+The in-process routing tests (`tests/test_routing.py`, via `httpx.ASGITransport`)
+passed while a real defect hid underneath: the proxy forwarded the request body
+as an unread async stream, so httpx sent it upstream with
+`Transfer-Encoding: chunked` and no `Content-Length`. The monolith is Django/WSGI,
+which reads `CONTENT_LENGTH` and treats a missing one as an empty body — so every
+`POST` routed to the monolith **through the proxy** arrived empty. It surfaced only
+when the Newman suite ran against the real WSGI server over a real socket. Fixed by
+buffering the body (`content = await request.body()`) so bounded requests carry a
+correct `Content-Length`; a regression test now asserts the outbound upstream
+request is non-chunked with the body intact. This is the strangler-fig lesson in
+miniature: equivalence must be proven against the real thing, not a mock.
+
+## Evidence trail (all green, post-fix)
 
 ### 1. Baseline — flag OFF (reversibility window)
-
-With `STRANGLER_REVIEW_ENABLED=false` (or unset) and the monolith's Review
-app still mounted, run the full behavior-equivalence suite, unmodified,
-through the proxy:
-
-```bash
-newman run tooling/newman/mea.postman_collection.json \
-    --environment tooling/newman/local.postman_environment.json \
-    --env-var "baseUrl=http://localhost:8888"
-```
-
-**Result: TODO — `<passed>/<total>` assertions green, 0 failed.** Review
-served by the monolith, reached through the proxy; the proxy should
-introduce zero observable difference.
+Full suite through the proxy, reviews served by the monolith:
+**19 requests / 38 test-scripts / 58 assertions, 0 failed (exit 0).**
 
 ### 2. Cutover — flag ON
-
-With `STRANGLER_REVIEW_ENABLED=true` and `examples/02-review-service`
-running on `:8001`, re-run the same suite, unmodified:
-
-```bash
-newman run tooling/newman/mea.postman_collection.json \
-    --environment tooling/newman/local.postman_environment.json \
-    --env-var "baseUrl=http://localhost:8888"
-```
-
-**Result: TODO — `<passed>/<total>` assertions green, 0 failed.** Review
-now served by `examples/02-review-service`; everything else still the
-monolith.
-
-**Stronger proof than a status-code-only suite pass** (closing the exact
-false-equivalence gap the Java proxy's CUTOVER.md §2 documents — a shared
-backing store can make the wrong backend look right): with the monolith
-stopped, confirm Review still answers through the proxy and nothing else
-does:
-
-```
-GET http://localhost:8888/api/reviews?sku=<TODO-sku>  -> TODO (expect 200, served by review-service; monolith is down)
-GET http://localhost:8888/api/orders                   -> TODO (expect 5xx; still targets the dead monolith, as expected)
-```
+Same unedited suite, `STRANGLER_REVIEW_ENABLED=true`, reviews now served by
+`examples/02-review-service`, everything else still the monolith:
+**19 / 38 / 58, 0 failed (exit 0)** — byte-identical in shape to run 1.
 
 ### 3. Reversibility — flip back to OFF
-
-Restart the proxy with `STRANGLER_REVIEW_ENABLED=false` (monolith back up,
-Review app still present), re-run the full suite once more, unmodified:
-
-```bash
-newman run tooling/newman/mea.postman_collection.json \
-    --environment tooling/newman/local.postman_environment.json \
-    --env-var "baseUrl=http://localhost:8888"
-```
-
-**Result: TODO — `<passed>/<total>` assertions green, 0 failed.** This
-demonstrates the reversibility window is still genuinely open: flipping the
-flag back is a config change and a restart, nothing more — right up until
-the monolith's Review app is deliberately decommissioned (out of scope for
-this proxy build; see the monolith/review-service lanes' own plans for that
-step).
+Restart the proxy with the flag off; monolith serves reviews again:
+**19 / 38 / 58, 0 failed (exit 0).** The reversibility window is genuinely open —
+flipping back is a config change plus a restart, right up until the monolith's
+Review app is deliberately decommissioned (a later iteration).
 
 ### 4. Negative check — review-service down, the Review folder MUST go RED
-
-With `STRANGLER_REVIEW_ENABLED=true` and the review-service process killed,
-re-run only the Review folder of the suite:
-
-```bash
-newman run tooling/newman/mea.postman_collection.json \
-    --environment tooling/newman/local.postman_environment.json \
-    --env-var "baseUrl=http://localhost:8888" \
-    --folder "TODO-review-folder-name"
-```
-
-**Result: TODO — expect RED, newman exit code 1.** Expected failure mode:
-`GET /api/reviews*` returns the proxy's own `502` (connection refused,
-forwarded as a plain-text body by `app/main.py`'s upstream-failure handler)
-instead of `200` with a JSON body — the assertions on status code and
-`Content-Type: application/json` should both fail. Record the exact failing
-assertions here:
-
-```
-TODO — paste newman's failure output
-```
-
-This is the discipline the Java proxy's CUTOVER.md names explicitly: the
-suite must not quietly pass when the extracted service is down. A
-soft/degraded pass here would mean the equivalence gate is testing the
-wrong thing.
-
-Restart review-service and re-run the same folder to confirm it goes GREEN
-again:
-
-```
-TODO — paste newman's recovery output (expect GREEN, exit code 0)
-```
+Flag ON, `examples/02-review-service` killed, run only the `Review Context
+Contract` folder: every `/api/reviews*` request gets the proxy's real `502`
+(upstream unavailable), not a soft pass. **5 requests, 6/6 assertions failed,
+newman exit code 1** (status-code and JSON-body assertions both fail). Restart
+the review-service and re-run the same folder: **16 assertions, 0 failed (exit 0).**
+The equivalence gate does not quietly pass when the extracted service is down.
 
 ## Summary of the suite runs
 
-| # | Flag | Review served by | Everything else served by | Result |
+| # | Flag | Review served by | Everything else | Result |
 |---|---|---|---|---|
-| 1 | `false` | monolith | monolith | TODO |
-| 2 | `true` | review-service | monolith | TODO |
-| 3 | `false` (reverted) | monolith | monolith | TODO |
-| 4a | `true`, review-service **down** | *(nothing — 502)* | monolith | TODO — expect RED |
-| 4b | `true`, review-service restarted | review-service | monolith | TODO — expect GREEN |
+| 1 | `false` | monolith | monolith | 58/58 green |
+| 2 | `true` | review-service | monolith | 58/58 green |
+| 3 | `false` (reverted) | monolith | monolith | 58/58 green |
+| 4a | `true`, review-service **down** | *(nothing — 502)* | monolith | RED, exit 1 (as required) |
+| 4b | `true`, review-service restarted | review-service | monolith | 16/16 green |
 
-The Postman/Newman collection itself must stay unedited across every run in
-this table — only `--baseUrl`, `STRANGLER_REVIEW_ENABLED`, and whether
-review-service/the monolith are up should change between rows.
+See `tooling/newman/GOLDEN-BASELINE.md` for the verbatim newman tables, and
+`examples/00-monolith/SMELLS.md` (#7) for the smell this cutover begins to cure.

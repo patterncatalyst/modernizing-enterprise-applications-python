@@ -84,6 +84,26 @@ def _raise_connect_error(request: httpx.Request) -> httpx.Response:
     raise httpx.ConnectError("connection refused (stub)", request=request)
 
 
+class _OnceByteStream(httpx.AsyncByteStream):
+    """A response body that is genuinely unread until iterated.
+
+    ``httpx.Response(..., content=...)`` / ``json=...`` reads the body
+    eagerly in ``__init__`` (so the response can be used without an async
+    context), which also marks it ``is_stream_consumed`` before the proxy's
+    own ``aiter_raw()`` ever runs -- fine for a real socket-backed transport,
+    but it trips ``httpx.StreamConsumed`` when paired with
+    ``httpx.MockTransport`` and ``client.send(..., stream=True)``. Passing
+    ``stream=`` instead defers reading to the one real iteration the proxy
+    performs, matching how a real upstream response behaves.
+    """
+
+    def __init__(self, data: bytes) -> None:
+        self._data = data
+
+    async def __aiter__(self) -> AsyncIterator[bytes]:
+        yield self._data
+
+
 @asynccontextmanager
 async def lifespan_context(app: Starlette) -> AsyncIterator[None]:
     """Drive a Starlette app's lifespan protocol with no extra dependency.
@@ -224,6 +244,62 @@ async def test_upstream_4xx_5xx_is_relayed_not_swallowed():
         resp = await client.get("/api/boom")
         assert resp.status_code == 500
         assert resp.json()["error"] == "boom"
+
+
+async def test_post_body_forwarded_with_content_length_not_chunked():
+    """Regression test for the WSGI-upstream empty-body bug.
+
+    Forwarding the inbound body as ``request.stream()`` (an async generator)
+    makes httpx send the upstream request as ``Transfer-Encoding: chunked``
+    with no ``Content-Length`` -- which a WSGI backend (the real monolith,
+    Django/gunicorn) decodes as a zero-length body, since it does not honor
+    gunicorn's non-standard ``wsgi.input_terminated`` signal. That gap can't
+    be seen by driving the proxy purely over ``httpx.ASGITransport`` (what
+    every other test in this module does): ASGI decodes chunked bodies fine,
+    so the bug is invisible there too.
+
+    This test instead captures the *actual outbound upstream request* the
+    proxy builds, via ``httpx.MockTransport``, and asserts directly on its
+    framing and bytes -- no live WSGI server required. Before the fix (body
+    forwarded via ``request.stream()``), this fails: the captured request
+    carries ``Transfer-Encoding: chunked`` and no ``Content-Length`` header.
+    """
+    captured: dict[str, httpx.Request] = {}
+    response_body = b'{"ok": true}'
+
+    def capture_upstream(request: httpx.Request) -> httpx.Response:
+        captured["request"] = request
+        return httpx.Response(
+            200,
+            headers=[
+                (b"content-type", b"application/json"),
+                (b"content-length", str(len(response_body)).encode("latin-1")),
+            ],
+            stream=_OnceByteStream(response_body),
+        )
+
+    settings = Settings(
+        review_enabled=False, monolith_base_url=MONOLITH_URL, review_base_url=REVIEW_URL
+    )
+    mounts = {MONOLITH_URL: httpx.MockTransport(capture_upstream)}
+    body = b'{"customerId": 1, "sku": "SKU-WIDGET-001", "rating": 5, "comment": "great"}'
+
+    async with running_proxy(settings, mounts) as client:
+        resp = await client.post(
+            "/api/orders",
+            content=body,
+            headers={"content-type": "application/json"},
+        )
+        assert resp.status_code == 200
+
+    upstream_request = captured["request"]
+
+    # (a) the upstream request carries a correct Content-Length ...
+    assert upstream_request.headers.get("content-length") == str(len(body))
+    # (b) ... and NOT Transfer-Encoding: chunked.
+    assert "transfer-encoding" not in upstream_request.headers
+    # (c) the upstream receives the exact body bytes the client sent.
+    assert upstream_request.content == body
 
 
 async def test_upstream_down_surfaces_real_5xx_not_masked_200():
