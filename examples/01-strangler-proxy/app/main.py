@@ -179,9 +179,10 @@ def create_app(
     http_client: httpx.AsyncClient | None = None,
 ) -> Starlette:
     """App factory. ``settings``/``http_client`` overrides exist for tests --
-    they let a test stand up two independently configured proxy instances
-    (flag off / flag on) in the same process, each wired to in-process stub
-    backends via a custom ``httpx.AsyncClient`` transport, without touching
+    they let a test stand up independently configured proxy instances
+    (e.g. with different per-context base URLs) in the same process, each
+    wired to in-process stub backends via a custom ``httpx.AsyncClient``
+    transport, without touching
     environment variables or module-level global state.
     """
     resolved_settings = settings if settings is not None else default_settings
