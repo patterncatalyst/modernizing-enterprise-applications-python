@@ -74,3 +74,17 @@ The equivalence gate does not quietly pass when the extracted service is down.
 
 See `tooling/newman/GOLDEN-BASELINE.md` for the verbatim newman tables, and
 `examples/00-monolith/SMELLS.md` (#7) for the smell this cutover begins to cure.
+
+## Notification seam (r03)
+
+`STRANGLER_NOTIFICATION_ENABLED` gates `/api/notifications*` to
+`examples/03-notification-service` the same way `STRANGLER_REVIEW_ENABLED`
+gates `/api/reviews*` to the review service — a second, independent flag in
+the same proxy (`app/config.py`, `_select_backend()` in `app/main.py`). It
+follows the identical OFF → ON → reversible → negative-check discipline
+documented above: baseline with the flag off, cut over, flip back to prove
+reversibility, then kill the notification service and confirm the proxy
+returns a real `502` rather than a masked `200`. The full Newman evidence
+trail for this seam (the four-run table and negative-check output) lands in
+`tooling/newman/GOLDEN-BASELINE.md` from a separate lane; this file only
+records that the same discipline applies.
