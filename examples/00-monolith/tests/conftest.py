@@ -1,6 +1,10 @@
+import base64
+
 import pytest
+from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
+from common.management.commands.seed import REVIEWER_PASSWORD, REVIEWER_USERNAME
 from common.models import Customer
 from inventory.models import InventoryItem
 from order.services import place_order
@@ -9,6 +13,23 @@ from order.services import place_order
 @pytest.fixture
 def api_client():
     return APIClient()
+
+
+@pytest.fixture
+def reviewer_user(db):
+    """The fixed Basic-auth demo user seeded by `manage.py seed`
+    (SMELL[ch.15] -- review's write endpoint auth gate)."""
+    return get_user_model().objects.create_user(
+        username=REVIEWER_USERNAME, password=REVIEWER_PASSWORD
+    )
+
+
+@pytest.fixture
+def reviewer_auth_header(reviewer_user):
+    """kwargs for `api_client.post(..., **reviewer_auth_header)`: a valid
+    HTTP Basic `Authorization` header for the seeded `reviewer` user."""
+    token = base64.b64encode(f"{REVIEWER_USERNAME}:{REVIEWER_PASSWORD}".encode()).decode()
+    return {"HTTP_AUTHORIZATION": f"Basic {token}"}
 
 
 @pytest.fixture
