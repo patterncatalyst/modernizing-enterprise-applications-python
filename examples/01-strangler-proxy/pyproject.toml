@@ -1,0 +1,39 @@
+[project]
+name = "mea-strangler-proxy"
+version = "0.1.0"
+description = "Modernizing Enterprise Applications (Python) -- r02 strangler-fig edge: a thin ASGI reverse proxy that fronts the monolith and, behind a flag, cuts over individual bounded contexts (starting with Review) to their extracted replacements."
+requires-python = ">=3.14"
+dependencies = [
+    "starlette==1.8.0",
+    "uvicorn[standard]==0.54.0",
+    "httpx==0.28.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "ruff==0.17.1",
+]
+
+[tool.pytest.ini_options]
+python_files = ["test_*.py"]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.uv]
+# A standalone ASGI edge process, not a distributable library -- don't build/install
+# it as a package into its own virtualenv.
+package = false
