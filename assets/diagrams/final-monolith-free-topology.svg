@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 640" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="20" y="50" width="1360" height="500" rx="12" fill="#fafafa" stroke="#ddd"/>
+<rect x="50" y="260" width="180" height="80" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="140.0" y="305.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Client</text>
+<rect x="290" y="260" width="240" height="80" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="410.0" y="290.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">strangler-proxy :8888</text>
+<text x="410.0" y="307.5" font-size="11.5" fill="#555555" text-anchor="middle">flagless edge router</text>
+<text x="410.0" y="322.5" font-size="11.5" fill="#555555" text-anchor="middle">6-way lookup, else 404</text>
+<rect x="290" y="400" width="240" height="80" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="410.0" y="438.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">graphql-gateway :8090</text>
+<text x="410.0" y="455.0" font-size="11.5" fill="#555555" text-anchor="middle">its own front door</text>
+<rect x="950" y="230" width="340" height="140" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="1120.0" y="283.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">00-monolith -- FROZEN</text>
+<text x="1120.0" y="300.0" font-size="11.5" fill="#555555" text-anchor="middle">no live traffic, unwired,</text>
+<text x="1120.0" y="315.0" font-size="11.5" fill="#555555" text-anchor="middle">shell builds + 404-only smoke test,</text>
+<text x="1120.0" y="330.0" font-size="11.5" fill="#555555" text-anchor="middle">kept as golden-baseline referent</text>
+<rect x="620" y="60" width="190" height="64" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="715.0" y="90.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">review-service</text>
+<text x="715.0" y="107.0" font-size="11.5" fill="#555555" text-anchor="middle">:8001</text>
+<rect x="620" y="140" width="190" height="64" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="715.0" y="170.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">notification-service</text>
+<text x="715.0" y="187.0" font-size="11.5" fill="#555555" text-anchor="middle">:8002</text>
+<rect x="620" y="220" width="190" height="64" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="715.0" y="250.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">inventory-service</text>
+<text x="715.0" y="267.0" font-size="11.5" fill="#555555" text-anchor="middle">:8084 / :9004</text>
+<rect x="620" y="300" width="190" height="64" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="715.0" y="330.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">payment-service</text>
+<text x="715.0" y="347.0" font-size="11.5" fill="#555555" text-anchor="middle">:8085</text>
+<rect x="620" y="380" width="190" height="64" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="715.0" y="410.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">shipping-service</text>
+<text x="715.0" y="427.0" font-size="11.5" fill="#555555" text-anchor="middle">:8087</text>
+<rect x="620" y="460" width="190" height="64" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="715.0" y="490.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">order-service</text>
+<text x="715.0" y="507.0" font-size="11.5" fill="#555555" text-anchor="middle">:8088</text>
+<path d="M230.0,300.0 L290.0,300.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M468.6538461538462,260.0 L668.0769230769231,124.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M505.3125,260.0 L638.75,204.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M530.0,281.11475409836066 L620.0,266.95081967213116" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M530.0,312.59016393442624 L620.0,322.0327868852459" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M518.9285714285714,340.0 L627.8571428571429,380.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M473.5416666666667,340.0 L664.1666666666666,460.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M530.0,460.45901639344265 L620.0,475.8032786885246" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M522.9629629629629,400.0 L624.6296296296297,364.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M530.0,428.9836065573771 L620.0,420.72131147540983" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M474.8936170212766,400.0 L663.0851063829787,284.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M530.0,300.0 L950.0,300.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="746.0" y="294.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">no route left -- break-glass only</text>
+<text x="746.0" y="294.0" font-size="11" fill="#555" text-anchor="middle">no route left -- break-glass only</text>
+<text x="700.0" y="28" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.26 -- the final topology: six services + a GraphQL gateway behind one flagless router, the monolith frozen and unwired</text>
+<text x="40" y="616" font-size="11" fill="#555555" text-anchor="start">Contract suite green against exactly this mesh -- 50 requests / 133 assertions, 0 failed, repeated 4x (GOLDEN-BASELINE-r07.md) -- with no monolith process running at all.</text>
+</svg>

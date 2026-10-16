@@ -51,6 +51,7 @@ def _settings() -> Settings:
         http_port=8087,
         database_url="unused-by-the-orchestrator-directly",
         kafka_bootstrap_servers="unused-in-this-test",
+        order_base_url="http://order.invalid",
         monolith_base_url="http://monolith.invalid",
         payment_captured_topic="payment.captured",
         shipment_dispatched_topic="shipment.dispatched",

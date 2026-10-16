@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 620" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="20" y="56" width="1320" height="240" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="76" font-size="12" font-weight="700" fill="#1d1d1d">COMMAND SIDE -- place_order() / transition_order_status_with_view()</text>
+<rect x="20" y="328" width="1320" height="190" rx="12" fill="#f1f5f9" stroke="#ddd"/>
+<text x="32" y="348" font-size="12" font-weight="700" fill="#1d1d1d">QUERY SIDE -- GET /api/orders[/{id}] reads order_view ONLY</text>
+<rect x="320" y="100" width="760" height="160" rx="12" fill="#eef2ff" stroke="#ddd"/>
+<text x="332" y="120" font-size="12" font-weight="700" fill="#1d1d1d">ONE local transaction (create_order_with_outbox_and_view)</text>
+<rect x="50" y="110" width="220" height="80" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="160.0" y="148.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">gRPC Reserve/GetStock</text>
+<text x="160.0" y="165.0" font-size="11.5" fill="#555555" text-anchor="middle">OUTSIDE any local tx</text>
+<rect x="350" y="150" width="200" height="90" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="450.0" y="193.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">orders + order_items</text>
+<text x="450.0" y="210.0" font-size="11.5" fill="#555555" text-anchor="middle">write aggregate, PENDING</text>
+<rect x="590" y="150" width="200" height="90" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="690.0" y="193.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">order_view upsert</text>
+<text x="690.0" y="210.0" font-size="11.5" fill="#555555" text-anchor="middle">SAME transaction</text>
+<rect x="830" y="150" width="200" height="90" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="930.0" y="193.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">outbox row</text>
+<text x="930.0" y="210.0" font-size="11.5" fill="#555555" text-anchor="middle">order.placed</text>
+<rect x="1130" y="150" width="180" height="90" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1220.0" y="193.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">OutboxRelay</text>
+<text x="1220.0" y="210.0" font-size="11.5" fill="#555555" text-anchor="middle">polls -&gt; Kafka</text>
+<rect x="50" y="388" width="170" height="80" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="135.0" y="426.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">GET /api/orders</text>
+<text x="135.0" y="443.0" font-size="11.5" fill="#555555" text-anchor="middle">or /{id}</text>
+<rect x="300" y="388" width="220" height="80" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="410.0" y="426.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">app/routes.py</text>
+<text x="410.0" y="443.0" font-size="11.5" fill="#555555" text-anchor="middle">repository.get_order_view_*</text>
+<rect x="600" y="388" width="220" height="80" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="710.0" y="426.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">order_view</text>
+<text x="710.0" y="443.0" font-size="11.5" fill="#555555" text-anchor="middle">ONE row per order</text>
+<rect x="900" y="388" width="360" height="80" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="1080.0" y="426.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">orders / order_items NEVER queried here --</text>
+<text x="1080.0" y="443.0" font-size="11.5" fill="#555555" text-anchor="middle">app/routes.py imports OrderView, not Order</text>
+<path d="M270.0,167.06896551724137 L350.0,179.48275862068965" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="316.0" y="167.27586206896552" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">line snapshots</text>
+<text x="316.0" y="167.27586206896552" font-size="11" fill="#555" text-anchor="middle">line snapshots</text>
+<path d="M550.0,195.0 L590.0,195.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M790.0,195.0 L830.0,195.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1030.0,195.0 L1130.0,195.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="1086.0" y="189.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">at-least-once</text>
+<text x="1086.0" y="189.0" font-size="11" fill="#2f5f3d" text-anchor="middle">at-least-once</text>
+<path d="M220.0,428.0 L300.0,428.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M520.0,428.0 L600.0,428.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="566.0" y="422.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">read-your-writes: same tx as the write above</text>
+<text x="566.0" y="422.0" font-size="11" fill="#2f5f3d" text-anchor="middle">read-your-writes: same tx as the write above</text>
+<path d="M820.0,428.0 L900.0,428.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="680.0" y="30" font-size="16" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.21 -- CQRS, concretely: one write aggregate, one projection, upserted in the SAME transaction as every mutation</text>
+<text x="40" y="580" font-size="11" fill="#555555" text-anchor="start">This buys read-after-write consistency WITHIN this service: a GET issued right after a 202 sees the new PENDING row with</text>
+<text x="40" y="598" font-size="11" fill="#555555" text-anchor="start">no delay. It does not buy cross-service consistency -- CONFIRMED is only as fresh as the saga event that drives it there.</text>
+</svg>

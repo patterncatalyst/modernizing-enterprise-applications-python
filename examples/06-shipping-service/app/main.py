@@ -88,10 +88,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     logger.info(
         "shipping-service started, DATABASE_URL=%s KAFKA_BOOTSTRAP_SERVERS=%s "
-        "MONOLITH_BASE_URL=%s payment_captured_topic=%s dispatched_topic=%s failed_topic=%s "
-        "group=%s resumed_sagas=%s",
+        "ORDER_BASE_URL=%s (fallback MONOLITH_BASE_URL=%s) payment_captured_topic=%s "
+        "dispatched_topic=%s failed_topic=%s group=%s resumed_sagas=%s",
         db.resolve_database_url(settings.database_url),
         settings.kafka_bootstrap_servers,
+        settings.order_base_url,
         settings.monolith_base_url,
         settings.payment_captured_topic,
         settings.shipment_dispatched_topic,

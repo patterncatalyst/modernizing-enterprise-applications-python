@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Regenerates Python gRPC stubs for BOTH sides of the inventory ACL seam
-# (r04/ch.19) from the canonical proto and its byte-identical vendored copy:
+# Regenerates Python gRPC stubs for EVERY side of the inventory ACL seam
+# (r04/ch.19, extended r07) from the canonical proto and its byte-identical
+# vendored copies:
 #
 #   canonical: examples/04-inventory-service/proto/dev/patterncatalyst/inventory/v1/inventory.proto
-#   vendored:  examples/00-monolith/order/proto/dev/patterncatalyst/inventory/v1/inventory.proto
+#   vendored:  examples/00-monolith/order/proto/dev/patterncatalyst/inventory/v1/inventory.proto      (r04)
+#   vendored:  examples/07-order-service/proto/dev/patterncatalyst/inventory/v1/inventory.proto       (r07)
+#   vendored:  examples/08-graphql-gateway/proto/dev/patterncatalyst/inventory/v1/inventory.proto     (r07)
 #
-# Uses `uvx --from grpcio-tools==1.84.0` so this works without either
+# `scripts/check-proto-drift.sh` asserts all four stay byte-identical.
+#
+# Uses `uvx --from grpcio-tools==1.84.0` so this works without any
 # project's own venv being set up -- see the per-project `uv run` form
 # printed at the end for the alternative once grpcio-tools is a dev dep.
 #
@@ -26,6 +31,12 @@ SVC_OUT_DIR="${ROOT_DIR}/examples/04-inventory-service/app/grpc_gen"
 
 MONO_PROTO_ROOT="${ROOT_DIR}/examples/00-monolith/order/proto"
 MONO_OUT_DIR="${ROOT_DIR}/examples/00-monolith/order/grpc_gen"
+
+ORDER_SVC_PROTO_ROOT="${ROOT_DIR}/examples/07-order-service/proto"
+ORDER_SVC_OUT_DIR="${ROOT_DIR}/examples/07-order-service/app/grpc_gen"
+
+GATEWAY_PROTO_ROOT="${ROOT_DIR}/examples/08-graphql-gateway/proto"
+GATEWAY_OUT_DIR="${ROOT_DIR}/examples/08-graphql-gateway/app/grpc_gen"
 
 generate() {
   local proto_root="$1"
@@ -61,6 +72,8 @@ generate() {
 
 generate "${SVC_PROTO_ROOT}" "${SVC_OUT_DIR}"
 generate "${MONO_PROTO_ROOT}" "${MONO_OUT_DIR}"
+generate "${ORDER_SVC_PROTO_ROOT}" "${ORDER_SVC_OUT_DIR}"
+generate "${GATEWAY_PROTO_ROOT}" "${GATEWAY_OUT_DIR}"
 
 cat <<EOF
 
@@ -69,6 +82,10 @@ Generated:
   ${SVC_OUT_DIR}/inventory_pb2_grpc.py
   ${MONO_OUT_DIR}/inventory_pb2.py
   ${MONO_OUT_DIR}/inventory_pb2_grpc.py
+  ${ORDER_SVC_OUT_DIR}/inventory_pb2.py
+  ${ORDER_SVC_OUT_DIR}/inventory_pb2_grpc.py
+  ${GATEWAY_OUT_DIR}/inventory_pb2.py
+  ${GATEWAY_OUT_DIR}/inventory_pb2_grpc.py
 
 Per-project 'uv run' form (once grpcio-tools==${GRPC_TOOLS_PIN#*==} is a dev
 dependency in that project's pyproject.toml / uv.lock):
@@ -86,4 +103,18 @@ dependency in that project's pyproject.toml / uv.lock):
       --python_out=order/grpc_gen --grpc_python_out=order/grpc_gen \\
       order/proto/${PROTO_FILE_REL}
   # then re-apply the sed fixup above to order/grpc_gen/inventory_pb2_grpc.py
+
+  cd examples/07-order-service && \\
+    uv run python -m grpc_tools.protoc \\
+      -I proto/${PROTO_LEAF_REL} \\
+      --python_out=app/grpc_gen --grpc_python_out=app/grpc_gen \\
+      proto/${PROTO_FILE_REL}
+  # then re-apply the sed fixup above to app/grpc_gen/inventory_pb2_grpc.py
+
+  cd examples/08-graphql-gateway && \\
+    uv run python -m grpc_tools.protoc \\
+      -I proto/${PROTO_LEAF_REL} \\
+      --python_out=app/grpc_gen --grpc_python_out=app/grpc_gen \\
+      proto/${PROTO_FILE_REL}
+  # then re-apply the sed fixup above to app/grpc_gen/inventory_pb2_grpc.py
 EOF

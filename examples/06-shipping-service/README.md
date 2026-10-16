@@ -155,7 +155,10 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8087
 
 Defaults to `DATABASE_URL=postgresql://monolith:monolith@localhost:5432/monolith`,
 `KAFKA_BOOTSTRAP_SERVERS=localhost:9092` (the INFRA lane's compose stack), and
-`MONOLITH_BASE_URL=http://localhost:8000` (the enrich step's target). A quick
+`ORDER_BASE_URL=http://localhost:8088` (the enrich step's target, r07
+re-point -- order-service's `order_view` serves `shippingAddress` now, not
+the monolith). `MONOLITH_BASE_URL` (default `http://localhost:8000`) is kept
+as a documented, operator-only fallback -- see `app/config.py`. A quick
 standalone Postgres for local use:
 
 ```sh
@@ -166,10 +169,10 @@ docker run -d --name mea-shipping-pg -p 5432:5432 \
 
 ### Try it
 
-Run the monolith (`cd ../00-monolith && uv run python manage.py runserver
-0.0.0.0:8000`) and publish a `payment.captured` event (e.g. with `kcat`, or by
-checking out an order through the monolith with `PAYMENT_MODE=choreographed`
-and letting `05-payment-service` emit it for real), then:
+Publish a `payment.captured` event (e.g. with `kcat`, or -- since r07 -- by
+checking out an order through `07-order-service` and letting
+`05-payment-service` emit it for real; `examples/00-monolith` is frozen and
+no longer part of the running topology, see its own README.md), then:
 
 ```sh
 curl "http://localhost:8087/api/shipments?orderId=555123"
@@ -198,7 +201,7 @@ docker build -f Containerfile -t mea-shipping-service:r06 .
 docker run --rm -p 8087:8087 \
   -e DATABASE_URL=postgresql://monolith:monolith@<host>:5432/monolith \
   -e KAFKA_BOOTSTRAP_SERVERS=<host>:9092 \
-  -e MONOLITH_BASE_URL=http://<host>:8000 \
+  -e ORDER_BASE_URL=http://<host>:8088 \
   mea-shipping-service:r06
 ```
 

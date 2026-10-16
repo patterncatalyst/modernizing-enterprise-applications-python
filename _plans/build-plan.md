@@ -277,7 +277,7 @@ the "Runnable via" column changes to name the Python mechanism.
 | Monolith (B) | ch.08 | Django 5.2 LTS + DRF | the "before" |
 | Modular Monolith (B) | ch.13 | Django apps as modules | legit destination |
 | Modular Monolith w/ decomposed DBs (B) | ch.13, ch.18 | per-app `DATABASES` routing | distributed-monolith trap |
-| Strangler Fig + proxy/redirection/shared-DB variants (B) | ch.14 | ASGI reverse-proxy façade | the spine |
+| Strangler Fig + proxy/redirection/shared-DB variants (B) | ch.14 | ASGI reverse-proxy façade | the spine; **Decommission COMPLETE r07** — all six extractions done, the proxy is now flagless (every `*_enabled` boolean + the monolith fallback removed, unmatched→404), the monolith is frozen-not-deleted in-repo plus a `reference/monolith-before` branch + `v0-monolith`/`stage/01..06` tags (DRQ-075), reached via a pre-cutover reversibility proof before the one deliberate irreversible move (DRQ-077) |
 | Content-based Routing (B) | ch.16, ch.17 | façade path/header routing | **landed r03** — `STRANGLER_NOTIFICATION_ENABLED` routes `/api/notifications*` |
 | Anti-Corruption Layer (B) | ch.16, ch.19 | FastAPI translation layer at the seam | **ch.16 landed r03** at the notification seam; **ch.19 landed r04** — `inventory.proto` is the ACL for the gRPC seam, deliberately wire-vocab-distinct from the domain, with a byte-identical drift guard (`scripts/check-proto-drift.sh`, DRQ-042) |
 | Decorating Collaborator (B) | ch.16, ch.19 | FastAPI client wrapper | **ch.16 landed r03** — the monolith's `order_placed_consumer` decorates the monolith's own read-model from the same event the service consumes (DRQ-038); **ch.19 inventory retire landed r04** — the monolith's `RemoteInventoryClient` wraps the gRPC seam, and the CDC backfill connector is retired per its runbook once the owned schema is reached (DRQ-044) |
@@ -289,9 +289,9 @@ the "Runnable via" column changes to name the Python mechanism.
 | Transactional Outbox (C) | ch.17 (intro), ch.20 | Django `OutboxEvent` model (partial index) + `outbox_relay` management-command poller (aiokafka producer); payment-service's own outbox (`examples/05-payment-service/`) | **landed r03** (monolith instance) — cures SMELLS #5/#6 (sync-send + dual-write); a DECLINE/SHIP-FAIL checkout leaves zero outbox rows (tested); **ch.20 (outbox-done-right deep dive) landed r05** — authored against a *second*, now-mature outbox instance (payment-service's own transactional outbox publishing `payment.captured`/`payment.declined`) |
 | Event-Driven (C) | ch.17 | aiokafka producer (relay) → aiokafka consumers (monolith self-consumer + notification-service) | **landed r03** — first event-driven extraction; `order.placed` hand-maintained contract (DRQ-036) |
 | Idempotent Consumer (C) | ch.17 | DB partial-unique backstop, deduped by `order_id`/`customerId` | **landed r03** — both the monolith's `order_placed_consumer` and the notification-service's consumer are idempotent on redelivery |
-| Event Sourcing (C) | ch.21 | light/optional | demoted-light: high cost, not required; **ch.21 deferred to r07** (order extraction, DRQ-057) |
-| CQRS (C) | ch.21, ch.26 | Django write model + denormalized read model | load-bearing via gateway read side; **ch.21 deferred to r07** (DRQ-057) |
-| Distributed Transactions ACID→ACD (C) | ch.22 | conceptual | **landed r05** — the `POST /api/orders` 201→202 PENDING flip (DRQ-049) is the concrete break of the one-ACID-transaction checkout into a choreographed saga, realized and taught in ch.22 |
+| Event Sourcing (C) | ch.21 | light/optional | demoted-light: high cost, not required; **landed r07** — the outbox-as-event-log framing is taught against order-service's own outbox (`order.placed`), not full event-sourced replay |
+| CQRS (C) | ch.21, ch.26 | FastAPI write aggregate + denormalized `order_view` read model, same-DB, same-transaction projection | **landed r07 (ch.21)** — the order extraction's `order_view` is the first load-bearing CQRS read model (deferred from r05, DRQ-057); every write path upserts it in the SAME local transaction (DRQ-072), reads are served exclusively from it, `rebuild_order_view` proves it's rebuildable, and a dedicated projection-disabled negative proves the read side isn't silently falling back to the write tables (DRQ-079) |
+| Distributed Transactions ACID→ACD (C) | ch.22 | conceptual | **landed r05**, extended r07 — the `POST /api/orders` 201→202 PENDING flip (DRQ-049) is the concrete break of the one-ACID-transaction checkout into a choreographed saga, realized and taught in ch.22; **r07 completes it for all six contexts** — SMELL #1/#2 (god checkout service, one shared ACID transaction) are STRUCK, since order-service's own local transaction now spans only its own `order_svc` schema (DRQ-080) |
 | Saga — general (D) | ch.23 | compensations | **landed r05** — the payment extraction's saga reaction (`order_saga_listener`) and its compensating gRPC `Release` are the first concrete saga in the project |
 | Saga — Choreographed (D) | ch.23 | aiokafka consumer/producer | **landed r05** — payment extraction (`order.placed`→`payment.captured`/`payment.declined`); deliberate contrast with r06's orchestrated shipping saga |
 | Saga — Orchestrated (D) | ch.24 | CNDP Python DB-backed saga orchestrator | **landed r06** — shipping extraction adapts + embeds the CNDP orchestrator (`select(Saga).with_for_update()`, idempotent `advance()`, reverse-order `compensate()`, DRQ-059); crash-resumable (`resume_running_sagas()`), a durability upgrade over the Java sibling's `InMemorySagaService` (DRQ-060); deliberate orchestration-vs-choreography contrast with r05's payment saga |
@@ -302,8 +302,8 @@ the "Runnable via" column changes to name the Python mechanism.
 | Service/Schema/API registry + requirements (G) | ch.28 | Apicurio (unchanged) | |
 | Service Mesh / Observability / Tracing (H) | ch.30 | Istio + OTel Python auto-instrumentation (minikube) | |
 | Caching (H) | App. H (Java-sourced, adapted) | demoted → appendix | generic; no migration driver |
-| API Gateway + Service Discovery evolution (H) | ch.26, ch.28 | FastAPI gateway + Apicurio | |
-| REST / gRPC / GraphQL (H) | ch.26 | FastAPI / grpcio / Strawberry | |
+| API Gateway + Service Discovery evolution (H) | ch.26, ch.28 | FastAPI gateway + Apicurio | **GraphQL/Aggregation Gateway landed r07 (ch.26)** — see the row below |
+| REST / gRPC / GraphQL (H) | ch.26 | FastAPI / grpcio / Strawberry | **landed r07** — `examples/08-graphql-gateway/` (:8090) is an additive, data-less Strawberry gateway with its own front door, federating order/payment/shipment/review over REST and per-item stock over gRPC behind one query, depth/token-bounded, partial-failure = per-field null + `errors[]` not a 500 (DRQ-074) |
 | Unit / E2E / Testing-Data (I) | ch.10 + woven | pytest/pytest-django + Newman | testing throughout |
 
 **Demotions, rationale unchanged from the Java sibling:** Container-Native
@@ -437,7 +437,39 @@ Behind the two independent cutover flags `STRANGLER_SHIPPING_ENABLED`
 (reads, a transparent pass-through) and `SHIPPING_MODE=inprocess|
 orchestrated` (dispatch), gated green by the new
 `shipping-equivalence-gate` (including the stuck-AWAITING_SHIPMENT honesty
-negative). Row 6 remains not started.
+negative). **Row 6 is now done, built in r07** (`_plans/r07-build-plan.md`)
+— **THE FINALE, and with it the strangler fig is COMPLETE: all six
+extractions are done, the monolith is decommissioned.** The order extraction
+(`examples/07-order-service/`, :8088) is CQRS from day one: a normalized
+write aggregate (`orders`/`order_items`) plus a denormalized `order_view`
+read table, upserted in the SAME local transaction as every write
+(DRQ-072); every `GET` is served exclusively from `order_view`. It lifts the
+monolith's four saga reactions (`payment.captured`/`payment.declined`/
+`shipment.dispatched`/`shipment.failed`) into its own idempotent consumer,
+owns its own forward-filled `customers` table (`order_svc` schema,
+customer FK→snapshot, DRQ-073), and produces `order.placed` from its own
+transactional outbox (DRQ-078). A new, additive **Strawberry GraphQL
+gateway** (`examples/08-graphql-gateway/`, :8090) federates order/payment/
+shipment/review (REST) and per-item stock (gRPC) behind one data-less
+aggregation query, with its own front door — never routed through the
+strangler proxy (DRQ-074). The decommission itself: a pre-cutover
+reversibility proof (full extracted topology vs. bare-monolith, both green)
+was captured immediately before the one deliberate, system-wide
+**irreversible** move (DRQ-077) — the monolith is frozen-not-deleted
+in-repo (a `reference/monolith-before` branch + `v0-monolith`/`stage/01..06`
+tags preserve the learner-facing "before," DRQ-075), the strangler proxy
+becomes **flagless** (every `*_enabled` boolean and the monolith fallback
+removed; unmatched paths 404; `test_routing.py` rewritten, 29/29 green), and
+shipping-service's `enrich` call is re-pointed from the monolith to
+order-service. **SMELL #1 (god checkout service) and #2 (one ACID
+transaction) are STRUCK** — ACID→ACD is now realized for all six contexts,
+not just payment/shipping (DRQ-080). The Newman equivalence suite converts
+to a contract/acceptance suite (no more monolith to compare against,
+DRQ-076), proven green ≥2× against the fully monolith-free mesh plus three
+honesty negatives (consumer-down, compensation-disabled, and a
+CQRS-specific **projection-disabled → stale-read** negative, DRQ-079) — one
+real integration bug (a staged GraphQL query that didn't match the as-built
+schema) was found and fixed along the way.
 
 | # | Service | Seam / mechanism | Data & transaction handling | Target runtime | Chapters | Status |
 |---|---|---|---|---|---|---|
@@ -447,7 +479,7 @@ negative). Row 6 remains not started.
 | 3 | **inventory** | Synchronous gRPC; decomposed DB; decorating collaborator | CDC (Debezium) backfill from shared schema → owned DB (transition-only, then retired), then cut writes; own `inventory` schema (Alembic, own-seed); `order_items` FK→snapshot | FastAPI + **grpcio** server (`grpc.aio`, :9004) | ch.18–19 | **done** |
 | 4 | **payment** | Event choreography (`order.placed`→`payment.captured`) | Choreographed saga via **aiokafka**; idempotent compensations (closes DRQ-043); ACID→ACD realized via the 201→202 flip | FastAPI + aiokafka | ch.20, ch.22, ch.23 | **done** |
 | 5 | **shipping** | Completes the chain; alternative orchestration | **Orchestrated saga** via the reused CNDP Python DB-backed saga orchestrator; crash-resumable; refund hop closes DRQ-054 | FastAPI + saga orchestrator | ch.24–25 | **done (r06)** |
-| 6 | **order** (+ gateway) | Core aggregate, extracted last; GraphQL read side | CQRS read model; event-sourcing optional; monolith decommissioned | FastAPI REST/aiokafka + **Strawberry** GraphQL gateway | ch.26 | not started |
+| 6 | **order** (+ gateway) | Core aggregate, extracted last; GraphQL read side | CQRS read model (same-DB, same-tx projection); monolith decommissioned | FastAPI REST/aiokafka + **Strawberry** GraphQL gateway | ch.21, ch.26 | **done (r07) — strangler fig COMPLETE** |
 
 **Seam toolkit (consistent across all six):** an ASGI reverse-proxy façade
 routing by path/content; an ACL (a thin FastAPI translation layer) at each
@@ -544,7 +576,7 @@ shifted down by one iteration, for the same total of **10 iterations**.
 | **r04** | **Inventory extraction — gRPC seam + CDC backfill + FK→snapshot — done** | Part 6 (18–19): `inventory.proto` (gRPC ACL) + drift guard; inventory extraction (`examples/04-inventory-service/`, ch.18–19) with own `inventory` Alembic schema + own-seed, atomic conditional-UPDATE Reserve (concurrency-safe, race-tested) + compensating Release issued outside the monolith's local transaction; transition-only Debezium CDC backfill (retired, NOT in CI); `order_items` FK→snapshot; two cutover flags (`STRANGLER_INVENTORY_ENABLED` + `INVENTORY_MODE`); Newman `inventory-equivalence-gate` green fully-gRPC and fully-local, plus RED-then-green negative checks | Java r05 |
 | **r05** | **Sagas — choreographed — done** | Part 7 ch.20/22/23 (ch.21 deferred to r07): **Payment extraction (`examples/05-payment-service/`, aiokafka choreography)** — `POST /api/orders` 201→202 PENDING in choreographed mode (zero-regression synchronous mode unchanged); `order_saga_listener` reacts to `payment.captured`/`payment.declined`; idempotent inventory `Release` (ledger + `idempotency_key`) closes DRQ-043; shipping-fail Option A (new `SHIPPING_FAILED` terminal, refund-on-ship-fail deferred to r06); `STRANGLER_PAYMENT_ENABLED` + `PAYMENT_MODE` two-dimension cutover; Newman converted to async bounded-wait + stuck-PENDING negative; `payment-equivalence-gate` green | Java r06 |
 | **r06** | **Sagas — orchestrated + resilience — done** | Part 7 ch.24–25: **Shipping extraction (`examples/06-shipping-service/`, :8087) via the reused CNDP Python DB-backed saga orchestrator** (ch.24), crash-resumable (durability upgrade over the Java sibling's in-memory orchestrator), `AWAITING_SHIPMENT` lifecycle, orchestrated-vs-choreographed contrast with r05; **payment-service refund hop closes DRQ-054** (ship-fail now refunds a captured payment); ch.25 (failure-mode taxonomy + the one new `tenacity` enrich-retry mechanism, pybreaker/bulkhead deferred); two cutover flags (`STRANGLER_SHIPPING_ENABLED` + `SHIPPING_MODE`); Newman `shipping-equivalence-gate` green both ways + stuck-AWAITING_SHIPMENT negative (and a poll-script bug the live cutover caught and fixed — retry through `AWAITING_SHIPMENT`, not just `PENDING`) | Java r07 |
-| **r07** | Comms + contracts | Part 8 (26–28) incl. **Order extraction + GraphQL gateway (strangler completes)** | Java r08 |
+| **r07** | **Order + GraphQL gateway — THE FINALE, strangler fig COMPLETE — done** | Part 8 ch.21/26: **Order extraction (`examples/07-order-service/`, :8088, CQRS from day one — same-DB two-table read model, same-tx projection, DRQ-072) + the additive Strawberry GraphQL gateway (`examples/08-graphql-gateway/`, :8090, own front door, DRQ-074)**; lifts the four saga reactions, own outbox → `order.placed`, customer FK→snapshot (owns `customers`, DRQ-073); monolith **decommissioned** — pre-cutover reversibility proof, then the one irreversible move (DRQ-077): flagless strangler proxy, monolith frozen-not-deleted + `reference/monolith-before` branch + `v0-monolith`/`stage/01..06` tags (DRQ-075); shipping's `enrich` re-pointed to order-service; **SMELL #1/#2 STRUCK, ACID→ACD for all six contexts** (DRQ-080); equivalence suite converted to a contract/acceptance suite, green ≥2× monolith-free plus 3 negatives incl. the CQRS projection-disabled check (DRQ-076/DRQ-079); ch.21 (Event Sourcing & CQRS, deferred from r05) + ch.26 authored | Java r08 |
 | **r08** | Operate + deliver + appendices | Part 9 (29–30), ch.31; minikube substrate; port/adapt remaining reuse appendices | Java r09 |
 | **r09** | Deck + close | ch.32 conclusion; rebuild the companion deck (`lgtm-presentation`); cross-linking; final validation | Java r10 |
 | **r10** | OpenShift/CRC appendix + cross-sibling reconciliation | ch.33 built live on CRC (per standing OpenShift/CRC Appendix Standard); a dedicated drift sweep against the Java sibling's `reconciliation.md` | new — not present in the Java sibling's table; added so the 10-iteration count matches while giving the OpenShift appendix and a final reconciliation pass their own iteration rather than crowding r08 |

@@ -1,8 +1,11 @@
-"""The strangler-fig edge: a thin ASGI reverse proxy in front of the monolith.
+"""The strangler-fig edge: a thin ASGI reverse proxy, now (r07) a FLAGLESS
+edge router in front of six independently deployable services -- the
+monolith it originally fronted is decommissioned (frozen in-repo; see
+`examples/00-monolith/README.md`).
 
 One catch-all route forwards every request -- method, full path, raw query
-string, headers, and body -- to whichever backend is configured for it, and
-relays that backend's real status code, body, and headers back (streamed)
+string, headers, and body -- to whichever backend owns that path's context,
+and relays that backend's real status code, body, and headers back (streamed)
 unchanged. This is the ASGI analogue of a Camel `platform-http` consumer
 paired with an `http` producer using `bridgeEndpoint=true&
 throwExceptionOnFailure=false`: the proxy never raises on an upstream 4xx/5xx,
@@ -18,9 +21,10 @@ is the *route-pattern-relative* value (``"api/reviews/5"``, no leading
 slash) -- if a future refactor mounts this route under a sub-application or
 a path prefix and someone switches the predicate to check that value against
 a bare ``"reviews"`` prefix instead of ``"api/reviews"``, the predicate will
-silently stop matching and every request will fall through to the monolith,
-exactly like the Camel route's original ``CamelHttpPath``-relative-prefix bug.
-Always match the FULL request path.
+silently stop matching and every request will fall through to... nothing --
+a real ``404`` (r07: there is no monolith fallback left to mask the bug
+behind) -- exactly like the Camel route's original ``CamelHttpPath``-relative-
+prefix bug, just louder now. Always match the FULL request path.
 """
 
 from __future__ import annotations
@@ -62,25 +66,33 @@ _HOP_BY_HOP_RESPONSE_HEADERS = {"content-length", "transfer-encoding", "connecti
 _ALL_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]
 
 
-def _select_backend(settings: Settings, path: str) -> str:
+def _select_backend(settings: Settings, path: str) -> str | None:
     """Operator-configured, request-independent target selection.
 
     Never builds a target from request data (header, query string, path
-    segment) -- only ever from the two fixed base URLs in ``settings`` --
-    which keeps this proxy's dynamic-URI seam closed to SSRF: no caller can
+    segment) -- only ever from the fixed base URLs in ``settings`` -- which
+    keeps this proxy's dynamic-URI seam closed to SSRF: no caller can
     redirect it to an arbitrary host.
+
+    r07 DECOMMISSION: flagless. Every one of the six bounded contexts this
+    proxy ever fronted now has exactly one owning backend, unconditionally
+    -- there is no more monolith to fall through to. A path matching none of
+    them returns ``None``; ``proxy_handler`` turns that into a real ``404``,
+    never a silent pass-through to some default backend.
     """
-    if settings.review_enabled and path.startswith("/api/reviews"):
+    if path.startswith("/api/reviews"):
         return settings.review_base_url
-    if settings.notification_enabled and path.startswith("/api/notifications"):
+    if path.startswith("/api/notifications"):
         return settings.notification_base_url
-    if settings.inventory_enabled and path.startswith("/api/inventory"):
+    if path.startswith("/api/inventory"):
         return settings.inventory_base_url
-    if settings.payment_enabled and path.startswith("/api/payments"):
+    if path.startswith("/api/payments"):
         return settings.payment_base_url
-    if settings.shipping_enabled and path.startswith("/api/shipments"):
+    if path.startswith("/api/shipments"):
         return settings.shipping_base_url
-    return settings.monolith_base_url
+    if path.startswith("/api/orders"):
+        return settings.order_base_url
+    return None
 
 
 def _forward_request_headers(request: Request) -> list[tuple[bytes, bytes]]:
@@ -113,6 +125,16 @@ async def proxy_handler(request: Request) -> Response:
 
     path = request.url.path
     base_url = _select_backend(settings, path)
+    if base_url is None:
+        # Flagless edge router, r07: no owning backend for this path -- a
+        # real 404, never a silent pass-through to a default/fallback
+        # backend (there is none left; the monolith is decommissioned).
+        return Response(
+            content=f"strangler-proxy: no route for {path}",
+            status_code=404,
+            media_type="text/plain",
+        )
+
     query = request.scope.get("query_string", b"")
     target_url = base_url.rstrip("/") + path + (f"?{query.decode('latin-1')}" if query else "")
 
@@ -157,9 +179,10 @@ def create_app(
     http_client: httpx.AsyncClient | None = None,
 ) -> Starlette:
     """App factory. ``settings``/``http_client`` overrides exist for tests --
-    they let a test stand up two independently configured proxy instances
-    (flag off / flag on) in the same process, each wired to in-process stub
-    backends via a custom ``httpx.AsyncClient`` transport, without touching
+    they let a test stand up independently configured proxy instances
+    (e.g. with different per-context base URLs) in the same process, each
+    wired to in-process stub backends via a custom ``httpx.AsyncClient``
+    transport, without touching
     environment variables or module-level global state.
     """
     resolved_settings = settings if settings is not None else default_settings

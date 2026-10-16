@@ -401,7 +401,7 @@ pipeline with an idempotent consumer is supposed to provide.
   table that has never needed it, would be speculative infrastructure ahead
   of the problem that earns it.
 
-Next: ch.22 turns from the mechanism to its cost — what the ACID guarantee
+Next: ch.21 splits reads from writes with CQRS, then ch.22 turns from the mechanism to its cost — what the ACID guarantee
 checkout used to take for granted actually loses once a saga, not a single
 transaction, is what resolves an order.
 

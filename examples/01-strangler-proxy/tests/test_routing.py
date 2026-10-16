@@ -1,14 +1,20 @@
-"""Routing + pass-through-fidelity tests for the strangler proxy.
+"""Routing + pass-through-fidelity tests for the strangler proxy -- the r07
+FLAGLESS edge-router shape.
 
-Exercises BOTH flag states (review disabled / enabled) against two in-process
-stub ASGI backends standing in for the monolith and the review service, all
-driven through the real app factory (``app.main.create_app``) and a real
-httpx ``ASGITransport`` -- no network sockets, no running servers.
+Through r02-r07's cutover window this suite exercised BOTH flag states (per
+context) against in-process stub ASGI backends. r07 decommissions the
+monolith: there is no more flag to flip and no more monolith backend to fall
+through to. This module is a full rewrite (not an incremental diff) for that
+flagless shape: every `/api/*` prefix this proxy has ever fronted now routes
+unconditionally to its one owning backend, and a path matching none of them
+is a real `404` -- never a silent pass-through to a default backend, because
+there is no longer a default backend to pass through to.
 
 Each test builds its own ``Settings`` + ``httpx.AsyncClient`` (mounted onto
-the stub ASGI apps) and passes them into ``create_app``, proving the proxy is
-reconfigurable per-instance rather than hard-wired to a single process-global
-flag state.
+stub ASGI apps) and passes them into ``create_app``, proving the proxy is
+reconfigurable per-instance (different backend base URLs) rather than
+hard-wired to a single process-global state -- the same posture the pre-r07
+suite proved, minus the flags.
 """
 
 from __future__ import annotations
@@ -25,7 +31,6 @@ from starlette.applications import Starlette
 from app.config import Settings
 from app.main import create_app
 
-MONOLITH_URL = "http://monolith.test"
 REVIEW_URL = "http://review.test"
 DEAD_REVIEW_URL = "http://review-down.test"
 NOTIFICATION_URL = "http://notification.test"
@@ -36,13 +41,18 @@ PAYMENT_URL = "http://payment.test"
 DEAD_PAYMENT_URL = "http://payment-down.test"
 SHIPPING_URL = "http://shipping.test"
 DEAD_SHIPPING_URL = "http://shipping-down.test"
+ORDER_URL = "http://order.test"
+DEAD_ORDER_URL = "http://order-down.test"
 
 
 def make_stub_app(name: str):
     """A minimal raw-ASGI stub backend: echoes request shape as JSON.
 
-    ``GET/POST/... /api/boom`` always answers 500, to prove the proxy relays
-    a real upstream error status verbatim instead of raising or masking it.
+    Any path ENDING in ``/boom`` (e.g. ``/api/orders/boom``) always answers
+    500, to prove the proxy relays a real upstream error status verbatim
+    instead of raising or masking it -- a suffix match rather than an exact
+    ``/api/boom`` match, so this works through any of the six real context
+    prefixes the flagless router actually knows about.
     """
 
     async def stub(scope, receive, send):
@@ -55,7 +65,7 @@ def make_stub_app(name: str):
             more_body = message.get("more_body", False)
 
         path = scope["path"]
-        if path == "/api/boom":
+        if path.endswith("/boom"):
             status = 500
             payload = {"backend": name, "path": path, "error": "boom"}
         else:
@@ -167,367 +177,170 @@ async def running_proxy(settings: Settings, mounts: dict[str, httpx.AsyncBaseTra
             yield client
 
 
+def _settings() -> Settings:
+    """The one, flagless, fully-wired Settings instance every routing test
+    below shares -- every one of the six owning backends is a healthy stub,
+    so each test only has to override what it specifically wants down."""
+    return Settings(
+        review_base_url=REVIEW_URL,
+        notification_base_url=NOTIFICATION_URL,
+        inventory_base_url=INVENTORY_URL,
+        payment_base_url=PAYMENT_URL,
+        shipping_base_url=SHIPPING_URL,
+        order_base_url=ORDER_URL,
+    )
+
+
 def _mounts() -> dict[str, httpx.AsyncBaseTransport]:
     return {
-        MONOLITH_URL: httpx.ASGITransport(app=make_stub_app("monolith")),
         REVIEW_URL: httpx.ASGITransport(app=make_stub_app("review")),
         NOTIFICATION_URL: httpx.ASGITransport(app=make_stub_app("notification")),
         INVENTORY_URL: httpx.ASGITransport(app=make_stub_app("inventory")),
         PAYMENT_URL: httpx.ASGITransport(app=make_stub_app("payment")),
         SHIPPING_URL: httpx.ASGITransport(app=make_stub_app("shipping")),
+        ORDER_URL: httpx.ASGITransport(app=make_stub_app("order")),
     }
 
 
-async def test_flag_off_routes_reviews_path_to_monolith():
-    settings = Settings(
-        review_enabled=False, monolith_base_url=MONOLITH_URL, review_base_url=REVIEW_URL
-    )
-    async with running_proxy(settings, _mounts()) as client:
-        resp = await client.get("/api/reviews/5")
+@pytest.mark.parametrize(
+    ("path", "backend"),
+    [
+        ("/api/reviews/5", "review"),
+        ("/api/reviews?sku=SKU-WIDGET-001", "review"),
+        ("/api/notifications/5", "notification"),
+        ("/api/notifications?customerId=42", "notification"),
+        ("/api/inventory/5", "inventory"),
+        ("/api/inventory?sku=SKU-WIDGET-001", "inventory"),
+        ("/api/payments/5", "payment"),
+        ("/api/payments?orderId=42", "payment"),
+        ("/api/shipments/5", "shipping"),
+        ("/api/shipments?orderId=42", "shipping"),
+        ("/api/orders/5", "order"),
+        ("/api/orders?customerId=1", "order"),
+    ],
+)
+async def test_every_context_prefix_routes_to_its_one_owning_backend(path, backend):
+    """The flagless router's core contract: every `/api/*` prefix this proxy
+    has ever fronted maps unconditionally to exactly one backend -- no flag,
+    no monolith fallback, anywhere."""
+    async with running_proxy(_settings(), _mounts()) as client:
+        resp = await client.get(path)
         assert resp.status_code == 200
-        assert resp.json()["backend"] == "monolith"
+        assert resp.json()["backend"] == backend
 
 
-async def test_flag_off_routes_other_paths_to_monolith():
-    settings = Settings(
-        review_enabled=False, monolith_base_url=MONOLITH_URL, review_base_url=REVIEW_URL
-    )
-    async with running_proxy(settings, _mounts()) as client:
-        resp = await client.get("/api/orders/1")
-        assert resp.status_code == 200
-        assert resp.json()["backend"] == "monolith"
+async def test_all_six_contexts_coexist_independently_in_one_proxy_instance():
+    """All six owning backends answer correctly side by side in the SAME
+    proxy instance -- not just one at a time in isolation."""
+    async with running_proxy(_settings(), _mounts()) as client:
+        for path, backend in [
+            ("/api/reviews/5", "review"),
+            ("/api/notifications/5", "notification"),
+            ("/api/inventory/5", "inventory"),
+            ("/api/payments/5", "payment"),
+            ("/api/shipments/5", "shipping"),
+            ("/api/orders/5", "order"),
+        ]:
+            resp = await client.get(path)
+            assert resp.status_code == 200
+            assert resp.json()["backend"] == backend
 
 
-async def test_flag_on_routes_reviews_path_to_review_service():
-    settings = Settings(
-        review_enabled=True, monolith_base_url=MONOLITH_URL, review_base_url=REVIEW_URL
-    )
-    async with running_proxy(settings, _mounts()) as client:
-        resp = await client.get("/api/reviews/5")
-        assert resp.status_code == 200
-        assert resp.json()["backend"] == "review"
-
-        # A sibling path under /api/reviews/* must also cut over, not just
-        # the exact prefix.
-        resp2 = await client.get("/api/reviews?sku=SKU-WIDGET-001")
-        assert resp2.status_code == 200
-        assert resp2.json()["backend"] == "review"
-
-
-async def test_flag_on_routes_other_paths_to_monolith():
-    settings = Settings(
-        review_enabled=True, monolith_base_url=MONOLITH_URL, review_base_url=REVIEW_URL
-    )
-    async with running_proxy(settings, _mounts()) as client:
-        resp = await client.get("/api/orders/1")
-        assert resp.status_code == 200
-        assert resp.json()["backend"] == "monolith"
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/",
+        "/api",
+        "/api/",
+        "/api/unknown",
+        "/health",
+        "/api/order",  # NOT a prefix of /api/orders -- must not accidentally match
+        "/api/review",  # NOT a prefix of /api/reviews -- must not accidentally match
+    ],
+)
+async def test_unmatched_path_is_a_real_404_never_a_silent_passthrough(path):
+    """r07's whole point: there is no monolith left to catch what nothing
+    else matches. An unrecognized path is a real `404` from the proxy
+    itself -- it never reaches any backend (none of the six stub backends
+    below are ever hit for these paths; if one of them answered, the
+    assertion on `backend` would fail instead of this 404 check even
+    mattering)."""
+    async with running_proxy(_settings(), _mounts()) as client:
+        resp = await client.get(path)
+        assert resp.status_code == 404
 
 
-async def test_notification_flag_off_routes_notifications_path_to_monolith():
-    settings = Settings(
-        notification_enabled=False,
-        monolith_base_url=MONOLITH_URL,
-        notification_base_url=NOTIFICATION_URL,
-    )
-    async with running_proxy(settings, _mounts()) as client:
-        resp = await client.get("/api/notifications/5")
-        assert resp.status_code == 200
-        assert resp.json()["backend"] == "monolith"
+async def test_review_down_surfaces_real_5xx_not_masked_200():
+    mounts = _mounts() | {REVIEW_URL: httpx.MockTransport(_raise_connect_error)}
+    async with running_proxy(_settings(), mounts) as client:
+        down_resp = await client.get("/api/reviews/5")
+        assert down_resp.status_code == 502
+        assert down_resp.status_code != 200
 
-
-async def test_notification_flag_on_routes_notifications_path_to_notification_service():
-    settings = Settings(
-        review_enabled=True,
-        notification_enabled=True,
-        monolith_base_url=MONOLITH_URL,
-        review_base_url=REVIEW_URL,
-        notification_base_url=NOTIFICATION_URL,
-    )
-    async with running_proxy(settings, _mounts()) as client:
-        resp = await client.get("/api/notifications/5")
-        assert resp.status_code == 200
-        assert resp.json()["backend"] == "notification"
-
-        # A sibling path under /api/notifications/* must also cut over, not
-        # just the exact prefix.
-        resp2 = await client.get("/api/notifications?customerId=42")
-        assert resp2.status_code == 200
-        assert resp2.json()["backend"] == "notification"
-
-        # The notification flag must be independent of the review flag: both
-        # cut-over paths route correctly in the same proxy instance ...
-        review_resp = await client.get("/api/reviews/5")
-        assert review_resp.status_code == 200
-        assert review_resp.json()["backend"] == "review"
-
-        # ... and every other path still falls through to the monolith.
-        other_resp = await client.get("/api/orders/1")
-        assert other_resp.status_code == 200
-        assert other_resp.json()["backend"] == "monolith"
+        # The failure is scoped to the dead backend -- every other context
+        # on this same proxy instance keeps working.
+        healthy_resp = await client.get("/api/orders/1")
+        assert healthy_resp.status_code == 200
+        assert healthy_resp.json()["backend"] == "order"
 
 
 async def test_notification_down_surfaces_real_5xx_not_masked_200():
-    settings = Settings(
-        notification_enabled=True,
-        monolith_base_url=MONOLITH_URL,
-        notification_base_url=DEAD_NOTIFICATION_URL,
-    )
-    mounts = {
-        MONOLITH_URL: httpx.ASGITransport(app=make_stub_app("monolith")),
-        DEAD_NOTIFICATION_URL: httpx.MockTransport(_raise_connect_error),
-    }
-    async with running_proxy(settings, mounts) as client:
+    mounts = _mounts() | {NOTIFICATION_URL: httpx.MockTransport(_raise_connect_error)}
+    async with running_proxy(_settings(), mounts) as client:
         down_resp = await client.get("/api/notifications/5")
         assert down_resp.status_code == 502
-        assert down_resp.status_code != 200
-
-        # The failure is scoped to the dead backend -- everything else on
-        # this same proxy instance keeps working.
         healthy_resp = await client.get("/api/orders/1")
         assert healthy_resp.status_code == 200
-        assert healthy_resp.json()["backend"] == "monolith"
-
-
-async def test_inventory_flag_off_routes_inventory_path_to_monolith():
-    settings = Settings(
-        inventory_enabled=False,
-        monolith_base_url=MONOLITH_URL,
-        inventory_base_url=INVENTORY_URL,
-    )
-    async with running_proxy(settings, _mounts()) as client:
-        resp = await client.get("/api/inventory/5")
-        assert resp.status_code == 200
-        assert resp.json()["backend"] == "monolith"
-
-
-async def test_inventory_flag_on_routes_inventory_path_to_inventory_service():
-    settings = Settings(
-        review_enabled=True,
-        notification_enabled=True,
-        inventory_enabled=True,
-        monolith_base_url=MONOLITH_URL,
-        review_base_url=REVIEW_URL,
-        notification_base_url=NOTIFICATION_URL,
-        inventory_base_url=INVENTORY_URL,
-    )
-    async with running_proxy(settings, _mounts()) as client:
-        resp = await client.get("/api/inventory/5")
-        assert resp.status_code == 200
-        assert resp.json()["backend"] == "inventory"
-
-        # A sibling path under /api/inventory/* must also cut over, not just
-        # the exact prefix.
-        resp2 = await client.get("/api/inventory?sku=SKU-WIDGET-001")
-        assert resp2.status_code == 200
-        assert resp2.json()["backend"] == "inventory"
-
-        # The inventory flag must be independent of the review and
-        # notification flags: all three cut-over paths route correctly in
-        # the same proxy instance ...
-        review_resp = await client.get("/api/reviews/5")
-        assert review_resp.status_code == 200
-        assert review_resp.json()["backend"] == "review"
-
-        notification_resp = await client.get("/api/notifications/5")
-        assert notification_resp.status_code == 200
-        assert notification_resp.json()["backend"] == "notification"
-
-        # ... and every other path still falls through to the monolith.
-        other_resp = await client.get("/api/orders/1")
-        assert other_resp.status_code == 200
-        assert other_resp.json()["backend"] == "monolith"
+        assert healthy_resp.json()["backend"] == "order"
 
 
 async def test_inventory_down_surfaces_real_5xx_not_masked_200():
-    settings = Settings(
-        inventory_enabled=True,
-        monolith_base_url=MONOLITH_URL,
-        inventory_base_url=DEAD_INVENTORY_URL,
-    )
-    mounts = {
-        MONOLITH_URL: httpx.ASGITransport(app=make_stub_app("monolith")),
-        DEAD_INVENTORY_URL: httpx.MockTransport(_raise_connect_error),
-    }
-    async with running_proxy(settings, mounts) as client:
+    mounts = _mounts() | {INVENTORY_URL: httpx.MockTransport(_raise_connect_error)}
+    async with running_proxy(_settings(), mounts) as client:
         down_resp = await client.get("/api/inventory/5")
         assert down_resp.status_code == 502
-        assert down_resp.status_code != 200
-
-        # The failure is scoped to the dead backend -- everything else on
-        # this same proxy instance keeps working.
         healthy_resp = await client.get("/api/orders/1")
         assert healthy_resp.status_code == 200
-        assert healthy_resp.json()["backend"] == "monolith"
-
-
-async def test_payment_flag_off_routes_payments_path_to_monolith():
-    settings = Settings(
-        payment_enabled=False,
-        monolith_base_url=MONOLITH_URL,
-        payment_base_url=PAYMENT_URL,
-    )
-    async with running_proxy(settings, _mounts()) as client:
-        resp = await client.get("/api/payments/5")
-        assert resp.status_code == 200
-        assert resp.json()["backend"] == "monolith"
-
-
-async def test_payment_flag_on_routes_payments_path_to_payment_service():
-    settings = Settings(
-        review_enabled=True,
-        notification_enabled=True,
-        inventory_enabled=True,
-        payment_enabled=True,
-        monolith_base_url=MONOLITH_URL,
-        review_base_url=REVIEW_URL,
-        notification_base_url=NOTIFICATION_URL,
-        inventory_base_url=INVENTORY_URL,
-        payment_base_url=PAYMENT_URL,
-    )
-    async with running_proxy(settings, _mounts()) as client:
-        resp = await client.get("/api/payments/5")
-        assert resp.status_code == 200
-        assert resp.json()["backend"] == "payment"
-
-        # A sibling path under /api/payments/* must also cut over, not just
-        # the exact prefix.
-        resp2 = await client.get("/api/payments?orderId=42")
-        assert resp2.status_code == 200
-        assert resp2.json()["backend"] == "payment"
-
-        # The payment flag must be independent of the review, notification,
-        # and inventory flags: all four cut-over paths route correctly in
-        # the same proxy instance ...
-        review_resp = await client.get("/api/reviews/5")
-        assert review_resp.status_code == 200
-        assert review_resp.json()["backend"] == "review"
-
-        notification_resp = await client.get("/api/notifications/5")
-        assert notification_resp.status_code == 200
-        assert notification_resp.json()["backend"] == "notification"
-
-        inventory_resp = await client.get("/api/inventory/5")
-        assert inventory_resp.status_code == 200
-        assert inventory_resp.json()["backend"] == "inventory"
-
-        # ... and every other path still falls through to the monolith.
-        other_resp = await client.get("/api/orders/1")
-        assert other_resp.status_code == 200
-        assert other_resp.json()["backend"] == "monolith"
+        assert healthy_resp.json()["backend"] == "order"
 
 
 async def test_payment_down_surfaces_real_5xx_not_masked_200():
-    settings = Settings(
-        payment_enabled=True,
-        monolith_base_url=MONOLITH_URL,
-        payment_base_url=DEAD_PAYMENT_URL,
-    )
-    mounts = {
-        MONOLITH_URL: httpx.ASGITransport(app=make_stub_app("monolith")),
-        DEAD_PAYMENT_URL: httpx.MockTransport(_raise_connect_error),
-    }
-    async with running_proxy(settings, mounts) as client:
+    mounts = _mounts() | {PAYMENT_URL: httpx.MockTransport(_raise_connect_error)}
+    async with running_proxy(_settings(), mounts) as client:
         down_resp = await client.get("/api/payments/5")
         assert down_resp.status_code == 502
-        assert down_resp.status_code != 200
-
-        # The failure is scoped to the dead backend -- everything else on
-        # this same proxy instance keeps working.
         healthy_resp = await client.get("/api/orders/1")
         assert healthy_resp.status_code == 200
-        assert healthy_resp.json()["backend"] == "monolith"
-
-
-async def test_shipping_flag_off_routes_shipments_path_to_monolith():
-    settings = Settings(
-        shipping_enabled=False,
-        monolith_base_url=MONOLITH_URL,
-        shipping_base_url=SHIPPING_URL,
-    )
-    async with running_proxy(settings, _mounts()) as client:
-        resp = await client.get("/api/shipments/5")
-        assert resp.status_code == 200
-        assert resp.json()["backend"] == "monolith"
-
-
-async def test_shipping_flag_on_routes_shipments_path_to_shipping_service():
-    settings = Settings(
-        review_enabled=True,
-        notification_enabled=True,
-        inventory_enabled=True,
-        payment_enabled=True,
-        shipping_enabled=True,
-        monolith_base_url=MONOLITH_URL,
-        review_base_url=REVIEW_URL,
-        notification_base_url=NOTIFICATION_URL,
-        inventory_base_url=INVENTORY_URL,
-        payment_base_url=PAYMENT_URL,
-        shipping_base_url=SHIPPING_URL,
-    )
-    async with running_proxy(settings, _mounts()) as client:
-        resp = await client.get("/api/shipments/5")
-        assert resp.status_code == 200
-        assert resp.json()["backend"] == "shipping"
-
-        # A sibling path under /api/shipments/* must also cut over, not just
-        # the exact prefix.
-        resp2 = await client.get("/api/shipments?orderId=42")
-        assert resp2.status_code == 200
-        assert resp2.json()["backend"] == "shipping"
-
-        # The shipping flag must be independent of the review, notification,
-        # inventory, and payment flags: all five cut-over paths route
-        # correctly in the same proxy instance ...
-        review_resp = await client.get("/api/reviews/5")
-        assert review_resp.status_code == 200
-        assert review_resp.json()["backend"] == "review"
-
-        notification_resp = await client.get("/api/notifications/5")
-        assert notification_resp.status_code == 200
-        assert notification_resp.json()["backend"] == "notification"
-
-        inventory_resp = await client.get("/api/inventory/5")
-        assert inventory_resp.status_code == 200
-        assert inventory_resp.json()["backend"] == "inventory"
-
-        payment_resp = await client.get("/api/payments/5")
-        assert payment_resp.status_code == 200
-        assert payment_resp.json()["backend"] == "payment"
-
-        # ... and every other path still falls through to the monolith.
-        other_resp = await client.get("/api/orders/1")
-        assert other_resp.status_code == 200
-        assert other_resp.json()["backend"] == "monolith"
+        assert healthy_resp.json()["backend"] == "order"
 
 
 async def test_shipping_down_surfaces_real_5xx_not_masked_200():
-    settings = Settings(
-        shipping_enabled=True,
-        monolith_base_url=MONOLITH_URL,
-        shipping_base_url=DEAD_SHIPPING_URL,
-    )
-    mounts = {
-        MONOLITH_URL: httpx.ASGITransport(app=make_stub_app("monolith")),
-        DEAD_SHIPPING_URL: httpx.MockTransport(_raise_connect_error),
-    }
-    async with running_proxy(settings, mounts) as client:
+    mounts = _mounts() | {SHIPPING_URL: httpx.MockTransport(_raise_connect_error)}
+    async with running_proxy(_settings(), mounts) as client:
         down_resp = await client.get("/api/shipments/5")
+        assert down_resp.status_code == 502
+        healthy_resp = await client.get("/api/orders/1")
+        assert healthy_resp.status_code == 200
+        assert healthy_resp.json()["backend"] == "order"
+
+
+async def test_order_down_surfaces_real_5xx_not_masked_200():
+    """The context r07 just cut over: order-service down must be a real 502
+    through the flagless router -- there is no monolith fallback left for
+    `/api/orders` to silently resolve to."""
+    mounts = _mounts() | {ORDER_URL: httpx.MockTransport(_raise_connect_error)}
+    async with running_proxy(_settings(), mounts) as client:
+        down_resp = await client.get("/api/orders/5")
         assert down_resp.status_code == 502
         assert down_resp.status_code != 200
 
-        # The failure is scoped to the dead backend -- everything else on
-        # this same proxy instance keeps working.
-        healthy_resp = await client.get("/api/orders/1")
+        healthy_resp = await client.get("/api/reviews/5")
         assert healthy_resp.status_code == 200
-        assert healthy_resp.json()["backend"] == "monolith"
+        assert healthy_resp.json()["backend"] == "review"
 
 
 async def test_pass_through_fidelity_method_path_query_headers_body():
-    settings = Settings(
-        review_enabled=True, monolith_base_url=MONOLITH_URL, review_base_url=REVIEW_URL
-    )
-    async with running_proxy(settings, _mounts()) as client:
+    async with running_proxy(_settings(), _mounts()) as client:
         resp = await client.post(
             "/api/reviews/5?sort=desc&limit=10",
             content=b'{"comment": "great product"}',
@@ -547,12 +360,12 @@ async def test_pass_through_fidelity_method_path_query_headers_body():
 
 async def test_upstream_4xx_5xx_is_relayed_not_swallowed():
     """The httpx analogue of bridgeEndpoint=true&throwExceptionOnFailure=false:
-    a real upstream error status must come back as-is, never masked into 200."""
-    settings = Settings(
-        review_enabled=False, monolith_base_url=MONOLITH_URL, review_base_url=REVIEW_URL
-    )
-    async with running_proxy(settings, _mounts()) as client:
-        resp = await client.get("/api/boom")
+    a real upstream error status must come back as-is, never masked into 200.
+    Routed through ``/api/orders/boom`` -- a real, known prefix (order-service's
+    stub) -- so this exercises the proxy's pass-through path, not its 404 path.
+    """
+    async with running_proxy(_settings(), _mounts()) as client:
+        resp = await client.get("/api/orders/boom")
         assert resp.status_code == 500
         assert resp.json()["error"] == "boom"
 
@@ -562,12 +375,12 @@ async def test_post_body_forwarded_with_content_length_not_chunked():
 
     Forwarding the inbound body as ``request.stream()`` (an async generator)
     makes httpx send the upstream request as ``Transfer-Encoding: chunked``
-    with no ``Content-Length`` -- which a WSGI backend (the real monolith,
-    Django/gunicorn) decodes as a zero-length body, since it does not honor
-    gunicorn's non-standard ``wsgi.input_terminated`` signal. That gap can't
-    be seen by driving the proxy purely over ``httpx.ASGITransport`` (what
-    every other test in this module does): ASGI decodes chunked bodies fine,
-    so the bug is invisible there too.
+    with no ``Content-Length`` -- which a WSGI backend decodes as a
+    zero-length body, since it does not honor gunicorn's non-standard
+    ``wsgi.input_terminated`` signal. That gap can't be seen by driving the
+    proxy purely over ``httpx.ASGITransport`` (what every other test in this
+    module does): ASGI decodes chunked bodies fine, so the bug is invisible
+    there too.
 
     This test instead captures the *actual outbound upstream request* the
     proxy builds, via ``httpx.MockTransport``, and asserts directly on its
@@ -589,13 +402,10 @@ async def test_post_body_forwarded_with_content_length_not_chunked():
             stream=_OnceByteStream(response_body),
         )
 
-    settings = Settings(
-        review_enabled=False, monolith_base_url=MONOLITH_URL, review_base_url=REVIEW_URL
-    )
-    mounts = {MONOLITH_URL: httpx.MockTransport(capture_upstream)}
+    mounts = {ORDER_URL: httpx.MockTransport(capture_upstream)}
     body = b'{"customerId": 1, "sku": "SKU-WIDGET-001", "rating": 5, "comment": "great"}'
 
-    async with running_proxy(settings, mounts) as client:
+    async with running_proxy(_settings(), mounts) as client:
         resp = await client.post(
             "/api/orders",
             content=body,
@@ -611,26 +421,6 @@ async def test_post_body_forwarded_with_content_length_not_chunked():
     assert "transfer-encoding" not in upstream_request.headers
     # (c) the upstream receives the exact body bytes the client sent.
     assert upstream_request.content == body
-
-
-async def test_upstream_down_surfaces_real_5xx_not_masked_200():
-    settings = Settings(
-        review_enabled=True, monolith_base_url=MONOLITH_URL, review_base_url=DEAD_REVIEW_URL
-    )
-    mounts = {
-        MONOLITH_URL: httpx.ASGITransport(app=make_stub_app("monolith")),
-        DEAD_REVIEW_URL: httpx.MockTransport(_raise_connect_error),
-    }
-    async with running_proxy(settings, mounts) as client:
-        down_resp = await client.get("/api/reviews/5")
-        assert down_resp.status_code == 502
-        assert down_resp.status_code != 200
-
-        # The failure is scoped to the dead backend -- everything else on
-        # this same proxy instance keeps working.
-        healthy_resp = await client.get("/api/orders/1")
-        assert healthy_resp.status_code == 200
-        assert healthy_resp.json()["backend"] == "monolith"
 
 
 if __name__ == "__main__":

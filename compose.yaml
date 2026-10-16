@@ -12,10 +12,24 @@
 #
 # Never the legacy hyphenated `docker-compose` v1 binary.
 #
+# r07 DECOMMISSION: this file never ran any application process (monolith or
+# otherwise) as a compose service — every app process in this project is
+# started directly (`uv run uvicorn ...` / `uv run python manage.py
+# runserver ...`), not containerized here; this file is infra-only (the
+# database, the broker, the CDC transition tool, the observability backend).
+# `examples/00-monolith` is now FROZEN (see its own README.md) and is no
+# longer started by `scripts/`/`demos/` as part of the live topology — every
+# bounded context it used to serve now has its own extracted service
+# (`examples/02`-`08`), fronted by `examples/01-strangler-proxy`'s flagless
+# edge router. Postgres below is unchanged: every extracted service (plus,
+# if ever rebooted in break-glass mode, the frozen monolith) still connects
+# to the SAME instance, each owning its own schema.
+#
 # Services:
-#   - postgres : the monolith's database. r01's only infra dependency — the
-#                monolith (examples/00-monolith, once it lands) connects to
-#                postgresql://monolith:monolith@localhost:5432/monolith.
+#   - postgres : the shared Postgres instance every service (frozen monolith
+#                included, if rebooted) connects to at
+#                postgresql://monolith:monolith@localhost:5432/monolith,
+#                each owning its own schema. r01's only infra dependency.
 #                infra/db/init/00-init.sql provisions the extensions the
 #                first Flyway/Alembic migration will want; the `monolith`
 #                db/user themselves come from the POSTGRES_DB/POSTGRES_USER/

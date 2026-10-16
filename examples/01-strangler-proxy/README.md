@@ -2,29 +2,41 @@
 
 This is the Python/ASGI analogue of the Java/Camel strangler-fig proxy
 (`modernizing-enterprise-applications/examples/01-strangler-proxy`,
-`StranglerProxyRoute`) — a standalone process that sits in front of the
+`StranglerProxyRoute`) — a standalone process that sat in front of the
 Django/DRF monolith (`examples/00-monolith/`, port `:8000`) so that bounded
-contexts can be peeled off onto their own services **one seam at a time**,
+contexts could be peeled off onto their own services **one seam at a time**,
 with clients none the wiser about which backend actually answered a given
 request.
 
-For r02 this proxy carries exactly one seam: Review (DRQ-019), to be served
-by a sibling lane's `examples/02-review-service/` (port `:8001`) once it
-cuts over. The shape generalizes the same way the Java version's did across
-its six eventual flags — this build intentionally stops at one, per the
-r02 scope.
+**r07 status: FLAGLESS EDGE ROUTER.** The strangler-fig arc this proxy was
+built for is complete — Review, Notification, Inventory, Payment, Shipping,
+and (as of r07) Order have all cut over, and the monolith is decommissioned
+from the running topology (frozen in-repo; see
+`examples/00-monolith/README.md`). There is no more "default backend" to
+fall through to, so every `*_ENABLED` cutover flag and the
+`STRANGLER_MONOLITH_BASE_URL` fallback are gone. This proxy is now a plain,
+unconditional edge router: six path prefixes, six owning backends, no other
+destination exists. The r02-r06 narrative below (the pattern, the flags, the
+per-seam cutover history) is preserved as the historical record of how each
+seam got here — see `CUTOVER.md` for the full reversibility evidence trail,
+including r07's order-cutover proof (the LAST reversible flag flip before
+this decommission).
 
-## The pattern
+## The pattern (historical — r02 through r07's reversible window)
 
-A **facade in front of both systems** decides, per request, which one
-answers:
+Through r02-r07, a **facade in front of both systems** decided, per request
+and per context, which one answered, gated by that context's own cutover
+flag:
 
 ```
             ┌──────────────────┐
- client --> │  strangler proxy │ --> monolith :8000             (default)
-            │       :8888      │ --> review-service :8001 (once cut over)
+ client --> │  strangler proxy │ --> monolith :8000             (flag off)
+            │       :8888      │ --> review-service :8001 (flag on, once cut over)
             └──────────────────┘
 ```
+
+As of r07, the flags are gone and the monolith is no longer in the running
+topology — see "The flagless edge router (r07)" below for today's shape.
 
 Every request is reverse-proxied **as-is**: same HTTP method, path, raw
 query string, headers, and body go out; the backend's actual status code,
@@ -78,9 +90,25 @@ Hop-by-hop adjustments (the only headers NOT forwarded verbatim):
 | Request/Response | `Transfer-Encoding`, `Connection` | Hop-by-hop per RFC 9110 §7.6.1; an inbound chunked `Transfer-Encoding` must never leak to the (buffered) upstream request, and the response is re-framed by the ASGI server on its own hop |
 | Response | `Content-Length` | Recomputed implicitly by the ASGI server for the streamed response |
 
+## The flagless edge router (r07)
+
+As of r07, `_select_backend()` (`app/main.py`) is an unconditional,
+per-context lookup — no boolean flag, no monolith fallback:
+
+```
+            ┌──────────────────┐
+ client --> │  strangler proxy │ --> review-service       :8001  (/api/reviews*)
+            │       :8888      │ --> notification-service :8002  (/api/notifications*)
+            │   (flagless)     │ --> inventory-service     :8084  (/api/inventory*)
+            │                  │ --> payment-service       :8085  (/api/payments*)
+            │                  │ --> shipping-service      :8087  (/api/shipments*)
+            │                  │ --> order-service         :8088  (/api/orders*)
+            └──────────────────┘ --> (anything else)             404
+```
+
 ## Configuration (operator-only — never request-derived)
 
-All three targets are read once from the environment at process start
+Every target is read once from the environment at process start
 (`app/config.py`). The route **never** builds a target URI from request
 data (header, query string, path segment) — only from these fixed,
 operator-configured values — which keeps the dynamic-URI seam closed to
@@ -89,45 +117,34 @@ SSRF: no caller can redirect the proxy to an arbitrary host.
 | Variable | Default | Meaning |
 |---|---|---|
 | `STRANGLER_PORT` | `8888` | Port uvicorn binds |
-| `STRANGLER_REVIEW_ENABLED` | `false` | Cutover flag for the Review seam |
-| `STRANGLER_MONOLITH_BASE_URL` | `http://localhost:8000` | Default backend |
-| `STRANGLER_REVIEW_BASE_URL` | `http://localhost:8001` | Review backend, once cut over |
-| `STRANGLER_NOTIFICATION_ENABLED` | `false` | Cutover flag for the Notification seam |
-| `STRANGLER_NOTIFICATION_BASE_URL` | `http://localhost:8002` | Notification backend, once cut over |
-| `STRANGLER_INVENTORY_ENABLED` | `false` | Cutover flag for the Inventory REST-read seam (`/api/inventory*`) |
-| `STRANGLER_INVENTORY_BASE_URL` | `http://localhost:8084` | Inventory backend, once cut over |
-| `STRANGLER_PAYMENT_ENABLED` | `false` | Cutover flag for the Payment REST-read seam (`/api/payments*`) |
-| `STRANGLER_PAYMENT_BASE_URL` | `http://localhost:8085` | Payment backend, once cut over |
-| `STRANGLER_SHIPPING_ENABLED` | `false` | Cutover flag for the Shipping REST-read seam (`/api/shipments*`) |
-| `STRANGLER_SHIPPING_BASE_URL` | `http://localhost:8087` | Shipping backend, once cut over |
+| `STRANGLER_REVIEW_BASE_URL` | `http://localhost:8001` | Review backend — owns `/api/reviews*`, unconditionally |
+| `STRANGLER_NOTIFICATION_BASE_URL` | `http://localhost:8002` | Notification backend — owns `/api/notifications*`, unconditionally |
+| `STRANGLER_INVENTORY_BASE_URL` | `http://localhost:8084` | Inventory backend — owns `/api/inventory*`, unconditionally |
+| `STRANGLER_PAYMENT_BASE_URL` | `http://localhost:8085` | Payment backend — owns `/api/payments*`, unconditionally |
+| `STRANGLER_SHIPPING_BASE_URL` | `http://localhost:8087` | Shipping backend — owns `/api/shipments*`, unconditionally |
+| `STRANGLER_ORDER_BASE_URL` | `http://localhost:8088` | Order backend — owns `/api/orders*`, unconditionally |
 
-| Flag | Backend for `/api/reviews*` | Backend for `/api/notifications*` | Backend for `/api/inventory*` | Backend for `/api/payments*` | Backend for `/api/shipments*` | Backend for everything else |
-|---|---|---|---|---|---|---|
-| review `false`, notification `false`, inventory `false`, payment `false`, shipping `false` (default) | monolith `:8000` | monolith `:8000` | monolith `:8000` | monolith `:8000` | monolith `:8000` | monolith `:8000` |
-| review `true`, notification `false`, inventory `false`, payment `false`, shipping `false` | review-service `:8001` | monolith `:8000` | monolith `:8000` | monolith `:8000` | monolith `:8000` | monolith `:8000` |
-| review `false`, notification `true`, inventory `false`, payment `false`, shipping `false` | monolith `:8000` | notification-service `:8002` | monolith `:8000` | monolith `:8000` | monolith `:8000` | monolith `:8000` |
-| review `false`, notification `false`, inventory `true`, payment `false`, shipping `false` | monolith `:8000` | monolith `:8000` | inventory-service `:8084` | monolith `:8000` | monolith `:8000` | monolith `:8000` |
-| review `false`, notification `false`, inventory `false`, payment `true`, shipping `false` | monolith `:8000` | monolith `:8000` | monolith `:8000` | payment-service `:8085` | monolith `:8000` | monolith `:8000` |
-| review `false`, notification `false`, inventory `false`, payment `false`, shipping `true` | monolith `:8000` | monolith `:8000` | monolith `:8000` | monolith `:8000` | shipping-service `:8087` | monolith `:8000` |
-| review `true`, notification `true`, inventory `true`, payment `true`, shipping `true` | review-service `:8001` | notification-service `:8002` | inventory-service `:8084` | payment-service `:8085` | shipping-service `:8087` | monolith `:8000` |
+There is no `STRANGLER_MONOLITH_BASE_URL` and no `*_ENABLED` flag anymore —
+removed in r07, along with the monolith itself from the running topology
+(see `examples/00-monolith/README.md`'s frozen-status section). A request
+whose path matches none of the six prefixes above gets a real `404` straight
+from the proxy — never a silent pass-through to some default backend,
+because there is no longer a default backend to pass through to. A request
+whose owning backend is unreachable gets a real `502` (unchanged from the
+pre-r07 behavior) — see "The implementation" above.
 
-The five flags are independent: each gates its own path prefix, and any one
-can be flipped without affecting the others. Note that `STRANGLER_INVENTORY_ENABLED`
-only governs the REST read surface (`/api/inventory*`) through this proxy —
-the monolith's gRPC reserve/release calls to the inventory service are a
-separate internal path that never goes through the proxy (see `CUTOVER.md`).
-Similarly, `STRANGLER_PAYMENT_ENABLED` only governs the REST read surface
-(`/api/payments*`) through this proxy — the monolith's asynchronous payment
-capture path is gated by its own `PAYMENT_MODE` setting and never goes
-through the proxy (see `CUTOVER.md`). Likewise, `STRANGLER_SHIPPING_ENABLED`
-only governs the REST read surface (`/api/shipments*`) through this proxy —
-the monolith's shipment-orchestration path is gated by its own
-`SHIPPING_MODE` setting and never goes through the proxy (see `CUTOVER.md`).
+`STRANGLER_INVENTORY_BASE_URL` only ever carried the REST read surface
+(`/api/inventory*`) through this proxy — gRPC reserve/release calls are, and
+always were, a separate internal path that never goes through the proxy.
+Likewise `STRANGLER_PAYMENT_BASE_URL`/`STRANGLER_SHIPPING_BASE_URL` only ever
+carried their own REST read surfaces; the payment-capture and
+shipment-dispatch paths are internal, Kafka-driven sagas that never went
+through the proxy either.
 
-Flipping the flag is a config change plus a restart, not a code change —
-that is what makes the cutover (and, while the monolith's Review module
-still exists, rolling it back) a *reversible* operation. See `CUTOVER.md`
-for the evidence trail.
+See `CUTOVER.md` for the full per-seam reversibility evidence trail,
+including r07's: the order seam proven reversible (flag ON → order-service
+serves checkout+reads through the proxy; flag OFF → the monolith still
+served them) BEFORE the flag, and the monolith, were removed for good.
 
 ## The full-path-prefix lesson
 
@@ -167,42 +184,19 @@ mount point, or consumer prefix.**
 ## Running it
 
 ```bash
-# 1. monolith (and, once built, the review-service) already up
+# review-, notification-, inventory-, payment-, shipping-, and order-service
+# all already up on their own ports -- no monolith, no flags.
 cd examples/01-strangler-proxy
 uv sync
 uv run uvicorn app.main:app --port 8888
-# proxy now listening on :8888, STRANGLER_REVIEW_ENABLED defaults to false (-> monolith)
+# proxy now listening on :8888, routing all six context prefixes
+# unconditionally; anything else is a 404.
 ```
 
-To cut Review over:
-
-```bash
-STRANGLER_REVIEW_ENABLED=true uv run uvicorn app.main:app --port 8888
-```
-
-To cut Notification over (independently of Review):
-
-```bash
-STRANGLER_NOTIFICATION_ENABLED=true uv run uvicorn app.main:app --port 8888
-```
-
-To cut the Inventory REST-read surface over (independently of the others):
-
-```bash
-STRANGLER_INVENTORY_ENABLED=true uv run uvicorn app.main:app --port 8888
-```
-
-To cut the Payment REST-read surface over (independently of the others):
-
-```bash
-STRANGLER_PAYMENT_ENABLED=true uv run uvicorn app.main:app --port 8888
-```
-
-To cut the Shipping REST-read surface over (independently of the others):
-
-```bash
-STRANGLER_SHIPPING_ENABLED=true uv run uvicorn app.main:app --port 8888
-```
+Each backend's base URL can be overridden independently (e.g. pointing at a
+different host/port in a container or CI runner) via the `STRANGLER_*_BASE_URL`
+variables in the table above — there is nothing left to "cut over"; every
+seam already has.
 
 ## Testing
 
@@ -211,13 +205,16 @@ uv run pytest       # in-process ASGI stub backends, no network sockets
 uv run ruff check .
 ```
 
-`tests/test_routing.py` builds two independently configured proxy instances
-(flag off / flag on) in the same process via the `create_app()` factory,
-each wired to its own `httpx.AsyncClient` mounted onto in-process stub ASGI
-backends (no real sockets, no running servers) — proving the proxy is
-reconfigurable per-instance, not hard-wired to a single process-global flag.
-It covers: routing under the Review/Notification/Inventory/Payment/Shipping
-flag combinations (each flag independent of the others), pass-through
-fidelity (method, path, query string, headers, body), a real upstream 4xx/5xx
-relayed unchanged, and upstream-down cases (Review, Notification, Inventory,
-Payment, and Shipping) that must surface a real `502`, never a masked `200`.
+`tests/test_routing.py` (rewritten for r07's flagless shape) builds one
+fully-wired proxy instance via the `create_app()` factory, with all six
+owning backends mounted as in-process stub ASGI apps (no real sockets, no
+running servers), and asserts: every `/api/*` prefix routes to its one
+owning backend unconditionally (parametrized over all six contexts, plus a
+same-instance, all-six-at-once coexistence check); an unmatched path (root,
+`/api/unknown`, a near-miss like `/api/order` that is NOT a prefix of
+`/api/orders`) is a real `404`, never a silent pass-through — there is no
+monolith backend anywhere in this test module; pass-through fidelity
+(method, path, query string, headers, body); a real upstream 4xx/5xx relayed
+unchanged; and upstream-down cases for all six backends, each surfacing a
+real `502`, never a masked `200`, with the failure scoped to only the dead
+backend.
