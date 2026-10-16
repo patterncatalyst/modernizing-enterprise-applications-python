@@ -32,6 +32,8 @@ class Settings:
     notification_base_url: str = "http://localhost:8002"
     inventory_enabled: bool = False
     inventory_base_url: str = "http://localhost:8084"
+    payment_enabled: bool = False
+    payment_base_url: str = "http://localhost:8085"
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -50,6 +52,8 @@ class Settings:
             inventory_base_url=os.environ.get(
                 "STRANGLER_INVENTORY_BASE_URL", "http://localhost:8084"
             ),
+            payment_enabled=_env_bool("STRANGLER_PAYMENT_ENABLED", False),
+            payment_base_url=os.environ.get("STRANGLER_PAYMENT_BASE_URL", "http://localhost:8085"),
         )
 
 
