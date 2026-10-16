@@ -40,13 +40,60 @@ monolith's own `handle_payment_captured`/this service's consumer
 respectively off the SAME `payment.captured` event, regardless of whether
 payment itself was charged synchronously or choreographed.
 
-## Known deferral carried over from `05-payment-service/CUTOVER.md`
+## The refund gap -- CLOSED (r06/DRQ-054)
 
-A payment that captures and THEN hits a shipping failure (`SHIP-FAIL`) is
-handled identically to r05's documented gap: this service emits
-`shipment.failed`, but there is still no Refund RPC/event anywhere in this
-project as of r06 -- a captured payment stays on the books for a
-`SHIPPING_FAILED` order. Documented, not a bug; a future ch.26+ lane's job.
+Earlier drafts of this file carried over r05's documented gap verbatim ("a
+captured payment stays on the books for a `SHIPPING_FAILED` order, no Refund
+RPC/event anywhere in this project"). That gap is closed:
+`../05-payment-service/app/refund_consumer.py`'s `ShipmentFailedConsumer`
+subscribes to this service's own `shipment.failed` topic and
+`app/service.py::process_shipment_failed` refunds a `CAPTURED` payment
+(`CAPTURED -> REFUNDED`, a `payment.refunded` event emitted) the instant this
+service's saga compensates a `SHIP-FAIL` order. See the CUTOVER lane below
+for the live proof, including the redelivery/idempotency check (a redelivered
+`shipment.failed` does not double-refund).
+
+## CUTOVER lane -- the orchestrated dispatch cutover, proven live end-to-end
+
+`tooling/newman/GOLDEN-BASELINE.md`'s "r06 CUTOVER lane" section is the full
+record: the FULL topology (monolith, inventory-service, payment-service,
+THIS service, the strangler proxy, real Kafka) was brought up with
+`SHIPPING_MODE=orchestrated` + `PAYMENT_MODE=choreographed`, and the full
+behavior-equivalence suite was run live through the proxy. In short:
+
+- **Fully-orchestrated GREEN** (100/100 assertions, newman exit 0): a happy
+  checkout genuinely goes `PENDING -> AWAITING_SHIPMENT -> CONFIRMED` (poll
+  attempt 2/40, a real multi-hop Kafka round trip, not an instant resolve); a
+  `SHIP-FAIL` checkout goes `PENDING -> AWAITING_SHIPMENT -> SHIPPING_FAILED`
+  AND its captured payment reaches `REFUNDED` (poll attempt 1/20) -- the r06
+  win. Shipping Context Contract (S1-S3) green against this service's own
+  `/api/shipments` surface.
+- **Reversibility GREEN**: `SHIPPING_MODE=inprocess` + `PAYMENT_MODE=synchronous`
+  with the proxy's shipping/payment flags off restores the original
+  synchronous contract (`201`/`402`/`422` in one round trip), no data
+  migration, no restart needed on this service's own side.
+- **Crash-resume proven**: a `Saga` row seeded `RUNNING` (mirroring
+  `tests/integration/test_crash_resume.py`'s own technique -- simulating a
+  crash right after `enrich` committed but before `dispatch` ran) survived a
+  real process restart; `resume_running_sagas()` picked up at the persisted
+  `step_index` without re-invoking `enrich`, and the order genuinely reached
+  `CONFIRMED`.
+- **Negative, honesty proof**: with this service killed, a checkout gets
+  stuck at `AWAITING_SHIPMENT` forever -- Scenario 1 run alone goes RED
+  (newman exit 1), not a false green -- and drains to `CONFIRMED` the instant
+  this service restarts.
+- **Refund idempotency proven**: a redelivered `shipment.failed` for an
+  already-`REFUNDED` payment is a safe no-op (no double refund, no second
+  `payment.refunded` event).
+
+**One honest finding, not papered over**: `tooling/newman/mea.postman_collection.json`'s
+bounded-wait poll scripts (`1c`/`3c`/`4c`) retry only while an order's status
+is `PENDING` -- they have no knowledge of the `AWAITING_SHIPMENT`
+intermediate status this service's orchestrated path introduces, so a poll
+landing in that (sub-second) window can report a false RED on an otherwise
+healthy saga. Reproduced once, root-caused, and left unfixed on purpose (this
+lane's scope excludes editing the collection) -- see `GOLDEN-BASELINE.md` for
+the full writeup and the mechanical fix a future lane should make.
 
 ## What this lane did NOT touch
 
