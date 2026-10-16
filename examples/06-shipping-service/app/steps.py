@@ -55,9 +55,12 @@ class BookCarrierFailed(Exception):
 async def enrich(
     session: AsyncSession, *, settings: Settings, order_id: int, context: dict[str, Any]
 ) -> dict[str, Any]:
-    """Saga step 1: fetch the order's `shippingAddress` from the monolith's
+    """Saga step 1: fetch the order's `shippingAddress` from order-service's
     `GET /api/orders/{orderId}` (`app/enrich_client.py`, tenacity retry +
-    bounded timeout). A failure here (monolith unreachable, retries
+    bounded timeout) -- order-service's `order_view` CQRS read model serves
+    the same `shippingAddress` field the monolith's `OrderSerializer` used to
+    (r07 re-point; see `app/config.py`'s module docstring for the documented
+    operator fallback). A failure here (order-service unreachable, retries
     exhausted, no address on the response) propagates straight out of this
     function -- `app/orchestrator.py::_advance_one_step` catches it like any
     other step failure and starts compensation. Since `dispatch` (step 2) has
@@ -67,7 +70,7 @@ async def enrich(
     docstring).
     """
     address = await enrich_client.fetch_shipping_address(
-        base_url=settings.monolith_base_url,
+        base_url=settings.order_base_url,
         order_id=order_id,
         timeout_s=settings.enrich_timeout_s,
     )

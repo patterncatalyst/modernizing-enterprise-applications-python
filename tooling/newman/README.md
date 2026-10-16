@@ -1,23 +1,47 @@
-# The Behavior-Equivalence Suite
+# The Behavior-Equivalence Suite → the Contract/Acceptance Suite (r07)
 
-This directory holds the project's **behavior-equivalence suite** — a Newman
-(Postman) contract collection captured against the running Django monolith
-(`examples/00-monolith/`) that asserts the monolith's externally-observable
-HTTP contract: status codes, response-body fields, and content types. It does
-**not** inspect internal database state directly — it only observes effects
-through the same REST surface a real client would use.
+This directory holds what began life as the project's **behavior-equivalence
+suite** — a Newman (Postman) contract collection captured against the
+running Django monolith (`examples/00-monolith/`) that asserted the
+monolith's externally-observable HTTP contract: status codes, response-body
+fields, and content types. It does **not** inspect internal database state
+directly — it only observes effects through the same REST surface a real
+client would use.
+
+**r07 REFRAMING: equivalence → contract.** Through r01-r07, "equivalence"
+meant something concrete: this exact, unedited collection, re-pointed only
+at `baseUrl`, had to pass against BOTH the monolith and whatever extracted
+service was cutting over, proving the two were observably interchangeable.
+As of r07, the monolith is decommissioned from the running topology (frozen
+in-repo — see `examples/00-monolith/README.md`) — there is no more second
+system left to BE equivalent TO. This collection's role changes
+accordingly: it is now a **contract/acceptance suite** for the monolith-free
+mesh itself — `{{baseUrl}}` points at the strangler proxy's flagless edge
+router (`:8888`, `proxy.postman_environment.json`, now the DEFAULT
+environment for this collection, including the collection's own built-in
+`{{baseUrl}}` fallback), every context's own contract folder is always
+exercised (`*ContractEnabled` flags are baked `true` in that environment
+file — there is no more flag-off/flag-on comparison to make), and the new
+GraphQL Gateway Contract folder (`:8090`) is live, not staged. See
+`GOLDEN-BASELINE-r07.md`'s "STEP C" section for the full decommission
+evidence trail (the real GraphQL schema-mismatch bug found and fixed, the
+≥2 clean monolith-free runs, and the three negative checks). The **r01-r06
+history below is preserved as-is** — the per-extraction cutover story this
+collection lived through on its way here.
 
 This is the Python sibling of
 `~/Dev/modernizing-enterprise-applications/tooling/newman/mea.postman_collection.json`,
-scoped to **r01** (the walking skeleton): the monolith is the only backend
-that exists yet, so every request is parameterized by `{{baseUrl}}` and that
-variable is set to the monolith's own address, `http://localhost:8000`. The
-same rule the Java project established applies here from the
-start: **this collection is never rewritten per extraction, only re-pointed**
-— once later iterations pull a context (review, notification, inventory,
-payment, shipping, order) out of the monolith into its own service, this
-exact, unedited collection gets re-run against the new `baseUrl` and a
-context is only "done" once it passes unchanged.
+originally scoped to **r01** (the walking skeleton): the monolith was the
+only backend that existed yet, so every request was parameterized by
+`{{baseUrl}}` and that variable was set to the monolith's own address,
+`http://localhost:8000`. The same rule the Java project established applied
+here through the whole cutover window: **this collection is never rewritten
+per extraction, only re-pointed** — once an iteration pulled a context
+(review, notification, inventory, payment, shipping, order) out of the
+monolith into its own service, this exact, unedited collection got re-run
+against the new `baseUrl` and a context was only "done" once it passed
+unchanged. `local.postman_environment.json` (`baseUrl=http://localhost:8000`)
+is kept, unchanged, for break-glass runs against a rebooted frozen monolith.
 
 ## Files
 
@@ -596,6 +620,34 @@ reached, both with the guard off and with only `orderContractEnabled=true`
 set), and the no-flags control run proving every pre-existing folder is
 unaffected.
 
+### Running the r07 DECOMMISSION contract suite (monolith-free, the end state)
+
+No monolith, no flags, no `baseUrl` to pick between — one environment file,
+every contract folder always on:
+
+```bash
+# Postgres + Kafka up; review-, notification-, inventory-, payment-,
+# shipping- (ORDER_BASE_URL=http://localhost:8088), order-, and the
+# GraphQL gateway all migrated/started on their own ports; the proxy
+# started FLAGLESS (no STRANGLER_*_ENABLED vars -- there are none left):
+newman run tooling/newman/mea.postman_collection.json \
+    -e tooling/newman/proxy.postman_environment.json
+```
+
+Or, for the fully self-contained, one-shot version (its own throwaway
+Postgres/Kafka, every service, the full run, then teardown):
+
+```bash
+demos/demo-final-topology.sh
+```
+
+See `GOLDEN-BASELINE-r07.md`'s "STEP C" section for the full evidence trail:
+the GraphQL contract query's real schema-mismatch bug (found, root-caused,
+fixed), four clean runs (0 failed, exit 0) spanning before and after the
+three negative-check interventions, and each of the three negatives
+(consumer-down, compensation-disabled, projection-disabled→stale-read)
+independently proven RED when broken and GREEN when restored.
+
 ## How this collection will be used going forward
 
 - **Per-extraction acceptance:** once a bounded context is pulled out of the
@@ -619,3 +671,11 @@ unaffected.
   earned this same idiom the same way, at its own first async boundary
   (its r06); expect later folders here (payment, shipping, the order
   extraction's own eventual cutover) to reuse it unchanged.
+- **Equivalence → contract, since r07:** the rules above describe this
+  collection's life as an EQUIVALENCE suite — proving two systems (monolith,
+  extracted service) observably interchangeable. That phase ended when the
+  monolith was decommissioned (r07): with nothing left to be equivalent TO,
+  this collection is now a standing CONTRACT/ACCEPTANCE suite for the
+  monolith-free mesh — every context's folder is always exercised, there is
+  no flag-off baseline left to compare against, and "passes" now means
+  "the live system satisfies its own contract," full stop.

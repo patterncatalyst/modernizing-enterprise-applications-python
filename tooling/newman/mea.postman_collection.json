@@ -1960,7 +1960,7 @@
       "name": "GraphQL Gateway Contract",
       "item": [
         {
-          "name": "G1. Query order via GraphQL gateway -> 200, aggregated shape (STAGED)",
+          "name": "G1. Query order via GraphQL gateway -> 200, aggregated shape",
           "request": {
             "method": "POST",
             "header": [
@@ -1968,7 +1968,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"{ order(id: {{orderContractOrderId}}) { id status totalCents items { sku stock { quantityOnHand } } payments { status } shipments { status } reviews { rating } } }\"\n}"
+              "raw": "{\n  \"query\": \"{ order(id: {{orderContractOrderId}}) { id status totalCents items { sku stock { onHandQty } reviews { rating } } payments { status } shipments { status } } }\"\n}"
             },
             "url": {
               "raw": "{{graphqlUrl}}/graphql",
@@ -1982,19 +1982,20 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// STAGED, INERT GUARD (r07 NEWMAN-BASELINE): the order-service + GraphQL",
-                  "// gateway don't exist yet -- they land in a LATER lane. This is the",
-                  "// collection's new LAST folder, so ending the run here when the guard",
-                  "// isn't set (the default) leaves every existing folder's own pass/fail",
-                  "// outcome untouched, same idiom as the Notification Context Contract",
-                  "// folder's own N1/N2 guard. Unlike Order/Inventory/Payment/Shipping",
-                  "// (which fire cheap, already-live monolith requests unconditionally), this",
-                  "// request targets a gateway that is not running in this lane -- a",
-                  "// pre-request script cannot skip the CURRENT request's send, only choose",
-                  "// what runs NEXT, so this folder is placed terminal specifically so the",
-                  "// guard can stop the run BEFORE this item is ever reached, rather than",
-                  "// firing a request against a dead :8090 and turning a connection",
-                  "// refusal into a spurious request-level failure.",
+                  "// LIVE as of r07's decommission lane (previously STAGED/inert in the",
+                  "// r07 NEWMAN-BASELINE lane, before examples/07-order-service and",
+                  "// examples/08-graphql-gateway existed). The guard mechanism is",
+                  "// unchanged: this is the collection's LAST folder, so ending the run",
+                  "// here when the guard isn't set leaves every existing folder's own",
+                  "// pass/fail outcome untouched, same idiom as the Notification Context",
+                  "// Contract folder's own N1/N2 guard. A pre-request script cannot skip",
+                  "// the CURRENT request's send, only choose what runs NEXT, so this",
+                  "// folder is placed terminal specifically so the guard can stop the run",
+                  "// BEFORE this item is ever reached when the gateway isn't part of the",
+                  "// topology being exercised (e.g. the r07 STEP A reversibility proofs,",
+                  "// which don't bring the gateway up at all) -- rather than firing a",
+                  "// request against a dead :8090 and turning a connection refusal into a",
+                  "// spurious request-level failure.",
                   "if (pm.environment.get('graphqlContractEnabled') !== 'true') {",
                   "    postman.setNextRequest(null);",
                   "}"
@@ -2017,15 +2018,25 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "var json = pm.response.json();",
-                  "var order = json.data && json.data.order;",
-                  "pm.test('Aggregated order shape present: id, status, totalCents, items, payments, shipments, reviews', function () {",
-                  "    pm.expect(order).to.not.be.undefined;",
-                  "    pm.expect(order).to.have.all.keys('id', 'status', 'totalCents', 'items', 'payments', 'shipments', 'reviews');",
+                  "pm.test('No GraphQL errors (schema-valid query, order resolves)', function () {",
+                  "    pm.expect(json.errors, JSON.stringify(json.errors)).to.be.undefined;",
                   "});",
-                  "pm.test('Items carry nested inventory stock', function () {",
+                  "var order = json.data && json.data.order;",
+                  "// NOTE: `reviews` is federated PER-ITEM (app/schema.py::OrderItemView.reviews),",
+                  "// not a top-level OrderView field -- a review is posted against a sku,",
+                  "// not an order. The original STAGED draft of this query/assertion",
+                  "// (written before the gateway existed) guessed a top-level `order.reviews`",
+                  "// and `stock { quantityOnHand }`; both were corrected against the REAL",
+                  "// schema (`onHandQty`, items[].reviews) once 08-graphql-gateway landed.",
+                  "pm.test('Aggregated order shape present: id, status, totalCents, items, payments, shipments', function () {",
+                  "    pm.expect(order).to.not.be.undefined;",
+                  "    pm.expect(order).to.have.all.keys('id', 'status', 'totalCents', 'items', 'payments', 'shipments');",
+                  "});",
+                  "pm.test('Items carry nested inventory stock and per-sku reviews', function () {",
                   "    order.items.forEach(function (item) {",
-                  "        pm.expect(item).to.have.all.keys('sku', 'stock');",
-                  "        pm.expect(item.stock).to.have.property('quantityOnHand');",
+                  "        pm.expect(item).to.have.all.keys('sku', 'stock', 'reviews');",
+                  "        pm.expect(item.stock).to.have.property('onHandQty');",
+                  "        pm.expect(item.reviews).to.be.an('array');",
                   "    });",
                   "});",
                   "pm.test('Payments carry status', function () {",
@@ -2033,9 +2044,6 @@
                   "});",
                   "pm.test('Shipments carry status', function () {",
                   "    order.shipments.forEach(function (s) { pm.expect(s).to.have.property('status'); });",
-                  "});",
-                  "pm.test('Reviews carry rating', function () {",
-                  "    order.reviews.forEach(function (r) { pm.expect(r).to.have.property('rating'); });",
                   "});"
                 ]
               }
@@ -2056,7 +2064,7 @@
     }
   ],
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8000", "type": "string" },
+    { "key": "baseUrl", "value": "http://localhost:8888", "type": "string" },
     { "key": "happyPathOrderId", "value": "", "type": "string" },
     { "key": "happyPathPollAttempt", "value": "0", "type": "string" },
     { "key": "widgetStockBeforeHappyPath", "value": "", "type": "string" },

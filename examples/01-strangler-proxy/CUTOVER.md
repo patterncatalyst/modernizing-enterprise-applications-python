@@ -176,3 +176,73 @@ The two dimensions are verified independently — flipping
 for the same reason as Inventory and Payment: a design that requires
 flipping both in lockstep to stay correct is not actually two independent
 seams, it is one seam with an extra step.
+
+## Order seam (r07) — the LAST reversible flag, then the irreversible cut
+
+Order was the final seam, and the only one proven reversible with the
+**write path itself** cut over through this proxy — `POST /api/orders`
+(checkout) routed to `examples/07-order-service` exactly like every `GET`
+under the same prefix, not split into a separate internal dimension the way
+Inventory/Payment/Shipping's write paths were. `STRANGLER_ORDER_ENABLED`
+gated `/api/orders*` to order-service the same way the five prior flags
+gated their own seams.
+
+### Reversibility proof (recorded before the irreversible step)
+
+Full topology live for both runs: Postgres 18.6-alpine, Kafka (KRaft,
+single-node), review-/notification-/inventory-/payment-/shipping-/
+order-service, through the proxy on `:8888`
+(`tooling/newman/proxy.postman_environment.json`). `examples/06-shipping-service`
+was already re-pointed (`ORDER_BASE_URL=http://localhost:8088`) — its saga's
+`enrich` step reads `shippingAddress` from order-service's `order_view`, not
+the monolith.
+
+**Run 1 — `STRANGLER_ORDER_ENABLED=true` (+ review/notification/inventory/
+payment/shipping flags all `true`), order served by order-service:**
+
+```
+newman run tooling/newman/mea.postman_collection.json \
+    -e tooling/newman/proxy.postman_environment.json \
+    --env-var reviewContractEnabled=true --env-var inventoryContractEnabled=true \
+    --env-var paymentContractEnabled=true --env-var shippingContractEnabled=true \
+    --env-var orderContractEnabled=true
+```
+
+**44 requests / 88 test-scripts / 117 assertions, 0 failed, exit code 0.**
+O1's checkout returned `202 Accepted` (order-service's always-choreographed
+path); N1b's bounded-wait poll independently confirmed a real order reaching
+terminal `CONFIRMED` via the full Kafka saga (payment.captured →
+AWAITING_SHIPMENT → shipment.dispatched → CONFIRMED) on attempt 4/20 — proof
+the lifted reactions (`07-order-service/app/service.py`) drive the lifecycle
+correctly standing alone, with no monolith process running at all.
+
+**Run 2 — flag OFF (no `STRANGLER_*` flags at all), order-service and every
+other extracted service stopped, only the bare monolith running
+(`PAYMENT_MODE`/`SHIPPING_MODE`/`INVENTORY_MODE` all left at their
+synchronous/in-process/local defaults):**
+
+```
+newman run tooling/newman/mea.postman_collection.json \
+    -e tooling/newman/proxy.postman_environment.json \
+    --env-var reviewContractEnabled=true --env-var inventoryContractEnabled=true \
+    --env-var paymentContractEnabled=true --env-var shippingContractEnabled=true \
+    --env-var orderContractEnabled=true
+```
+
+**33 requests / 66 test-scripts / 105 assertions, 0 failed, exit code 0.**
+O1's checkout returned a plain `201 Created` (the monolith's synchronous
+path) — the same collection, the same environment file, only the proxy's
+own configuration and the live backend changed. **This is the last reversible
+proof in this project's strangler-fig history**: right up to this point,
+turning `STRANGLER_ORDER_ENABLED` off was a config change plus a restart,
+and the monolith still answered `/api/orders*` correctly.
+
+### The irreversible step
+
+Immediately after the proof above, `STRANGLER_ORDER_ENABLED` (and every
+other `*_ENABLED` flag, and `STRANGLER_MONOLITH_BASE_URL`) were removed from
+`app/config.py` entirely — see the README's "The flagless edge router (r07)"
+section. `_select_backend()` is now an unconditional six-way lookup with a
+real `404` for anything else. The monolith is removed from the running
+topology (`compose.yaml`/`scripts/`/`demos/`) but kept, frozen, in-repo —
+see `examples/00-monolith/README.md`. There is no flag left to flip back.

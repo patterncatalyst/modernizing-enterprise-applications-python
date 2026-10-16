@@ -301,3 +301,260 @@ so the later lane that performs it has a clear brief:
   Payment, Shipping, Notification) is unaffected — confirmed by Run 2's
   byte-identical request count and pass/fail shape relative to the r06
   baseline's own no-flags behavior.
+
+---
+
+# The r07 DECOMMISSION + PROXY-EDGE + CONTRACT-SUITE lane
+
+This section is the Phase-2 continuation of the lane above: it performs the
+order cutover this file's "Conversion plan" promised, the irreversible
+monolith decommission, and the equivalence→contract conversion. Scope per
+the Phase-2 build contract: `examples/01-strangler-proxy/`,
+`examples/06-shipping-service/`, `examples/00-monolith/`, `scripts/`,
+`tooling/newman/`, `compose.yaml`, `.env.example`.
+
+## STEP A — order cutover flag + shipping enrich re-point (reversible)
+
+`examples/07-order-service` and `examples/08-graphql-gateway` arrived
+already built (a prior lane); this lane's job was the CUTOVER: add
+`STRANGLER_ORDER_ENABLED` to the proxy, re-point `06-shipping-service`'s
+enrich call from the monolith to order-service's `order_view`, and prove
+reversibility BEFORE the irreversible step. Full narrative + the exact
+newman commands live in `examples/01-strangler-proxy/CUTOVER.md`'s "Order
+seam (r07)" section; summarized here:
+
+| Run | Config | Result |
+|---|---|---|
+| 1 (ON) | `STRANGLER_ORDER_ENABLED=true` + review/notification/inventory/payment/shipping flags all `true`, full extracted topology (NO monolith process running at all) | **44 requests / 117 assertions, 0 failed, exit 0.** O1 returned `202 Accepted`; N1b's poll independently confirmed a real order reaching `CONFIRMED` via the full Kafka saga on attempt 4/20. |
+| 2 (OFF) | No `STRANGLER_*` flags at all, every extracted service stopped, only the bare monolith running at its synchronous/in-process/local defaults | **33 requests / 105 assertions, 0 failed, exit 0.** O1 returned a plain `201 Created` (monolith). |
+
+This is **the last reversible proof** in this project's strangler-fig
+history — turning `STRANGLER_ORDER_ENABLED` off was still a config change
+plus a restart, and the monolith still answered correctly, right up to this
+point.
+
+`examples/06-shipping-service/app/config.py` gained `order_base_url`
+(`ORDER_BASE_URL`, default `http://localhost:8088`); `app/steps.py::enrich`
+now calls `GET {order_base_url}/api/orders/{orderId}`.
+`monolith_base_url`/`MONOLITH_BASE_URL` is kept as a documented,
+operator-only fallback (an operator can point `ORDER_BASE_URL` itself at the
+frozen monolith's `:8000` to restore enrichment in a break-glass incident) —
+never automatic in-code failover. Shipping-service's own unit test suite (9
+tests) and the proxy's own routing suite (23 tests, pre-rewrite) both passed
+green against this change.
+
+## STEP B — the irreversible decommission
+
+### Flagless proxy
+
+`examples/01-strangler-proxy/app/config.py` and `app/main.py` were rewritten:
+every `*_enabled` boolean and `monolith_base_url` are GONE from `Settings`;
+`_select_backend()` is now an unconditional six-way lookup
+(review/notification/inventory/payment/shipping/order), returning `None` for
+anything else, which `proxy_handler` turns into a real `404`. `tests/test_routing.py`
+was rewritten from scratch (not incrementally diffed) for the flagless shape:
+one fully-wired `Settings` instance, a parametrized test asserting all 12
+path variants (6 contexts × 2 path shapes) route to their one owning
+backend, an all-six-coexist test, a parametrized unmatched-path test
+(root, `/api/unknown`, near-miss prefixes like `/api/order` that must NOT
+match `/api/orders`) asserting a real `404`, six independent backend-down
+tests (each a real `502`, failure scoped to the dead backend only), and the
+existing pass-through-fidelity + chunked-body regression tests.
+
+**Result: 29/29 tests green, `ruff check` clean.**
+
+### Monolith frozen, removed from the running topology
+
+`examples/00-monolith/README.md` and `AGENTS.md` gained a "FROZEN STATUS
+(r07)" section: the module stays in-repo (not deleted) as the golden-baseline
+referent and a break-glass fallback, but `compose.yaml`/`scripts/`/`demos/`
+no longer start it, its `outbox_relay`, `order_placed_consumer`, or
+`order_saga_listener` management commands as part of the live topology.
+`compose.yaml`'s header comment was updated to note it never ran app
+processes as compose services in the first place (every service in this
+project is started directly via `uv run`) and that the monolith is now
+frozen.
+
+`examples/00-monolith/SMELLS.md` — smell **#1 (god checkout service)** and
+smell **#2 (one ACID transaction spanning six contexts)** are both struck
+`**STRUCK (r07)**`, with evidence: the order context is extracted
+(`07-order-service`, CQRS), its `place_order` reaches inventory only over a
+versioned gRPC contract and never touches payment/shipping/notification's
+code or tables, and its own local transaction (`create_order_with_outbox_and_view`
+/ `transition_order_status_with_view`) spans ONLY the `order_svc` schema —
+ACID→ACD realized for every one of the six contexts, not just payment (r05)
+and shipping (r06). The captured-then-`shipment.failed` refund deferral
+smell #2 used to note is also resolved: `05-payment-service`'s own
+`shipment.failed` consumer (`app/refund_consumer.py`, r06/DRQ-054) refunds
+independently, reacting to the same event order-service reacts to.
+
+### Proto-drift guard extended to 4 copies
+
+`scripts/gen-proto.sh` now also generates stubs for `07-order-service` and
+`08-graphql-gateway`; `scripts/check-proto-drift.sh` now asserts the
+canonical `04-inventory-service` proto is byte-identical to ALL THREE
+vendored copies (monolith, order-service, graphql-gateway), not just the
+monolith's. Verified live:
+
+```
+$ scripts/check-proto-drift.sh
+check-proto-drift: OK -- canonical + all 3 vendored copies are byte-identical (e2aa7ca0...)
+```
+
+Perturbing `07-order-service`'s copy (`echo '// drift test' >> ...proto`) and
+re-running produced `check-proto-drift: PROTO DRIFT DETECTED (order-service)`,
+exit code 1; restoring the file returned the guard to `OK`, exit code 0.
+
+## STEP C — equivalence → contract suite, monolith-free
+
+### Re-pointing
+
+`tooling/newman/proxy.postman_environment.json` (`baseUrl=http://localhost:8888`)
+now bakes in `reviewContractEnabled=true`, `notificationContractEnabled=true`,
+`inventoryContractEnabled=true`, `paymentContractEnabled=true`,
+`shippingContractEnabled=true`, `orderContractEnabled=true`, and
+`graphqlContractEnabled=true` — every context's contract folder is ALWAYS
+exercised now; there is no more flag-off/flag-on equivalence comparison to
+make, only "does the live system satisfy its contract." The collection's own
+`{{baseUrl}}` default (used when no environment file is supplied at all) was
+re-pointed from the monolith (`:8000`) to the proxy edge (`:8888`).
+`local.postman_environment.json` (bare monolith, `:8000`) is UNCHANGED —
+kept for break-glass use against a rebooted frozen monolith.
+
+### A real integration bug found and fixed: the GraphQL contract query didn't match the real schema
+
+The G1 request (written in the earlier NEWMAN-BASELINE lane, STAGED, before
+`08-graphql-gateway` existed) guessed a schema shape that turned out wrong
+once the real gateway was built:
+
+- It queried `stock { quantityOnHand }` — the real field (`app/schema.py::StockView`)
+  is `onHandQty`.
+- It queried a top-level `order.reviews` — reviews are federated PER-ITEM
+  (`OrderItemView.reviews`), not a top-level `OrderView` field, because a
+  review is posted against a sku, not an order.
+
+**Root cause:** the query was authored speculatively against a schema that
+didn't exist yet (the collection's own docs called it "STAGED, inert"); it
+was never run against a live gateway until this lane. Running it for real
+produced `data.order: null` with two `errors[]` entries
+(`Cannot query field 'quantityOnHand' on type 'StockView'`,
+`Cannot query field 'reviews' on type 'OrderView'`) — confirmed by hand:
+
+```
+$ curl -s -X POST http://localhost:8090/graphql -H 'Content-Type: application/json' \
+    -d '{"query": "{ order(id: 29) { id status totalCents items { sku stock { quantityOnHand } } ... reviews { rating } } }"}'
+{"data": null, "errors": [{"message": "Cannot query field 'quantityOnHand' on type 'StockView'."}, ...]}
+```
+
+**Fix:** corrected the query to `items { sku stock { onHandQty } reviews { rating } } }`
+and rewrote the test-script assertions to match the real, per-item-nested
+shape (`order` now asserted to have exactly `id, status, totalCents, items,
+payments, shipments`; each item asserted to carry `sku, stock, reviews`).
+Also added an explicit `No GraphQL errors` assertion so a future schema
+drift fails loudly instead of producing a confusing `TypeError` on `order.items`.
+Un-staged the item name (dropped "(STAGED)") since the gateway is now part
+of the live, exercised topology. Verified by hand against the live gateway
+post-fix (order id 29: real nested stock + 5 reviews + 1 payment + 1
+shipment, zero errors) before re-running the suite.
+
+### Contract suite GREEN, ≥2× stable
+
+Full monolith-free topology: Postgres 18.6-alpine, Kafka (KRaft), review-
+(`:8001`), notification- (`:8002`), inventory- (`:8084`/`:9004`), payment-
+(`:8085`), shipping- (`:8087`, `ORDER_BASE_URL` re-pointed), order-
+(`:8088`), the GraphQL gateway (`:8090`), the FLAGLESS proxy (`:8888`) — no
+monolith process anywhere.
+
+```bash
+newman run tooling/newman/mea.postman_collection.json \
+    -e tooling/newman/proxy.postman_environment.json
+```
+
+| Run | requests | assertions | failed | exit |
+|---|---|---|---|---|
+| 1 (post-fix) | 50 | 133 | 0 | 0 |
+| 2 (post-fix) | 50 | 133 | 0 | 0 |
+| 3 (post negative-check restores) | 45 | 128 | 0 | 0 |
+| 4 (post negative-check restores) | 45 | 128 | 0 | 0 |
+
+(Request/assertion counts vary slightly run-to-run — N1b/the happy-path polls
+resolve on different attempt counts depending on saga timing, and the
+accumulating order history changes O3/N2's response sizes — but EVERY run is
+0 failed, exit 0. Runs 3–4 are the stronger stability proof: they ran AFTER
+the three negative-check interventions below, each requiring an order-service
+restart.) Scenario 1→`CONFIRMED`, Scenario 4→`SHIPPING_FAILED` + net-zero +
+`REFUNDED` (payment-service's independent refund consumer), GraphQL
+`order(id)` stitches order+payment+shipment+per-item-stock+per-item-reviews
+— all confirmed in the runs above.
+
+### The three negatives, each proven RED when broken
+
+**1. Consumer-down → stuck → RED.** Killed `order-service` (it is both the
+`/api/orders*` HTTP surface AND the Kafka consumer group `order-service`
+reacting to all four saga-outcome topics — same "down = both" shape as
+`06-shipping-service`'s own consumer-down check in r06). Re-ran the full
+suite: **59/111 assertions failed, newman exit code 1.** Restarted
+order-service, re-ran: **0 failed, exit 0** (recovery confirmed).
+
+**2. Compensation-disabled → non-net-zero → RED.** Temporarily commented out
+the compensating `await _release_order_lines(...)` call in
+`07-order-service/app/service.py::handle_payment_declined`, restarted,
+ran Scenario 3 alone:
+
+```
+1. AssertionError  Quantity on hand nets back to the pre-checkout value ...
+                   expected 81 to deeply equal 82
+```
+
+**1/30 assertions failed, newman exit code 1** — stock does NOT net back to
+zero when the compensating Release never fires. Restored the line, restarted,
+re-ran Scenario 3: **0 failed, exit 0.**
+
+**3. Projection-disabled → stale read → RED.** Temporarily commented out the
+`await _upsert_order_view(session, order, items)` call in
+`07-order-service/app/repository.py::transition_order_status_with_view`
+(the aggregate still transitions correctly; only the CQRS read-side
+projection stops being kept in sync), restarted, ran Scenario 1 alone:
+
+```
+1. AssertionError  Order reaches terminal status CONFIRMED within the bounded-wait budget (40 x 750ms, attempt 40/40)
+                   expected 'PENDING' to deeply equal 'CONFIRMED'
+```
+
+`GET /api/orders/{id}` (which reads `order_view` EXCLUSIVELY, per this
+service's own CQRS contract) never observed the real, successful transition
+on the write side — a genuine stale read, exhausting the full 40-attempt
+bounded-wait budget. **1/53 assertions failed, newman exit code 1.** Restored
+the line, restarted, re-ran Scenario 1: **0 failed, exit 0.**
+
+All three interventions were temporary, single-line comment-outs, restored
+immediately after capturing the RED evidence and confirmed restored by a
+clean `ruff check` + a subsequent green run (see the stability table above —
+runs 3–4 were captured AFTER all three restores).
+
+### `demos/demo-final-topology.sh`
+
+New script: brings up the complete monolith-free topology from scratch in
+its own throwaway Postgres/Kafka containers (no reuse of any other demo
+script's state), migrates every schema, starts all seven services plus the
+flagless proxy, runs the full contract suite, and tears everything down —
+self-contained, matching the style of `demo-payment-cutover.sh`/
+`demo-shipping-cutover.sh`. The ONE Django command it runs is `manage.py
+migrate && manage.py seed` (one-shot schema setup, not a live server) —
+`examples/00-monolith` is never started as a process. Verified by running it
+standalone (all prior manually-managed processes/containers torn down
+first): **50 requests / 133 assertions, 0 failed, exit 0**, clean teardown.
+
+## STEP C acceptance criteria met
+
+- Contract suite green ≥2× (4 clean runs recorded above, 2 before and 2
+  after the negative-check interventions) against the fully monolith-free
+  mesh, including the Order Context Contract and GraphQL Gateway Contract
+  folders, un-staged.
+- All 3 required negatives (consumer-down, compensation-disabled,
+  projection-disabled→stale-read) independently proven RED when broken,
+  GREEN when restored.
+- `demos/demo-final-topology.sh` created and verified green standalone.
+- One real integration bug found (the GraphQL contract query didn't match
+  the real, as-built schema) — root-caused and fixed, with before/after
+  evidence.
