@@ -94,7 +94,11 @@ class Command(BaseCommand):
             created_at=_utc(2026, 1, 7, 12, 0, 0),
         )
         OrderItem.objects.create(
-            order=order, inventory_item=widget, quantity=2, unit_price_cents=1999
+            order=order,
+            sku=widget.sku,
+            item_name=widget.name,
+            quantity=2,
+            unit_price_cents=1999,
         )
 
         Payment.objects.create(
