@@ -728,6 +728,169 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Notification Context Contract",
+      "item": [
+        {
+          "name": "N1. Checkout for the notification contract -> 201 Created, CONFIRMED",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"items\": [ { \"sku\": \"SKU-WIDGET-001\", \"quantity\": 1 } ],\n  \"paymentMethod\": \"CARD-VISA\",\n  \"shippingAddress\": \"1 Notification Contract Way, Testville\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// INERT GUARD: this is the LAST folder in the collection, so ending the",
+                  "// run here when the guard isn't set leaves every existing folder's own",
+                  "// pass/fail outcome untouched -- Kafka-free gates/runs that don't pass",
+                  "// --env-var notificationContractEnabled=true never reach N2's",
+                  "// bounded-wait poll (the one request that actually needs Kafka). N1",
+                  "// itself still fires even when the guard is off: it is a plain",
+                  "// synchronous checkout -- the same kind of request Scenario 1 already",
+                  "// proves works with no Kafka involved -- so running it unconditionally",
+                  "// cannot break an existing run. --env-var sets the ENVIRONMENT scope,",
+                  "// not the collection-variable scope -- verified empirically against this",
+                  "// newman build -- so the guard is read via pm.environment.get(), never",
+                  "// pm.collectionVariables.get().",
+                  "if (pm.environment.get('notificationContractEnabled') !== 'true') {",
+                  "    postman.setNextRequest(null);",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Order created returns 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Order status is CONFIRMED (checkout stays synchronous -- only notification delivery moved to Kafka; order.placed is written to the outbox in the same transaction)', function () {",
+                  "    pm.expect(json.status).to.eql('CONFIRMED');",
+                  "});",
+                  "pm.collectionVariables.set('notificationOrderId', String(json.id));",
+                  "pm.collectionVariables.set('notificationCustomerId', String(json.customerId));",
+                  "pm.collectionVariables.set('notificationPollAttempt', '0');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N2. Bounded-wait poll: order-confirmation notification becomes observable",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications?customerId={{notificationCustomerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications"],
+              "query": [{ "key": "customerId", "value": "{{notificationCustomerId}}" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Same INERT GUARD as N1 -- redundant for the normal full-suite run (N1's",
+                  "// guard already ended the run before this item is ever reached), but",
+                  "// keeps this request from doing anything meaningful if the Notification",
+                  "// folder is ever run in isolation (e.g. --folder) without the flag set.",
+                  "if (pm.environment.get('notificationContractEnabled') !== 'true') {",
+                  "    postman.setNextRequest(null);",
+                  "}",
+                  "",
+                  "// Bounded-wait idiom: busy-wait only on a RETRY (attempt > 0), never on",
+                  "// attempt 0, so a notification that's already there (e.g. a fast",
+                  "// consumer that beat this poll to the row) resolves on the very first",
+                  "// try with zero added latency. notificationPollMaxAttempts (20) x",
+                  "// notificationPollDelayMs (750ms) = a ~15s budget.",
+                  "var attempt = Number(pm.collectionVariables.get('notificationPollAttempt')) || 0;",
+                  "if (attempt > 0) {",
+                  "    var delayMs = Number(pm.collectionVariables.get('notificationPollDelayMs'));",
+                  "    var start = Date.now();",
+                  "    while (Date.now() - start < delayMs) { /* busy-wait */ }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('notificationContractEnabled') !== 'true') {",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Notification list request succeeds', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = [];",
+                  "try { json = pm.response.json(); } catch (e) { json = []; }",
+                  "",
+                  "var orderId = Number(pm.collectionVariables.get('notificationOrderId'));",
+                  "var match = Array.isArray(json) ? json.filter(function (n) { return n.orderId === orderId; })[0] : undefined;",
+                  "",
+                  "var maxAttempts = Number(pm.collectionVariables.get('notificationPollMaxAttempts'));",
+                  "var attempt = Number(pm.collectionVariables.get('notificationPollAttempt')) || 0;",
+                  "",
+                  "if (!match && attempt < maxAttempts - 1) {",
+                  "    // Not there yet and the bounded-wait budget is not exhausted: retry.",
+                  "    pm.collectionVariables.set('notificationPollAttempt', String(attempt + 1));",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "    return;",
+                  "}",
+                  "",
+                  "// Either found, or the bounded-wait budget (notificationPollMaxAttempts x",
+                  "// notificationPollDelayMs, ~15s) is exhausted: assert STRICTLY -- this",
+                  "// must FAIL, never hang and never soft-pass, once the budget runs out.",
+                  "pm.test('Order-confirmation notification for orderId=' + orderId + ' is observable within the bounded-wait budget (' + maxAttempts + ' x ' + pm.collectionVariables.get('notificationPollDelayMs') + 'ms, attempt ' + (attempt + 1) + '/' + maxAttempts + ')', function () {",
+                  "    pm.expect(match, 'no notification with orderId=' + orderId + ' found after ' + (attempt + 1) + ' attempt(s)').to.not.be.undefined;",
+                  "});",
+                  "",
+                  "if (!match) {",
+                  "    // Budget exhausted -- the assertion above already failed the run",
+                  "    // strictly. Stop here instead of cascading into TypeErrors on",
+                  "    // match.channel/match.message below.",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Notification shape is camelCase: id, customerId, orderId, channel, message, sentAt', function () {",
+                  "    pm.expect(match).to.have.all.keys('id', 'customerId', 'orderId', 'channel', 'message', 'sentAt');",
+                  "});",
+                  "pm.test('Notification channel is EMAIL', function () {",
+                  "    pm.expect(match.channel).to.eql('EMAIL');",
+                  "});",
+                  "pm.test('Notification message mentions the order id', function () {",
+                  "    pm.expect(match.message).to.include(String(orderId));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "event": [
@@ -748,6 +911,11 @@
     { "key": "widgetStockBeforeDecline", "value": "", "type": "string" },
     { "key": "widgetStockBeforeShipFail", "value": "", "type": "string" },
     { "key": "seededReviewId", "value": "", "type": "string" },
-    { "key": "newReviewId", "value": "", "type": "string" }
+    { "key": "newReviewId", "value": "", "type": "string" },
+    { "key": "notificationCustomerId", "value": "", "type": "string" },
+    { "key": "notificationOrderId", "value": "", "type": "string" },
+    { "key": "notificationPollAttempt", "value": "0", "type": "string" },
+    { "key": "notificationPollMaxAttempts", "value": "20", "type": "string" },
+    { "key": "notificationPollDelayMs", "value": "750", "type": "string" }
   ]
 }

@@ -724,3 +724,271 @@ never edited, and the fail-safe (a real `502` on a dead upstream, never a
 masked `200`) still holds. The acceptance criterion the NEWMAN-CUTOVER lane
 left open — "full suite green through the proxy in both flag states" — is
 now met.
+
+---
+
+# The r03 NEWMAN-ASYNC lane — the Notification Context Contract, live against real Kafka
+
+This section records the suite's first genuinely **asynchronous** cutover
+proof: `mea.postman_collection.json` gained one new, top-level, **env-guarded**
+folder, **Notification Context Contract** (2 requests, N1–N2) — see
+`README.md` for exactly what each request asserts and for the full bring-up
+commands. The five pre-existing folders (Smoke, the four checkout scenarios,
+Review Context Contract) were **not edited**. Unlike every prior lane, this
+one needs a real Kafka broker end to end: the monolith's outbox relay
+(`manage.py outbox_relay`) publishes `order.placed`, and **two independent
+consumers** race to read it — the monolith's own
+`manage.py order_placed_consumer` (group `monolith-notification`, feeding the
+flag-OFF `GET /api/notifications` read model) and
+`examples/03-notification-service`'s `aiokafka` consumer (group
+`notification-service`, feeding the flag-ON read model).
+
+## What was running
+
+| Component | Address | Mode |
+|---|---|---|
+| Postgres | `localhost:5432` (`monolith`/`monolith`/`monolith`) | throwaway `postgres:18.6-alpine`, migrated + seeded fresh |
+| Kafka | `localhost:9092` | throwaway `apache/kafka:4.3.1` (the repo's pin), single-node KRaft, `KAFKA_AUTO_CREATE_TOPICS_ENABLE=true` (no manual topic creation needed) |
+| `examples/00-monolith` | `:8000` | `uv run gunicorn config.wsgi:application --bind 0.0.0.0:8000` (WSGI — same backend the r02 PHASE-2 repair lane proved clean of the chunked-body defect) |
+| `examples/00-monolith` outbox relay | — | `uv run python manage.py outbox_relay` (poll ~1s) |
+| `examples/00-monolith` self-consumer | — | `uv run python manage.py order_placed_consumer` (group `monolith-notification`) — required for the flag-OFF path; without it the flag-OFF `GET /api/notifications` read model never repopulates |
+| `examples/03-notification-service` | `:8002` | `uv run alembic upgrade head` once, then `uv run uvicorn app.main:app --port 8002` (group `notification-service`), `DATABASE_URL`/`KAFKA_BOOTSTRAP_SERVERS` both defaulted (same Postgres instance, `localhost:9092`) |
+| `examples/01-strangler-proxy` | `:8888` | `uv run uvicorn app.main:app --port 8888`, `STRANGLER_NOTIFICATION_ENABLED` toggled per run below |
+
+newman 6.2.2 for every run below. Final collection SHA-256:
+`90374e8609eb7ec2bf59815e26a51a5d2353ec3c0c74d0cdc04e9bbe0352dd8b` — identical
+across every run in this section (only the proxy's flag, and which backend
+was reachable, ever changed).
+
+## The inert-guard control run — no `--env-var` at all, against the monolith directly
+
+Before touching Kafka-dependence at all, the full, **completely unmodified**
+invocation (`local.postman_environment.json`, no `--env-var` flag) was run to
+prove the new folder is a true no-op for every existing caller of this
+collection:
+
+```
+┌─────────────────────────┬───────────────────┬──────────────────┐
+│                         │          executed │           failed │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              iterations │                 1 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│                requests │                20 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│            test-scripts │                40 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│      prerequest-scripts │                21 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              assertions │                60 │                0 │
+├─────────────────────────┴───────────────────┴──────────────────┤
+│ total run duration: 839ms                                      │
+└───────────────────────────────────────────────────────────────┘
+```
+
+**20 requests** (the pre-existing 19, plus exactly one: N1 — the plain,
+synchronous checkout that fires unconditionally because a pre-request
+script's `setNextRequest(null)` can only choose what runs *next*, never
+prevent the *current* request; see README.md for why that's still safe).
+N2 — the one request that actually needs Kafka — was never reached, and
+`newman` exited `0`. This is the literal "existing Kafka-free gates/runs ...
+stay unaffected" acceptance criterion, run against this exact, final
+collection file.
+
+## Run A — flag OFF, through the proxy, `--env-var notificationContractEnabled=true`
+
+`STRANGLER_NOTIFICATION_ENABLED` unset (default `false`): notifications
+should be served by the monolith's own `order.placed` self-consumer, reached
+through the proxy.
+
+```
+┌─────────────────────────┬───────────────────┬──────────────────┐
+│                         │          executed │           failed │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              iterations │                 1 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│                requests │                22 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│            test-scripts │                44 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│      prerequest-scripts │                25 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              assertions │                66 │                0 │
+├─────────────────────────┴───────────────────┴──────────────────┤
+│ total run duration: 1729ms                                     │
+├────────────────────────────────────────────────────────────────┤
+│ total data received: 7.3kB (approx)                            │
+├────────────────────────────────────────────────────────────────┤
+│ average response time: 28ms [min: 5ms, max: 134ms, s.d.: 33ms] │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Fully green, 0 failed, newman exit code 0.** Smoke, all four checkout
+scenarios, and the Review Context Contract all pass exactly as in the r02
+PHASE-2 baseline (58/58 of those assertions unchanged), plus the new
+Notification folder's 8 assertions. N2 resolved on **attempt 2/20** (one
+retry, ~750ms of added latency) — the notification created by this run's
+checkout (`orderId=30`) became observable via the monolith's own consumer
+well inside the ~15s budget.
+
+## Run B — flag ON, through the proxy (same, unedited collection + environment)
+
+Proxy restarted with `STRANGLER_NOTIFICATION_ENABLED=true`:
+
+```
+┌─────────────────────────┬───────────────────┬──────────────────┐
+│                         │          executed │           failed │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              iterations │                 1 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│                requests │                22 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│            test-scripts │                44 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│      prerequest-scripts │                25 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              assertions │                66 │                0 │
+├─────────────────────────┴───────────────────┴──────────────────┤
+│ total run duration: 1722ms                                     │
+├────────────────────────────────────────────────────────────────┤
+│ total data received: 6.31kB (approx)                           │
+├────────────────────────────────────────────────────────────────┤
+│ average response time: 26ms [min: 3ms, max: 134ms, s.d.: 32ms] │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Fully green, 0 failed, newman exit code 0 — byte-identical shape to Run A**
+(same 22 requests / 44 test-scripts / 25 prerequest-scripts / 66 assertions,
+0 failed in both; the collection file itself was never touched between
+runs). Notification-service's own log confirms it, not the monolith,
+answered this run's `GET /api/notifications`: `consumed order.placed for
+order 25 (customer 1)` followed by the `200 OK` to the poll. N2 again
+resolved on **attempt 2/20** — essentially identical latency to the
+flag-OFF path, confirming the bounded-wait idiom is correct for either
+backend without the collection knowing or caring which one is live.
+
+## Negative check — notification-service down, flag ON: the Notification folder MUST go RED
+
+With `STRANGLER_NOTIFICATION_ENABLED=true` and `examples/03-notification-service`
+killed, only the Notification folder was re-run:
+
+```
+┌─────────────────────────┬─────────────────┬─────────────────┐
+│                         │        executed │          failed │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│              iterations │               1 │               0 │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│                requests │              21 │               0 │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│            test-scripts │              42 │               0 │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│      prerequest-scripts │              42 │               0 │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│              assertions │              23 │              21 │
+├─────────────────────────┴─────────────────┴─────────────────┤
+│ total run duration: 14.7s                                   │
+└───────────────────────────────────────────────────────────── ┘
+```
+
+**`newman` exited non-zero (exit code 1), 21/23 assertions failed.** N1 still
+passed (checkout is synchronous and doesn't touch the notification-service
+at all). N2 ran its full **20-attempt bounded-wait budget** (`notificationPollMaxAttempts`
+x `notificationPollDelayMs` = 20 x 750ms ≈ 14.7s observed, matching the ~15s
+design budget) — every attempt got a real `502 Bad Gateway` from the proxy
+(the fail-safe `examples/01-strangler-proxy`'s README documents: a dead
+upstream is a real 5xx, never a masked `200`), e.g.:
+
+```
+01. AssertionError  Notification list request succeeds
+                    expected response to have status code 200 but got 502
+                    inside "Notification Context Contract / N2. Bounded-wait poll: ..."
+```
+
+— and once the budget was exhausted, the **strict** final assertion failed
+cleanly and on its own terms:
+
+```
+21. AssertionError  Order-confirmation notification for orderId=19 is observable
+                    within the bounded-wait budget (20 x 750ms, attempt 20/20)
+                    no notification with orderId=19 found after 20 attempt(s):
+                    expected undefined not to be undefined
+                    inside "Notification Context Contract / N2. Bounded-wait poll: ..."
+```
+
+It never hung and never soft-passed. Restarting
+`examples/03-notification-service` and re-running the same folder returned
+to fully green:
+
+```
+┌─────────────────────────┬──────────────────┬──────────────────┐
+│                         │         executed │           failed │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│              iterations │                1 │                0 │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│                requests │                4 │                0 │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│            test-scripts │                8 │                0 │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│      prerequest-scripts │                8 │                0 │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│              assertions │                9 │                0 │
+├─────────────────────────┴──────────────────┴──────────────────┤
+│ total run duration: 1668ms                                    │
+└───────────────────────────────────────────────────────────────┘
+```
+
+N2 resolved on **attempt 3/20** this time (2 retries, ~1.5s) — slightly
+slower than Run A/B because the restarted consumer had to rejoin its
+consumer group and complete a partition rebalance before it could see the
+earlier-published event, but still comfortably inside the ~15s budget.
+
+## A test-script robustness finding (not an integration bug — fixed before this record)
+
+While first capturing the negative check above, the budget-exhausted path
+raised 3 extra `TypeError`s (`Cannot convert undefined or null to object` /
+`Cannot read properties of undefined`) from the shape/`channel`/`message`
+assertions after `match` was `undefined` — noisy, but it did not change the
+RED outcome (`newman` still exited non-zero both times: 24/26 assertions
+failed before the fix, 21/23 after). `N2`'s test script was hardened with an
+early `return` right after the strict "observable within budget" assertion
+when `match` is still `undefined`, so a budget-exhausted run now reports
+exactly one clean, diagnostic failure for that path instead of a cascade.
+This was caught and fixed **before** capturing the final run numbers
+recorded above — every table in this section reflects the hardened script
+(collection SHA-256 `90374e86...`).
+
+## Bounded-wait margin, all runs
+
+| Run | Resolved on attempt | Elapsed (approx.) | Budget |
+|---|---|---|---|
+| Inert-guard control (no `--env-var`) | N2 never reached | — | — |
+| Run A (flag OFF) | 2/20 | ~750ms | 15s |
+| Run B (flag ON) | 2/20 | ~750ms | 15s |
+| Negative (notification-service down) | budget exhausted | ~14.7s | 15s |
+| Recovery (flag ON) | 3/20 | ~1.5s | 15s |
+
+Every successful resolution used **well under 10%** of the 15s budget in
+either flag state — the 20 x 750ms sizing has substantial headroom even
+accounting for consumer-group rebalance latency after a restart (the
+recovery run's attempt 3/20).
+
+## Summary
+
+| # | Flag | Notification served by | Everything else served by | Result |
+|---|---|---|---|---|
+| Inert-guard control | n/a (no `--env-var`) | n/a — N2 never reached | monolith | **GREEN** — 60/60 assertions, 0 failed, N1 only |
+| A | `false` | monolith (self-consumer) | monolith | **GREEN** — 66/66 assertions, 0 failed |
+| B | `true` | notification-service | monolith | **GREEN** — 66/66 assertions, 0 failed, byte-identical shape to A |
+| Negative, `true` + notification-service down | *(nothing — 502)* | monolith | **RED** — 21/23 assertions failed, newman exit code 1 |
+| Negative, recovered | notification-service | monolith | **GREEN** — 9/9 assertions, 0 failed |
+
+The behavior-equivalence suite's first asynchronous, env-guarded, bounded-wait
+folder is fully proven: green through the proxy in both flag states against
+a real Kafka broker and two independently-running consumers, inert (and
+`newman`-exit-0) for every existing caller that doesn't opt in, and RED for a
+genuinely dead downstream with a strict, non-hanging failure. No unmet
+acceptance criterion and no integration bug surfaced in this lane — the only
+finding was the test-script robustness item above, fixed prior to this
+record. The throwaway Postgres and Kafka containers, and every process
+started for this lane (monolith, outbox relay, self-consumer,
+notification-service, proxy), were torn down afterward; the host was left
+clean.
