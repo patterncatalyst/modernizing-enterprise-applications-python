@@ -90,7 +90,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install uv (pinned) + Python 3.14
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.3.0   # no floating v10 tag; pin exact
         with:
           version: "0.13.1"            # decisions.md version matrix: uv 0.13.1
           python-version: "3.14"
