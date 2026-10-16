@@ -15,6 +15,12 @@ lift. The demo DECLINE rule below is lifted byte-for-byte from that
 synchronous original (`DECLINE_SENTINEL = "DECLINE"`), but the control flow
 around it -- idempotent dedupe, never raising, writing an outbox event instead
 of returning an HTTP 402 -- is authored fresh for the choreography.
+
+Also owns `process_shipment_failed` (r06/DRQ-054) -- the refund reaction to a
+`shipment.failed` event, closing the stranded-payment gap: a `CAPTURED`
+payment whose shipment later fails must be refunded, idempotently, via this
+service's same outbox. See that function's own docstring for the full
+contract.
 """
 
 from __future__ import annotations
@@ -27,7 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app import repository
 from app.models import Payment
-from app.schemas import OrderPlacedEvent
+from app.schemas import OrderPlacedEvent, ShipmentFailedEvent
 
 logger = logging.getLogger("payment_service.service")
 
@@ -35,9 +41,11 @@ AGGREGATE_TYPE = "payment"
 
 STATUS_CAPTURED = "CAPTURED"
 STATUS_DECLINED = "DECLINED"
+STATUS_REFUNDED = "REFUNDED"
 
 PAYMENT_CAPTURED_EVENT_TYPE = "payment.captured"
 PAYMENT_DECLINED_EVENT_TYPE = "payment.declined"
+PAYMENT_REFUNDED_EVENT_TYPE = "payment.refunded"
 
 DECLINE_SENTINEL = "DECLINE"
 
@@ -153,3 +161,67 @@ async def process_order_placed(
                 "order.placed for order %s raced a concurrent insert, discarding duplicate",
                 event.order_id,
             )
+
+
+def _build_refund_event_payload(payment: Payment, *, occurred_at: datetime) -> dict[str, object]:
+    """Builds the `payment.refunded` wire payload (see `../EVENTS.md`) --
+    the refund sibling of `_build_event_payload` above. Deliberately a
+    SMALLER shape than `payment.captured`/`payment.declined` (no `method`,
+    no `reason`): the FROZEN r06/DRQ-054 contract is
+    `{orderId, paymentId, amountCents, status, occurredAt}`, and `status` is
+    always the literal `REFUNDED` here."""
+    return {
+        "orderId": payment.order_id,
+        "paymentId": payment.id,
+        "amountCents": payment.amount_cents,
+        "status": payment.status,
+        "occurredAt": occurred_at.isoformat(),
+    }
+
+
+async def process_shipment_failed(
+    session_factory: async_sessionmaker[AsyncSession], event: ShipmentFailedEvent
+) -> None:
+    """r06/DRQ-054 -- closes the stranded-payment gap: a shipping failure
+    AFTER payment has already been captured must refund that payment, or the
+    customer is charged for an order that never ships. The mirror of
+    `process_order_placed`'s idempotent, single-owner shape, but a STATUS
+    TRANSITION rather than an insert: find the `Payment` for this
+    `shipment.failed`'s `orderId`, and if (and only if) it is currently
+    `CAPTURED`, move it to `REFUNDED` and write a matching `payment.refunded`
+    outbox row, atomically (`repository.transition_payment_status_with_outbox_event`).
+
+    IDEMPOTENT by design, same at-least-once posture as every other consumer
+    in this service: a redelivered `shipment.failed` for an order already
+    `REFUNDED` finds no row in the expected `CAPTURED` state and is a safe
+    no-op -- it does NOT re-refund, and does NOT emit a second
+    `payment.refunded` event. An order with no payment recorded at all, or
+    whose payment is `DECLINED` (never captured in the first place), is ALSO
+    a no-op for the same reason: there is nothing to refund, and this must
+    NEVER "refund" money that was never taken.
+    """
+    async with session_factory() as session:
+        now = datetime.now(UTC)
+        payment = await repository.transition_payment_status_with_outbox_event(
+            session,
+            order_id=event.order_id,
+            expected_status=STATUS_CAPTURED,
+            new_status=STATUS_REFUNDED,
+            created_at=now,
+            event_type=PAYMENT_REFUNDED_EVENT_TYPE,
+            build_payload=lambda p: _build_refund_event_payload(p, occurred_at=now),
+        )
+        if payment is None:
+            logger.info(
+                "shipment.failed for order %s: no CAPTURED payment to refund (already "
+                "REFUNDED, DECLINED, or no payment recorded) -- idempotent no-op",
+                event.order_id,
+            )
+            return
+
+        logger.info(
+            "processed shipment.failed for order %s -> payment %s (payment id=%s)",
+            event.order_id,
+            payment.status,
+            payment.id,
+        )

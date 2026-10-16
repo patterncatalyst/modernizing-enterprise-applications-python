@@ -111,8 +111,10 @@ async def choreography(database_url: str, kafka_bootstrap_servers: str):
         database_url=database_url,
         kafka_bootstrap_servers=kafka_bootstrap_servers,
         order_placed_topic=ORDER_PLACED_TOPIC,
+        shipment_failed_topic="shipment.failed",
         payment_captured_topic=PAYMENT_CAPTURED_TOPIC,
         payment_declined_topic=PAYMENT_DECLINED_TOPIC,
+        payment_refunded_topic="payment.refunded",
         consumer_group=f"payment-service-test-{order_id}",
         outbox_poll_ms=200,
     )

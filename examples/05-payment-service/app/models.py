@@ -32,6 +32,17 @@ class Payment(Base):
     `app/consumer.py` / `app/service.py`). The unique index on `order_id` is
     the idempotency backstop against the at-least-once `order.placed`
     delivery guarantee: one order places at most one payment attempt.
+
+    `status` holds one of `CAPTURED`/`DECLINED`/`REFUNDED` (see
+    `app/service.py`'s `STATUS_*` constants) -- a plain `String(32)` column
+    with NO database `CHECK` constraint enumerating the allowed values, so
+    adding `REFUNDED` (the r06/DRQ-054 stranded-payment-on-shipping-failure
+    reaction, `app/service.py::process_shipment_failed`) is a pure
+    application-level change with no accompanying Alembic migration. A
+    `CAPTURED` payment transitions to `REFUNDED` at most once -- see
+    `app/repository.py::transition_payment_status_with_outbox_event`'s
+    conditional-`UPDATE` guard, this transition's analogue of the
+    insert-side unique index above.
     """
 
     __tablename__ = "payments"
@@ -59,13 +70,14 @@ class OutboxEvent(Base):
     pattern, same shape as the monolith's `common.OutboxEvent`:
     `aggregate_type`/`aggregate_id`/`event_type`/`payload`/`created_at`/
     `published_at`, same partial index on unpublished rows), publishing
-    `payment.captured`/`payment.declined` -- see `app/relay.py`.
+    `payment.captured`/`payment.declined`/`payment.refunded` -- see
+    `app/relay.py`.
 
     Unlike the monolith's single shared outbox table feeding one topic
     (`order.placed`), this table's `event_type` selects the topic to publish
-    to at relay time (`app/relay.py`'s `_TOPIC_BY_EVENT_TYPE`), since one
-    payment attempt emits one of two distinct event types to two distinct
-    topics.
+    to at relay time (`app/relay.py`'s `_topic_for`), since one payment
+    attempt (or, as of r06/DRQ-054, one `shipment.failed` reaction) emits one
+    of three distinct event types to three distinct topics.
     """
 
     __tablename__ = "outbox"

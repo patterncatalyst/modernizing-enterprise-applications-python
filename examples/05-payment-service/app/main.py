@@ -2,7 +2,10 @@
 `:8085`: an idempotent `aiokafka` consumer captures payment off the
 `order.placed` event and emits `payment.captured`/`payment.declined` via this
 service's OWN transactional outbox, into this service's OWN `payment`
-Postgres schema. Plus a read surface, `GET /api/payments[?orderId=]` /
+Postgres schema. A second idempotent `aiokafka` consumer
+(`app/refund_consumer.py`, r06/DRQ-054) reacts to `shipment.failed` by
+refunding any `CAPTURED` payment for that order, emitting `payment.refunded`
+via the SAME outbox. Plus a read surface, `GET /api/payments[?orderId=]` /
 `GET /api/payments/{id}`, matching the monolith's contract byte-for-byte. See
 `../README.md` for the own-schema/choreography story, `../EVENTS.md` for the
 event contracts, and `../MIGRATION.md` for the two-phase write-up.
@@ -23,6 +26,7 @@ from app import db
 from app.config import Settings
 from app.consumer import OrderPlacedConsumer
 from app.errors import install_exception_handlers
+from app.refund_consumer import ShipmentFailedConsumer
 from app.relay import OutboxRelay
 from app.routes import router
 
@@ -66,24 +70,32 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.consumer = consumer
     await consumer.start()
 
+    refund_consumer = ShipmentFailedConsumer(settings, session_factory)
+    app.state.refund_consumer = refund_consumer
+    await refund_consumer.start()
+
     relay = OutboxRelay(settings, session_factory)
     app.state.relay = relay
     await relay.start()
 
     logger.info(
         "payment-service started, DATABASE_URL=%s KAFKA_BOOTSTRAP_SERVERS=%s "
-        "order_placed_topic=%s captured_topic=%s declined_topic=%s group=%s",
+        "order_placed_topic=%s shipment_failed_topic=%s captured_topic=%s declined_topic=%s "
+        "refunded_topic=%s group=%s",
         db.resolve_database_url(settings.database_url),
         settings.kafka_bootstrap_servers,
         settings.order_placed_topic,
+        settings.shipment_failed_topic,
         settings.payment_captured_topic,
         settings.payment_declined_topic,
+        settings.payment_refunded_topic,
         settings.consumer_group,
     )
     try:
         yield
     finally:
         await relay.stop()
+        await refund_consumer.stop()
         await consumer.stop()
         await engine.dispose()
         logger.info("payment-service shut down")
@@ -105,16 +117,19 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict[str, object]:
-        """Reports Kafka consumer-group partition assignment, not just
-        process liveness -- the CI readiness wait polls this so it doesn't
-        start firing requests at a service whose consumer hasn't finished
-        its group-join/rebalance yet (a request that would otherwise see an
-        empty result even after a matching `order.placed` event has been
+        """Reports Kafka consumer-group partition assignment for BOTH
+        consumers, not just process liveness -- the CI readiness wait polls
+        this so it doesn't start firing requests (or publishing events) at a
+        service whose consumer(s) haven't finished their group-join/rebalance
+        yet (a request/event that would otherwise see/trigger nothing even
+        after a matching `order.placed`/`shipment.failed` event has been
         published)."""
         consumer: OrderPlacedConsumer = app.state.consumer
+        refund_consumer: ShipmentFailedConsumer = app.state.refund_consumer
         return {
             "status": "ok",
             "consumerPartitionsAssigned": consumer.partitions_assigned,
+            "refundConsumerPartitionsAssigned": refund_consumer.partitions_assigned,
         }
 
     return app
