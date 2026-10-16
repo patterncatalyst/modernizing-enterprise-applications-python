@@ -200,11 +200,10 @@ echo
 if [ "$NEWMAN_EXIT" -eq 0 ]; then
   log "GREEN — the orchestrated shipping-saga cutover (r06), including the refund win, is proven end-to-end."
 else
-  log "RED (newman exit $NEWMAN_EXIT) — see the output above and $LOG_DIR/*.log. Note: tooling/newman/GOLDEN-BASELINE.md's"
-  log "r06 CUTOVER section documents a known, narrow timing race in the 1c/3c/4c poll scripts (they don't retry through"
-  log "the AWAITING_SHIPMENT intermediate status) that can cause an occasional false RED here without any underlying"
-  log "saga/refund defect -- re-running this script once usually resolves it. A genuinely stuck order (every status"
-  log "check still AWAITING_SHIPMENT well after this script exits) would mean a real regression, not this timing gap."
+  log "RED (newman exit $NEWMAN_EXIT) — see the output above and $LOG_DIR/*.log. The 1c/3c/4c poll scripts retry"
+  log "through the AWAITING_SHIPMENT intermediate status (fixed in r06; see tooling/newman/GOLDEN-BASELINE.md's r06"
+  log "CUTOVER Phase-2 repair lane and DRQ-063), so a RED here is a genuine failure — a stuck order (every status"
+  log "check still AWAITING_SHIPMENT well after this script exits) means a real saga/refund regression to investigate."
 fi
 
 exit "$NEWMAN_EXIT"
