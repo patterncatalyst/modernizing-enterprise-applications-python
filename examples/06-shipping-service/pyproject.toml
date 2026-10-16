@@ -1,0 +1,53 @@
+[project]
+name = "mea-shipping-service"
+version = "0.1.0"
+description = "Modernizing Enterprise Applications (Python) -- r06, the shipping bounded context extracted onto a standalone FastAPI service on :8087, run as an ORCHESTRATED saga (DB-backed state machine, adapted from the cloud-native-design-patterns ch.17/Appendix D saga orchestrator) triggered by payment-service's own `payment.captured` event. The deliberate ch.23-vs-ch.24 contrast with r05's CHOREOGRAPHED payment saga: this service owns a `shipping` Postgres schema (Alembic), persists one row per in-flight saga (status/step_index/context), and resumes any RUNNING/COMPENSATING saga on startup -- a durability upgrade over the Java sibling's in-memory Camel Saga EIP coordinator."
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi==0.143.2",
+    "uvicorn[standard]==0.54.0",
+    "sqlalchemy[asyncio]==2.1.4",
+    "asyncpg==0.32.0",
+    "pydantic==2.14.1",
+    "aiokafka==0.14.0",
+    "alembic==1.20.0",
+    "httpx==0.28.1",
+    "tenacity==9.2.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "ruff==0.17.1",
+    "testcontainers==4.15.0",
+]
+
+[tool.pytest.ini_options]
+python_files = ["test_*.py"]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+markers = [
+    "integration: tests that require Testcontainers-backed Kafka + Postgres",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# B008 (function call in argument default) is a false positive for FastAPI's
+# `Depends(...)`/`Query(...)` pattern -- that IS the idiomatic way to declare
+# a dependency, per FastAPI's own docs. Same suppression as every other
+# FastAPI service in this project.
+ignore = ["B008"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.uv]
+# A standalone FastAPI service, not a distributable library -- don't
+# build/install it as a package into its own virtualenv.
+package = false

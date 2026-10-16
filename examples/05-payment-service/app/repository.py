@@ -92,6 +92,65 @@ async def create_payment_with_outbox_event(
     return payment
 
 
+async def transition_payment_status_with_outbox_event(
+    session: AsyncSession,
+    *,
+    order_id: int,
+    expected_status: str,
+    new_status: str,
+    created_at: datetime,
+    event_type: str,
+    build_payload: Callable[[Payment], dict[str, Any]],
+) -> Payment | None:
+    """Conditionally transitions a `Payment` row's `status` (e.g.
+    `CAPTURED` -> `REFUNDED`, `app/service.py::process_shipment_failed`,
+    r06/DRQ-054) and writes the matching outbox event, in ONE transaction --
+    the same transactional-outbox atomicity guarantee
+    `create_payment_with_outbox_event` makes for the initial insert.
+
+    Returns the updated `Payment`, or `None` if no row matched BOTH
+    `order_id` AND `expected_status` -- the idempotent no-op path: either
+    there is no payment for that order at all, it was never `CAPTURED`
+    (e.g. `DECLINED`), or a prior call already moved it past
+    `expected_status` (e.g. a redelivered `shipment.failed` finding the
+    payment already `REFUNDED`).
+
+    The `WHERE status = expected_status` guard on the `UPDATE` is this
+    transition's version of `create_payment_with_outbox_event`'s
+    insert-side unique index: it makes the read-then-decide-then-write shape
+    safe against two `shipment.failed` deliveries for the same order racing
+    concurrently -- only one `UPDATE` can match the row while it is still in
+    `expected_status`, so only one caller ever sees a non-`None` result and
+    writes the outbox event; the loser's `UPDATE` matches zero rows and this
+    returns `None`, same safe no-op as any other idempotent redelivery.
+    """
+    stmt = (
+        update(Payment)
+        .where(Payment.order_id == order_id, Payment.status == expected_status)
+        .values(status=new_status)
+        .returning(Payment)
+    )
+    result = await session.execute(stmt)
+    payment = result.scalar_one_or_none()
+    if payment is None:
+        await session.rollback()
+        return None
+
+    outbox_event = OutboxEvent(
+        aggregate_type="payment",
+        aggregate_id=str(order_id),
+        event_type=event_type,
+        payload=build_payload(payment),
+        created_at=created_at,
+        published_at=None,
+    )
+    session.add(outbox_event)
+
+    await session.flush()
+    await session.commit()
+    return payment
+
+
 async def list_unpublished_outbox_events(
     session: AsyncSession, *, limit: int = _RELAY_BATCH_SIZE
 ) -> list[OutboxEvent]:

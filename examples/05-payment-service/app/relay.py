@@ -11,16 +11,18 @@ relay. Every `Settings.outbox_poll_ms` (default 1000), this:
 1. reads unpublished `OutboxEvent` rows oldest-first (the partial index
    `idx_payment_outbox_unpublished` keeps that cheap),
 2. publishes each to the Kafka topic matching its `event_type`
-   (`payment.captured` or `payment.declined`) via
-   `AIOKafkaProducer.send_and_wait()`, keyed by `aggregate_id` (= `orderId`
-   as a string, the frozen contract -- see `../EVENTS.md`),
+   (`payment.captured`, `payment.declined`, or -- as of r06/DRQ-054 --
+   `payment.refunded`) via `AIOKafkaProducer.send_and_wait()`, keyed by
+   `aggregate_id` (= `orderId` as a string, the frozen contract -- see
+   `../EVENTS.md`),
 3. stamps `published_at` in a short transaction.
 
 AT-LEAST-ONCE, not exactly-once: publish happens before the stamp, so a crash
 between steps 2 and 3 re-publishes the same row on the next poll. Downstream
-consumers of `payment.captured`/`payment.declined` are responsible for their
-own idempotency on redelivery, same discipline this service's own
-`order.placed` consumer (`app/consumer.py`) already follows.
+consumers of `payment.captured`/`payment.declined`/`payment.refunded` are
+responsible for their own idempotency on redelivery, same discipline this
+service's own `order.placed`/`shipment.failed` consumers (`app/consumer.py`,
+`app/refund_consumer.py`) already follow.
 """
 
 from __future__ import annotations
@@ -57,6 +59,7 @@ class OutboxRelay:
         return {
             "payment.captured": self._settings.payment_captured_topic,
             "payment.declined": self._settings.payment_declined_topic,
+            "payment.refunded": self._settings.payment_refunded_topic,
         }.get(event_type)
 
     async def start(self) -> None:
@@ -67,10 +70,11 @@ class OutboxRelay:
         self._task = asyncio.create_task(self._relay_loop(), name="payment-outbox-relay")
         logger.info(
             "outbox relay started (bootstrap=%s, captured_topic=%s, declined_topic=%s, "
-            "poll_ms=%s)",
+            "refunded_topic=%s, poll_ms=%s)",
             self._settings.kafka_bootstrap_servers,
             self._settings.payment_captured_topic,
             self._settings.payment_declined_topic,
+            self._settings.payment_refunded_topic,
             self._settings.outbox_poll_ms,
         )
 

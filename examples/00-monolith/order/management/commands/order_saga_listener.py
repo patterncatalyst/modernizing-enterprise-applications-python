@@ -1,24 +1,29 @@
-"""The monolith's first SAGA consumer (r05/ch.23-25): reacts to
+"""The monolith's SAGA consumer (r05/ch.23-25, extended r06): reacts to
 payment-service's own outbox-published `payment.captured`/`payment.declined`
 events (see `examples/05-payment-service/EVENTS.md`) to finish a
 CHOREOGRAPHED checkout (`settings.PAYMENT_MODE = "choreographed"`) that
 `order.services.place_order()` (via `_place_order_choreographed`) left
-PENDING. All the actual reaction logic -- the status-transition idempotency
-guard, the in-process shipping dispatch, the compensating gRPC Release on a
-decline/ship-fail -- lives in `order.services.handle_payment_captured`/
-`handle_payment_declined`, where it's unit-testable without Kafka; this
-command is just the aiokafka wiring, cloned from
-`notification.management.commands.order_placed_consumer`'s getmany/
-signal-stop/sync_to_async idiom, subscribed to BOTH outcome topics at once
-(one consumer group, two topics -- aiokafka's `AIOKafkaConsumer` accepts
-multiple topic names).
+PENDING, AND (r06) to the standalone shipping-service's own
+outbox-published `shipment.dispatched`/`shipment.failed` events that resolve
+the `AWAITING_SHIPMENT` hand-off `handle_payment_captured` leaves behind when
+`settings.SHIPPING_MODE = "orchestrated"`. All the actual reaction logic --
+the status-transition idempotency guards, the in-process shipping dispatch
+(`inprocess` mode) vs. the AWAITING_SHIPMENT hand-off (`orchestrated` mode),
+the compensating gRPC Release on a decline/ship-fail -- lives in
+`order.services.handle_payment_captured`/`handle_payment_declined`/
+`handle_shipment_dispatched`/`handle_shipment_failed`, where it's
+unit-testable without Kafka; this command is just the aiokafka wiring,
+cloned from `notification.management.commands.order_placed_consumer`'s
+getmany/signal-stop/sync_to_async idiom, subscribed to all FOUR outcome
+topics at once (one consumer group, four topics -- aiokafka's
+`AIOKafkaConsumer` accepts multiple topic names).
 
 `enable_auto_commit=True` + `auto_offset_reset="earliest"`: the same
 simplest-correct-starting-point choice `order_placed_consumer` makes.
 At-least-once redelivery (a crash after processing, before the next
-auto-commit) is safe ONLY because `handle_payment_captured`/
-`handle_payment_declined` are idempotent via their own status-transition
-guard -- see those functions' docstrings in `order/services.py`.
+auto-commit) is safe ONLY because every one of these four handlers is
+idempotent via its own status-transition guard -- see those functions'
+docstrings in `order/services.py`.
 """
 
 import asyncio
@@ -32,16 +37,26 @@ from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from order.services import handle_payment_captured, handle_payment_declined
+from order.services import (
+    handle_payment_captured,
+    handle_payment_declined,
+    handle_shipment_dispatched,
+    handle_shipment_failed,
+)
 
 logger = logging.getLogger(__name__)
 
 _handle_payment_captured_async = sync_to_async(handle_payment_captured)
 _handle_payment_declined_async = sync_to_async(handle_payment_declined)
+_handle_shipment_dispatched_async = sync_to_async(handle_shipment_dispatched)
+_handle_shipment_failed_async = sync_to_async(handle_shipment_failed)
 
 
 class Command(BaseCommand):
-    help = "Consume payment.captured/payment.declined and finish a choreographed checkout."
+    help = (
+        "Consume payment.captured/payment.declined/shipment.dispatched/"
+        "shipment.failed and drive the order saga to its terminal status."
+    )
 
     def handle(self, *args, **options):
         asyncio.run(_run())
@@ -50,11 +65,24 @@ class Command(BaseCommand):
 async def _run() -> None:
     captured_topic = settings.PAYMENT_CAPTURED_TOPIC
     declined_topic = settings.PAYMENT_DECLINED_TOPIC
+    dispatched_topic = settings.SHIPMENT_DISPATCHED_TOPIC
+    failed_topic = settings.SHIPMENT_FAILED_TOPIC
     group_id = settings.ORDER_SAGA_CONSUMER_GROUP
+
+    # Topic -> handler dispatch table, keyed by the (distinct) topic name --
+    # replaces r05's two-way if/else now that there are four topics.
+    handlers = {
+        captured_topic: _handle_payment_captured_async,
+        declined_topic: _handle_payment_declined_async,
+        dispatched_topic: _handle_shipment_dispatched_async,
+        failed_topic: _handle_shipment_failed_async,
+    }
 
     consumer = AIOKafkaConsumer(
         captured_topic,
         declined_topic,
+        dispatched_topic,
+        failed_topic,
         bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
         group_id=group_id,
         auto_offset_reset="earliest",
@@ -62,10 +90,12 @@ async def _run() -> None:
     )
     await consumer.start()
     logger.info(
-        "order_saga_listener.started bootstrap_servers=%s topics=%s,%s group_id=%s",
+        "order_saga_listener.started bootstrap_servers=%s topics=%s,%s,%s,%s group_id=%s",
         settings.KAFKA_BOOTSTRAP_SERVERS,
         captured_topic,
         declined_topic,
+        dispatched_topic,
+        failed_topic,
         group_id,
     )
 
@@ -86,12 +116,10 @@ async def _run() -> None:
             # chance to end the loop instead of waiting for the next message.
             batches = await consumer.getmany(timeout_ms=1000)
             for topic_partition, records in batches.items():
+                handler = handlers[topic_partition.topic]
                 for record in records:
                     event = json.loads(record.value.decode("utf-8"))
-                    if topic_partition.topic == captured_topic:
-                        order = await _handle_payment_captured_async(event)
-                    else:
-                        order = await _handle_payment_declined_async(event)
+                    order = await handler(event)
                     logger.info(
                         "order_saga.consumed topic=%s order_id=%s status=%s",
                         topic_partition.topic,

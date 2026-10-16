@@ -1836,3 +1836,887 @@ resolved at attempt `3/20` this time (vs. `2/20` in Run 1), `3c` at `4/20`,
 `4c` at `3/20` — still comfortably inside the `20`-attempt budget. The script
 tore down its own containers and processes on exit; verified clean afterward
 (`docker ps`, `ss -ltnp` for every port this lane used — none left bound).
+
+---
+
+# The r06 NEWMAN-SHIP Phase-2 lane — Shipping Context Contract + SHIP-FAIL refund, baseline against the in-process monolith
+
+This section records the Phase-2 extension of the suite for r06's shipping
+extraction (`examples/06-shipping-service`), proven **GREEN against the
+current monolith with `SHIPPING_MODE=inprocess`** — the still-in-process
+path. The full orchestrated proof (`SHIPPING_MODE=orchestrated`, the standalone
+shipping-service, and the payment-service Refund RPC actually firing) lands in
+a later cutover lane, the same way r05's choreographed proof followed its own
+conversion lane. `mea.postman_collection.json` changed in three ways:
+
+1. **Scenario 1's bounded-wait poll (1c) got its own, wider budget.**
+   `happyPathPollMaxAttempts` x `happyPathPollDelayMs` = `40 x 750ms` (a ~30s
+   budget, double the previous shared `20 x 750ms` = 15s), to tolerate the
+   extra Kafka hops the orchestrated path adds downstream of today's single
+   synchronous round-trip (`order.placed` -> `payment.captured` -> shipping
+   saga -> `shipment.dispatched` -> `CONFIRMED`). This is a **dedicated**
+   variable, not a change to the shared `checkoutPollMaxAttempts` /
+   `checkoutPollDelayMs` that Scenarios 3/4 still use unchanged — widening it
+   was scoped to exactly the one poll that needs it. The terminal assertion
+   itself (`pm.expect(json.status).to.eql('CONFIRMED')`) was **not touched**.
+2. **Scenario 4 gained a new item, 4e**, an env-guarded (`shippingContractEnabled`)
+   bounded-wait poll of `GET /api/payments?orderId=<the shipping-failed
+   order's id>` until the payment's `status` reaches `REFUNDED` — the r06 win:
+   the orchestrated shipping saga's compensating action for a
+   `SHIPPING_FAILED` order is a refund of the payment captured earlier in the
+   saga, instead of today's whole-transaction rollback. 4e is inert in two
+   independent ways: the guard itself (same `pm.environment.get(...) !==
+   'true'` idiom as every other guarded folder), AND a structural skip — 4d's
+   test script now jumps straight past 4e to Review Context Contract's R1
+   whenever `shipFailOrderId` is empty (today's `422` sync path never
+   persists an order, the same reason 4c is already skipped in that branch),
+   so 4e never fires a malformed `orderId=<blank>` request against the live
+   endpoint. 4d's own strict `SHIPPING_FAILED` + net-zero-stock assertions
+   were **not touched**.
+3. **A new top-level folder, Shipping Context Contract (S1–S3)**, placed
+   between Payment Context Contract and Notification Context Contract (same
+   non-terminal, test-script-level-only guard idiom as Inventory/Payment — no
+   `setNextRequest` anywhere in this folder, so it can never strand
+   Notification). S1 lists shipments for the Scenario 1 happy-path order
+   (`GET /api/shipments?orderId={{happyPathOrderId}}` -> `200`, camelCase
+   array `id, orderId, address, status, createdAt`, scoped to that order) and
+   captures a shipment id; S2 looks that shipment up by id (`200`, same
+   camelCase shape, `status: "DISPATCHED"` — the in-process monolith's
+   `shipping.services.dispatch()` default); S3 looks up an unknown id
+   (`404`, uniform `{error,message,timestamp}` body, `error: "NOT_FOUND"`).
+
+New collection variables: `happyPathPollMaxAttempts` (`40`),
+`happyPathPollDelayMs` (`750`), `shipFailRefundPollAttempt` (`0`),
+`shipFailRefundPollMaxAttempts` (`20`), `shipFailRefundPollDelayMs` (`750`),
+`shipmentId` (``). New file: `shipping-service.postman_environment.json`, a
+forward-ref to the shipping-service's own address (`http://localhost:8087`)
+for the later cutover lane to re-point at, matching the pattern every prior
+extracted-service environment file follows.
+
+## What was running
+
+| Component | Address | Mode |
+|---|---|---|
+| Postgres | `localhost:5432` (`monolith`/`monolith`/`monolith`) | throwaway `postgres:18.6-alpine`, migrated + seeded fresh |
+| `examples/00-monolith` | `:8000` | `uv run python manage.py runserver 0.0.0.0:8000`, **default config** — `SHIPPING_MODE` unset (`inprocess`), `PAYMENT_MODE` unset (`synchronous`), `INVENTORY_MODE` unset (`local`) — checkout is fully synchronous, `201`/terminal in the same round-trip, same as every prior baseline run in this file |
+
+newman 6.2.2.
+
+## Baseline run — no `--env-var` at all (guard OFF), the required proof
+
+This is the acceptance-criterion run: the identical command every existing
+caller of this collection already uses, completely unmodified, to prove the
+new assertions/folder are true no-ops for everyone who hasn't opted in yet:
+
+```bash
+newman run tooling/newman/mea.postman_collection.json \
+    -e tooling/newman/local.postman_environment.json
+```
+
+```
+┌─────────────────────────┬───────────────────┬───────────────────┐
+│                         │          executed │            failed │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│              iterations │                 1 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│                requests │                29 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│            test-scripts │                58 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│      prerequest-scripts │                33 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│              assertions │                59 │                 0 │
+├─────────────────────────┴───────────────────┴───────────────────┤
+│ total run duration: 2.3s                                        │
+├─────────────────────────────────────────────────────────────────┤
+│ total data received: 11.53kB (approx)                           │
+├─────────────────────────────────────────────────────────────────┤
+│ average response time: 61ms [min: 35ms, max: 171ms, s.d.: 29ms] │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Fully green, 0 failed, newman exit code 0.** Repeated back-to-back against
+the same process (no database reset in between): identical shape, `29`
+requests / `58` test-scripts / `33` prerequest-scripts / `59` assertions, `0`
+failed (`2.2s` duration, `11.7kB` received) — confirming the result isn't an
+artifact of a clean database, same non-vacuity standard every prior lane in
+this file holds itself to.
+
+**`29` requests, not `30`:** the new Shipping Context Contract folder's three
+requests (S1–S3) all fire unconditionally (the same cheap, side-effect-free
+`GET`s Inventory/Payment already prove safe to fire every run) — that
+accounts for `+3`. The new 4e does **not** fire in this run: `shipFailOrderId`
+is empty on today's synchronous `422` path, so 4d's structural skip (point 2
+above) jumps straight past it to Review's R1 — `+0`, by design, not a gap.
+Net vs. the r05 baseline's `26`-request no-flags shape: `+3` (Shipping
+Context Contract) `-0` (4e skipped) = `29`.
+
+1c resolved on **attempt 1/40** — zero retries, the same non-vacuity proof
+every prior bounded-wait poll in this file establishes: today's still-
+synchronous monolith is already `CONFIRMED` by the time the poll fires, so
+the widened budget adds no latency, only headroom for the future orchestrated
+path.
+
+## Exploratory run — guard ON, same in-process monolith (not the acceptance proof, recorded for completeness)
+
+`--env-var shippingContractEnabled=true` was also run against this same
+unmodified monolith, purely to confirm the new assertions are *correct*, not
+just *inert*:
+
+```
+┌─────────────────────────┬───────────────────┬───────────────────┐
+│                         │          executed │            failed │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│              iterations │                 1 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│                requests │                29 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│            test-scripts │                58 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│      prerequest-scripts │                33 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│              assertions │                70 │                 0 │
+├─────────────────────────┴───────────────────┴───────────────────┤
+│ total run duration: 2.4s                                        │
+└───────────────────────────────────────────────────────────────── ┘
+```
+
+**Still fully green — `+11` assertions, `0` failed.** The `+11` are exactly
+S1 (4 assertions) + S2 (4) + S3 (3), all genuinely exercised and passing
+against the monolith's already-existing `/api/shipments` endpoints (they
+predate this lane — `shipping/views.py`/`shipping/serializers.py` already
+expose them for the in-process `SHIPPING_MODE`). **4e still does not fire its
+assertions even with the flag on** — `shipFailOrderId` is still empty on this
+config regardless of the flag (today's monolith always takes the sync `422`
+path for a `SHIP-FAIL` address; nothing makes it choreographed here), so 4d's
+structural skip still applies. This is the expected, honest result:
+`order/services.py`'s own docstrings mark the in-process
+`handle_payment_captured`'s `ShippingFailed` branch as a **KNOWN DEFERRAL —
+not refunded yet**, payment-service exposes no Refund RPC/event yet either.
+4e staying structurally unreachable here — rather than being weakened to
+pass — is exactly what keeps this lane honest about what it has and hasn't
+proven; the real refund proof is the later cutover lane's job, once
+`SHIPPING_MODE=orchestrated` and a Refund path actually exist end to end.
+
+## A robustness fix made while capturing this (not a regression, found before any number above was recorded)
+
+The first draft of 4e fired unconditionally in sequence after 4d, gated only
+by its own `shippingContractEnabled` guard (the same idiom as Inventory/
+Payment). That caused a real `500 Internal Server Error` from the monolith
+(`GET /api/payments?orderId=` with a **blank** `orderId`, since
+`shipFailOrderId` is empty on the sync path — Postgres rejects the empty
+string against an integer column) on every single run, flag on or off — it
+never failed a newman assertion (the guard's own `if (!shippingContractEnabled)
+return;` skips straight past asserting anything), but it was a noisy,
+dishonest violation of this collection's own "cheap, side-effect-free GET,
+safe to fire unconditionally" standard. Fixed by having 4d's test script
+jump straight past 4e (point 2 above) whenever there's no order id to query,
+the same mechanism 3b/4b already use to skip 3c/4c on the sync branch. All
+numbers in this section reflect the fixed collection (confirmed before the
+fix: `30` requests, `172kB`+ received, a `500` on 4e; after: `29` requests,
+`11.5kB` received, no `500` anywhere).
+
+## Summary
+
+| # | Guard | Served by | Result |
+|---|---|---|---|
+| Baseline (required) | off (no `--env-var`) | monolith, `SHIPPING_MODE=inprocess` | **GREEN** — 59/59 assertions, 0 failed; new folder/4e true no-ops |
+| Exploratory | `shippingContractEnabled=true` | same monolith | **GREEN** — 70/70 assertions, 0 failed; S1–S3 genuinely exercised; 4e still structurally inert (no order id on the sync path) |
+
+Acceptance criteria met: the converted collection is GREEN against the
+in-process/synchronous monolith with the shipping guard off; Scenario 1's
+terminal `CONFIRMED` assertion was only given a wider budget, never relaxed;
+Scenario 4 keeps its strict `SHIPPING_FAILED` + net-zero-stock assertions
+untouched; the new refund assertion and the Shipping Context Contract folder
+are env-guarded and inert when off; every pre-existing folder is unaffected.
+The throwaway Postgres container and the monolith process started for this
+lane were torn down afterward; the host was left clean.
+
+---
+
+# The r06 CUTOVER lane — the orchestrated shipping saga, live end-to-end
+
+This section proves the actual **async orchestrated cutover**, not just the
+collection's tolerance for it (the previous lane). The FULL topology was
+brought up — monolith, inventory-service, payment-service,
+**shipping-service**, the strangler proxy, real Kafka — and
+`settings.SHIPPING_MODE = "orchestrated"` was flipped live alongside
+`PAYMENT_MODE = "choreographed"`. Five things this lane proves:
+
+1. **The orchestrated dispatch cutover**: a happy checkout's order now stops
+   at `AWAITING_SHIPMENT` after `payment.captured`, and only reaches
+   `CONFIRMED` once `examples/06-shipping-service`'s own DB-backed saga
+   (`enrich -> dispatch -> book_carrier -> emit`) completes and the
+   monolith's `order_saga_listener` consumes its `shipment.dispatched` event.
+2. **The r06 refund win**: a `SHIP-FAIL` checkout now resolves to
+   `SHIPPING_FAILED` AND the payment captured earlier in the saga is
+   genuinely **refunded** (`05-payment-service`'s `ShipmentFailedConsumer` /
+   `process_shipment_failed`) — the gap the r06 NEWMAN-SHIP Phase-2 lane
+   above left honestly open ("no Refund RPC/event anywhere in this project")
+   is now closed and proven live.
+3. **Reversibility**: `SHIPPING_MODE=inprocess` + `PAYMENT_MODE=synchronous`
+   with the proxy's shipping/payment flags off restores the original
+   synchronous terminal-in-one-round-trip contract, no data migration.
+4. **Crash-resume** (the orchestrator's durability win over the Java
+   sibling's in-memory saga coordinator, see `MIGRATION.md`): a saga left
+   `RUNNING` by a crashed shipping-service process resumes from its
+   persisted `step_index`/`context` on restart and the order still reaches
+   `CONFIRMED` — never restarting an already-completed step.
+5. **The negative, honesty proof**: with shipping-service down, a checkout
+   gets stuck at `AWAITING_SHIPMENT` forever; Scenario 1 run alone goes
+   genuinely RED (newman exit 1), not a false green; restarting
+   shipping-service drains the stuck order to `CONFIRMED`.
+
+Only `tooling/newman/` (this file) and
+`examples/06-shipping-service/CUTOVER.md` were touched by this lane — no
+application code and no Newman collection/environment file changed. The
+collection is exactly what the r06 NEWMAN-SHIP Phase-2 lane already landed.
+
+## What was running
+
+| Component | Address | Mode |
+|---|---|---|
+| Postgres | `localhost:5432` (`monolith`/`monolith`/`monolith`) | throwaway `postgres:18.6-alpine`, empty volume, migrated + seeded fresh |
+| Kafka (KRaft) | `localhost:9092` | throwaway single-node `apache/kafka:4.3.1`, `PLAINTEXT://localhost:9092` |
+| `examples/04-inventory-service` | HTTP `:8084` / gRPC `:9004` | `alembic upgrade head`, then `uvicorn` — unchanged from every prior lane |
+| `examples/05-payment-service` | `:8085` | `alembic upgrade head`, then `uvicorn` — lifespan runs its `order.placed` consumer, its own outbox relay, AND (new as of r06) its `shipment.failed` refund consumer (`ShipmentFailedConsumer`) |
+| `examples/06-shipping-service` | `:8087` | `alembic upgrade head`, then `uvicorn` — lifespan runs its `payment.captured` consumer, its own outbox relay, and the startup crash-resume scan (`resume_running_sagas`) before reporting ready; `MONOLITH_BASE_URL=http://localhost:8000` for the `enrich` step |
+| `examples/00-monolith` | `:8000` | `manage.py migrate && manage.py seed`, then `gunicorn config.wsgi`, `INVENTORY_MODE=grpc INVENTORY_GRPC_TARGET=localhost:9004 PAYMENT_MODE=choreographed SHIPPING_MODE=orchestrated KAFKA_BOOTSTRAP_SERVERS=localhost:9092`, PLUS three background `manage.py` processes with the same env: `outbox_relay`, `order_placed_consumer`, `order_saga_listener` |
+| `examples/01-strangler-proxy` | `:8888` | `uvicorn`, `STRANGLER_INVENTORY_ENABLED=STRANGLER_PAYMENT_ENABLED=STRANGLER_SHIPPING_ENABLED=true` + all base URLs (review/notification left off — those services were never started for this lane, their paths fall through to the monolith unchanged) |
+
+Seed stock: `SKU-WIDGET-001` 100, `SKU-GADGET-002` 50, `SKU-GIZMO-003` 5, same
+seed every lane in this file has used since r01. newman 6.2.2 for every run
+below.
+
+## Run 1 — fully-orchestrated, through the proxy — first attempt, RED (a found test-script timing gap, not a saga bug)
+
+`newman run tooling/newman/mea.postman_collection.json -e tooling/newman/proxy.postman_environment.json --env-var paymentContractEnabled=true --env-var inventoryContractEnabled=true --env-var shippingContractEnabled=true`:
+
+```
+┌─────────────────────────┬───────────────────┬──────────────────┐
+│                         │          executed │           failed │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              iterations │                 1 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│                requests │                40 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│            test-scripts │                80 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│      prerequest-scripts │                55 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              assertions │               104 │                1 │
+├─────────────────────────┴───────────────────┴──────────────────┤
+│ total run duration: 7.4s                                       │
+├────────────────────────────────────────────────────────────────┤
+│ total data received: 6.38kB (approx)                           │
+├────────────────────────────────────────────────────────────────┤
+│ average response time: 19ms [min: 4ms, max: 136ms, s.d.: 27ms] │
+└────────────────────────────────────────────────────────────────┘
+
+ 1.  AssertionError  Order reaches terminal status SHIPPING_FAILED within the bounded-wait budget (20 x 750ms, attempt 3/20)
+                     expected 'AWAITING_SHIPMENT' to deeply equal 'SHIPPING_FAILED'
+                     at assertion:1 in test-script
+                     inside "Scenario 4 — Shipping-Failure / 4c. Bounded-wait poll: order reaches SHIPPING_FAILED (async path only)"
+```
+
+**newman exited non-zero.** Scenario 1 (order 2) had already resolved
+correctly — `CONFIRMED` on **attempt 4/40** — and Scenario 4e (the refund
+poll) still passed, `REFUNDED` on **attempt 1/20**. Only 4c's own terminal
+assertion failed, and it failed on a real, reproducible value:
+`AWAITING_SHIPMENT`, not a timeout or a connection error. Querying the order
+directly a few seconds later confirmed the saga had, in fact, finished:
+
+```
+GET /api/orders/4 -> {"id":4,...,"status":"SHIPPING_FAILED",...}
+```
+
+and `order_saga_listener.log` pinpointed exactly how close the race was —
+**273ms** between the order entering `AWAITING_SHIPMENT` and leaving it:
+
+```
+17:54:57,100 INFO  payment.captured order_id=4 -> AWAITING_SHIPMENT (orchestrated)
+17:54:57,101 INFO  order_saga.consumed topic=payment.captured order_id=4 status=AWAITING_SHIPMENT
+17:54:57,373 INFO  shipment.failed order_id=4 -> SHIPPING_FAILED
+17:54:57,374 INFO  order_saga.consumed topic=shipment.failed order_id=4 status=SHIPPING_FAILED
+```
+
+**Root cause — a pre-existing gap in the already-committed collection's poll
+scripts, not a bug in the saga/orchestrator.** `4c`'s (and, by the identical
+template, `1c`'s and `3c`'s) retry condition is
+`if (json.status === 'PENDING' && attempt < maxAttempts - 1) { ...retry... }`
+— it only keeps polling while the order is still `PENDING`. r06's
+orchestrated shipping path introduces a NEW, genuinely transitional status,
+`AWAITING_SHIPMENT`, that these scripts have no knowledge of: the instant a
+poll observes `AWAITING_SHIPMENT` instead of `PENDING`, the script falls
+through to the strict terminal assertion immediately, even though the saga
+may still be mid-flight (compensating, or — as here — one Kafka hop and an
+~1s outbox-relay poll away from its real terminal event). The window is
+short (sub-second, as the log excerpt above shows) but real: a poll landing
+inside it is a genuine, reproducible false RED, not a flaky assertion or an
+infrastructure hiccup. This was first exercised here because this is the
+first lane to actually drive a real checkout through `SHIPPING_MODE=orchestrated`
+end-to-end with the collection's polls live against it — the prior Phase-2
+lane only ran this collection against the still-synchronous monolith, where
+`AWAITING_SHIPMENT` is never reachable at all.
+
+**This was NOT fixed in this lane** — this lane's scope (per its own
+instructions) is `tooling/newman/` as *documentation* only; the collection
+and environment JSON files are frozen artifacts this lane must not edit. The
+fix, for a future lane, is mechanical: widen `1c`/`3c`/`4c`'s retry
+condition from `json.status === 'PENDING'` to
+`json.status === 'PENDING' || json.status === 'AWAITING_SHIPMENT'`, the same
+"keep polling through every known non-terminal status" shape `app/services.py`'s
+own status machine already documents. Left as found, per this lane's explicit
+instruction not to paper over a real finding.
+
+**FIXED** — see "The r06 CUTOVER Phase-2 repair lane" at the end of this
+file for the shipped fix (a `NON_TERMINAL_STATUSES` set, applied to `1c`,
+`3c`, `4c`, AND `N1b`, the Notification contract's identical sibling poll)
+and the post-fix stability proof (6 consecutive fully-orchestrated runs,
+0 failed, with `AWAITING_SHIPMENT` directly observed in-flight on every run).
+
+## Run 1b — fully-orchestrated, through the proxy — GREEN (same unedited collection, fresh orders)
+
+Immediately re-run, same command, same unedited collection and environment,
+against the same still-running topology (fresh orders 6/7/8 — Postgres
+sequences, not a database reset):
+
+```
+┌─────────────────────────┬───────────────────┬──────────────────┐
+│                         │          executed │           failed │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              iterations │                 1 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│                requests │                36 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│            test-scripts │                72 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│      prerequest-scripts │                47 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              assertions │               100 │                0 │
+├─────────────────────────┴───────────────────┴──────────────────┤
+│ total run duration: 4.2s                                       │
+├────────────────────────────────────────────────────────────────┤
+│ total data received: 5.77kB (approx)                           │
+├────────────────────────────────────────────────────────────────┤
+│ average response time: 19ms [min: 4ms, max: 132ms, s.d.: 28ms] │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Fully green, 0 failed, newman exit code 0 — this is the required
+acceptance-criterion run.** The requests-count delta vs. Run 1 (`36` vs
+`40`) is exactly Scenario 2's `3` requests not needing a retry chain and `1`
+fewer N1-family request this pass — ordinary run-to-run variance in a
+collection with bounded-wait retries, not a missing assertion (same
+`104`/`100`-shape difference pattern every prior lane in this file already
+treats as expected). The async path was REALLY exercised end to end, not
+vacuously tolerated:
+
+| Scenario | `*b` response | Poll | Terminal result | Attempts |
+|---|---|---|---|---|
+| 1 — Happy-Path (order 6) | `202 Accepted`, `PENDING` | `1c` | **CONFIRMED** | **attempt 2/40** — real Kafka round trip through payment-service AND the shipping saga, not an instant resolve |
+| 2 — Out-of-Stock | `409 Conflict`, `OUT_OF_STOCK` | — | n/a | n/a |
+| 3 — Payment-Declined (order 7) | `202 Accepted`, `PENDING` | `3c` | **PAYMENT_DECLINED** | attempt 2/20 |
+| 3 (stock) | — | `3d` | net-zero stock, compensating gRPC Release | attempt 1/20 |
+| 4 — Shipping-Failure (order 8) | `202 Accepted`, `PENDING` | `4c` | **SHIPPING_FAILED** | attempt 3/20 |
+| 4 (stock) | — | `4d` | net-zero stock, compensating gRPC Release | attempt 1/20 |
+| 4 (refund, r06) | — | `4e` | **REFUNDED** | **attempt 1/20** |
+
+**The r06 win, confirmed directly against the database, not just the
+collection's own assertion:**
+
+```
+GET /api/payments?orderId=8 ->
+[{"id":7,"orderId":8,"amountCents":1999,"method":"CARD-VISA","status":"REFUNDED","createdAt":"2026-10-16T17:56:23.975211Z"}]
+```
+
+`shipping.log` shows the whole saga for order 8 completing in milliseconds
+once consumed (`started saga 2 for order 4` from Run 1's identical shape —
+`dispatch` persists the `Shipment` row, `book_carrier` raises on the
+`SHIP-FAIL` sentinel, `cancel_shipment` compensates it, the terminal
+`shipment.failed` outbox row is written, all in one synchronous chain), and
+`payment.log`/`refund_consumer.py`'s own log line confirms the refund
+reaction fired off that exact event. Shipping Context Contract (S1–S3) was
+green scoped to the Scenario 1 happy-path order (6): S1 listed its shipment,
+S2 confirmed `status: "DISPATCHED"`, S3's unknown-id lookup `404`d. Review
+(R1–R5), Inventory (I1–I3), and Payment (P1–P3) folders were all green too.
+
+## Run 2 — reversibility: `SHIPPING_MODE=inprocess` + `PAYMENT_MODE=synchronous`
+
+The monolith (`gunicorn`) and its three background processes were restarted
+with `SHIPPING_MODE=inprocess` and `PAYMENT_MODE=synchronous`
+(`INVENTORY_MODE=grpc` unchanged); the proxy was restarted with
+`STRANGLER_SHIPPING_ENABLED`/`STRANGLER_PAYMENT_ENABLED` both unset
+(`STRANGLER_INVENTORY_ENABLED` left on). payment-service, shipping-service,
+and inventory-service were all left RUNNING, unchanged — no restart needed
+on their side, since nothing about their own configuration changes; they
+simply stop receiving `order.placed`/`payment.captured` traffic shaped the
+way they'd act on (the monolith synchronous path never asks them to):
+
+```
+newman run tooling/newman/mea.postman_collection.json -e tooling/newman/proxy.postman_environment.json
+```
+
+```
+┌─────────────────────────┬───────────────────┬──────────────────┐
+│                         │          executed │           failed │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              iterations │                 1 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│                requests │                29 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│            test-scripts │                58 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│      prerequest-scripts │                33 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              assertions │                59 │                0 │
+├─────────────────────────┴───────────────────┴──────────────────┤
+│ total run duration: 1077ms                                     │
+├────────────────────────────────────────────────────────────────┤
+│ total data received: 11.53kB (approx)                          │
+├────────────────────────────────────────────────────────────────┤
+│ average response time: 21ms [min: 3ms, max: 143ms, s.d.: 32ms] │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Fully green, 0 failed — byte-identical shape to the Phase-2 lane's own
+baseline run (`29`/`58`/`33`/`59`).** Both cutover dimensions reversed:
+
+| Scenario | `*b` response | Attempts |
+|---|---|---|
+| 1 — Happy-Path | `201 Created`, `CONFIRMED` immediately | **attempt 1/40** |
+| 2 — Out-of-Stock | `409 Conflict` | n/a |
+| 3 — Payment-Declined | `402 Payment Required` (whole tx rolled back) | attempt 1/20, net-zero |
+| 4 — Shipping-Failure | `422 Unprocessable Content` (whole tx rolled back) | attempt 1/20, net-zero; `4e` structurally skipped (no order id persisted on the sync path, same as the Phase-2 lane) |
+
+No data migration, no restart-order dependency on the already-running
+standalone services — the reversal is clean with the rest of the async
+topology still live, exactly the posture the r05 CUTOVER lane established
+for `PAYMENT_MODE`.
+
+## Run 3 — crash-resume: the orchestrator durability win
+
+Back to `SHIPPING_MODE=orchestrated` / `PAYMENT_MODE=choreographed` / all
+three proxy flags on. Per the task's own fallback (timing a live mid-flight
+kill is unreliable here: once a `payment.captured` record is consumed,
+`advance()` chains `enrich -> dispatch -> book_carrier -> emit` through
+in-process Python recursion with no Kafka round-trip in between, so the
+entire happy-path saga completes in single-digit milliseconds — there is no
+realistic window to `docker restart`/kill the process mid-step without
+code-level instrumentation), this lane used the **seed-a-RUNNING-saga-row**
+alternative, mirroring `examples/06-shipping-service/tests/integration/test_crash_resume.py`'s
+own technique exactly:
+
+1. shipping-service was killed (`kill <pid>`; confirmed via `GET :8087/health`
+   -> connection refused).
+2. A fresh happy checkout was placed directly through the proxy
+   (`POST /api/orders`, order **14**). It reached `AWAITING_SHIPMENT`
+   (confirmed via `GET /api/orders/14`) — the monolith's `order_saga_listener`
+   transitions it there off `payment.captured` regardless of
+   shipping-service's own health, and with shipping-service down, NO saga
+   row exists yet for this order (its own `payment.captured` consumer never
+   ran) — the event sits unconsumed in the `shipping-service` Kafka
+   consumer group.
+3. A `Saga` row was inserted DIRECTLY into `shipping.sagas`, simulating a
+   crash right after `enrich` (step 0) committed but before `dispatch`
+   (step 1) ran — the exact scenario `test_crash_resume.py` seeds:
+   ```sql
+   INSERT INTO shipping.sagas (order_id, status, step_index, context, created_at, updated_at)
+   VALUES (14, 'RUNNING', 1, '{"enrich": {"address": "42 Resume Street, Testville"}}'::jsonb, now(), now())
+   -- -> id=9
+   ```
+4. shipping-service was restarted. Its log shows BOTH mechanisms firing, and
+   neither interfering with the other:
+   ```
+   payment.captured consumer started (topic=payment.captured, group=shipping-service, ...)
+   payment.captured for order 14 already has a saga (id=9, status=RUNNING), skipping (idempotent no-op)
+   consumed payment.captured for order 14 (payment 11)
+   resuming saga 9 (status=RUNNING)
+   dispatch: persisted shipment id=9 (DISPATCHED) for order 14
+   emit: shipment.dispatched queued for order 14 (shipment 9)
+   shipping-service started, ... resumed_sagas=1
+   outbox.published id=9 ... event_type=shipment.dispatched topic=shipment.dispatched
+   ```
+   The stale `payment.captured` event for order 14, still sitting unconsumed
+   from step 2, WAS redelivered to the restarted consumer — and
+   `app/service.py::handle_payment_captured`'s own idempotency guard (the
+   seeded saga already exists) absorbed it as a no-op, exactly as designed,
+   never starting a second saga. **Critically: no `HTTP Request: GET
+   .../api/orders/14` line appears anywhere in the restart log** — `enrich`
+   (the one step that makes an outbound HTTP call) was genuinely NOT
+   re-invoked; `resume_running_sagas()` picked up at the persisted
+   `step_index=1` and ran straight to `dispatch -> book_carrier -> emit`,
+   using the `address` already sitting in the seeded `context`.
+5. `GET /health` confirmed `resumedSagaCount: 1`. `GET /api/orders/14`
+   confirmed the order reached **`CONFIRMED`**, and `order_saga_listener.log`
+   shows the real consumed-event chain that got it there:
+   ```
+   payment.captured order_id=14 -> AWAITING_SHIPMENT (orchestrated)
+   shipment.dispatched order_id=14 -> CONFIRMED
+   ```
+
+**A shipping saga survived a shipping-service restart and the order reached
+`CONFIRMED` without re-running its already-completed step** — the crash-resume
+acceptance criterion, proven with the method the task names as the fallback
+when live mid-flight timing isn't realistic, and documented as such.
+
+## Run 4 — negative: shipping-service down, stuck-`AWAITING_SHIPMENT` honesty proof
+
+Still fully orchestrated. shipping-service was killed again (confirmed via
+`GET :8087/health` -> connection refused). A fresh happy checkout was placed
+directly (order **15**):
+
+```
+POST /api/orders -> 202 Accepted, {"id":15,...,"status":"PENDING",...}
+-- a few seconds later --
+GET /api/orders/15 -> {"id":15,...,"status":"AWAITING_SHIPMENT",...}
+```
+
+confirming the order genuinely reaches `AWAITING_SHIPMENT` and then goes
+nowhere with no shipping-service alive to ever dispatch it.
+`newman run ... --folder "Scenario 1 — Happy-Path Checkout"` was run on its
+own (fresh order 15, same order as above):
+
+```
+┌─────────────────────────┬──────────────────┬─────────────────┐
+│                         │         executed │          failed │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│              iterations │                1 │               0 │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│                requests │                6 │               0 │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│            test-scripts │               12 │               0 │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│      prerequest-scripts │                9 │               0 │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│              assertions │               16 │               1 │
+├─────────────────────────┴──────────────────┴─────────────────┤
+│ total run duration: 1746ms                                   │
+├──────────────────────────────────────────────────────────────┤
+│ total data received: 1.1kB (approx)                          │
+├──────────────────────────────────────────────────────────────┤
+│ average response time: 17ms [min: 5ms, max: 30ms, s.d.: 8ms] │
+└──────────────────────────────────────────────────────────────┘
+
+1. AssertionError  Order reaches terminal status CONFIRMED within the bounded-wait budget (40 x 750ms, attempt 3/40)
+                   expected 'AWAITING_SHIPMENT' to deeply equal 'CONFIRMED'
+```
+
+**newman exit code 1 — RED, as required.** Note this RED fired at attempt
+`3/40`, not after the full `40`-attempt budget — the SAME `1c` poll-script
+gap documented in Run 1 above (it stops retrying the instant the status
+isn't `PENDING`) means it exits early here too. That does not weaken this
+negative proof's conclusion: whether the script gives up at attempt 3 or
+attempt 40, the order genuinely never reaches `CONFIRMED` with
+shipping-service down — it is stuck in `AWAITING_SHIPMENT` **forever**, not
+just slow, and `GET /api/orders/15` confirmed it stayed there, unmoving,
+for the full duration of this check:
+
+```
+GET /api/orders/15 -> {"id":15,...,"status":"AWAITING_SHIPMENT",...}
+```
+
+**Recovery.** shipping-service was restarted (no saga seeded this time — a
+plain restart, not the Run 3 crash-resume scenario). `GET /health` reported
+`resumedSagaCount: 0` (nothing was `RUNNING`/`COMPENSATING` at startup — no
+saga had ever been created for order 15, since shipping-service's own
+consumer never got the chance to see `payment.captured` for it while down).
+Its consumer rejoined the `shipping-service` group at
+`auto_offset_reset=earliest` and drained the backlog immediately:
+
+```
+GET /api/orders/15 -> {"id":15,...,"status":"CONFIRMED",...}
+```
+
+The stuck-`AWAITING_SHIPMENT` failure mode is real, honestly detectable (RED,
+not a false green), and self-heals the moment shipping-service comes back —
+no manual intervention, no lost orders, no stuck-forever state (as long as
+the broker itself still holds the undelivered `payment.captured` record,
+which KRaft's default retention guarantees for any realistic outage).
+
+## Refund idempotency — redelivered `shipment.failed`, no double refund
+
+Order 8's own, already-consumed `shipment.failed` event (captured from
+`shipping.outbox` — the exact payload the saga originally emitted) was
+re-published to the `shipment.failed` topic by hand via `kcat`, simulating a
+broker-side at-least-once redelivery:
+
+```
+{"orderId": 8, "shipmentId": 5, "address": "1 SHIP-FAIL Lane, Testville", "status": "FAILED", "reason": "carrier booking failed for order 8: SHIP-FAIL sentinel detected", "occurredAt": "2026-10-16T17:56:24.631334+00:00"}
+```
+
+**Before:** payment id 7, `status: "REFUNDED"`; `payment.outbox` held exactly
+`2` `payment.refunded` rows project-wide (order 4 from Run 1, order 8 from
+Run 1b). **After** the redelivery, `payment.log` confirmed the guard fired
+exactly as its own docstring promises:
+
+```
+shipment.failed for order 8: no CAPTURED payment to refund (already REFUNDED, DECLINED, or no payment recorded) -- idempotent no-op
+consumed shipment.failed for order 8 (shipment 5)
+```
+
+**After:** payment id 7 unchanged, still `status: "REFUNDED"`,
+`createdAt` unchanged; `payment.outbox`'s `payment.refunded` row count
+**still exactly `2`** — no second `payment.refunded` event was ever queued.
+`app/service.py::process_shipment_failed`'s guard (only refund a payment
+currently `CAPTURED`) stopped the redelivered event before it could
+re-refund an already-`REFUNDED` payment.
+
+## Summary
+
+| Proof | Result |
+|---|---|
+| Fully-orchestrated suite, first attempt | RED — newman exit 1, 1/104 assertions failed; a found test-script timing gap (`4c` doesn't retry through `AWAITING_SHIPMENT`), NOT a saga bug — order genuinely reached `SHIPPING_FAILED` 273ms after the poll gave up |
+| Fully-orchestrated suite, re-run (required proof) | **GREEN** — 100/100 assertions, 0 failed; Scenario 1 `202`->poll attempt 2/40->`CONFIRMED`; Scenario 4 `202`->`SHIPPING_FAILED`+net-zero+**REFUNDED** (poll attempt 1/20); Scenario 3 `202`->`PAYMENT_DECLINED`; Scenario 2 `409`; Shipping Context Contract green |
+| Reversibility | **GREEN** — 59/59 assertions, 0 failed, byte-identical to the Phase-2 baseline; Scenario 1 back to `201`/attempt-1; Scenario 3/4 back to `402`/`422` |
+| Crash-resume | A `RUNNING` saga (seeded mid-flight, mirroring the service's own integration test) survived a shipping-service restart; `enrich` was NOT re-run; the order reached `CONFIRMED` |
+| Negative (shipping-service down) | **RED**, newman exit 1, order stuck `AWAITING_SHIPMENT` (confirmed unmoving via direct `GET`); self-heals to `CONFIRMED` the instant shipping-service restarts |
+| Refund idempotency | Payment `REFUNDED` before, `REFUNDED` after a redelivered `shipment.failed`; `payment.refunded` outbox count unchanged (`2` before, `2` after) — no double refund |
+
+**One real finding surfaced and documented, not papered over**: `tooling/newman/mea.postman_collection.json`'s
+`1c`/`3c`/`4c` poll scripts retry only while an order's status is `PENDING`,
+with no knowledge of the `AWAITING_SHIPMENT` intermediate status r06's
+orchestrated path introduces — a genuine, reproducible (if narrow,
+sub-second) window for a false RED on an otherwise-healthy saga. This lane's
+scope explicitly forbids editing the collection, so it is left as found; the
+mechanical fix (treat `AWAITING_SHIPMENT` as non-terminal in those three
+scripts' retry conditions, the same way `PENDING` already is) is recorded
+above for whichever lane picks up `tooling/newman/` next. Every OTHER
+mechanism this lane exercised — the orchestrated dispatch cutover, the
+refund reaction, crash-resume durability, the stuck-`AWAITING_SHIPMENT`
+detection, and refund idempotency — behaved exactly as the code's own
+docstrings describe. The throwaway Postgres and Kafka containers and every
+service process started for this lane were torn down afterward; the host
+was left clean.
+
+**FIXED by the r06 CUTOVER Phase-2 repair lane** (see that section at the
+end of this file) — the collection's `1c`/`3c`/`4c` retry guards, PLUS `N1b`
+(the Notification contract's identical `PENDING`-only sibling, found by
+grepping the same pattern rather than trusting the scope was exhaustive),
+now retry through a `NON_TERMINAL_STATUSES = ['PENDING', 'AWAITING_SHIPMENT']`
+set. Re-proven stable: the synchronous baseline GREEN twice (unaffected,
+confirming the fix never fires on a path that can't reach
+`AWAITING_SHIPMENT`), and the fully-orchestrated suite through the proxy
+GREEN **6 consecutive times**, 0 failed every run, with the saga's own log
+confirming every one of those runs actually transitioned orders through
+`AWAITING_SHIPMENT` in-flight — this is not a vacuous pass.
+
+## Independent reproduction: `demos/demo-shipping-cutover.sh`
+
+The packaged demo script (bring-up -> fully-orchestrated run -> teardown, a
+fresh set of throwaway containers/processes, built and run AFTER this
+lane's manual proof was already complete) was run TWICE, back to back:
+
+**Attempt 1 — RED**, newman exit 1, `102/103` assertions passed, 1 failed:
+
+```
+1.  AssertionError  Order reaches terminal status CONFIRMED within the bounded-wait budget (40 x 750ms, attempt 3/40)
+                    expected 'AWAITING_SHIPMENT' to deeply equal 'CONFIRMED'
+                    inside "Scenario 1 — Happy-Path Checkout / 1c. Bounded-wait poll: order reaches terminal status -> strictly CONFIRMED"
+```
+
+This is the SAME documented poll-script gap from Run 1/Run 4 above, caught
+this time on `1c` (the happy path) rather than `4c` — direct, independent
+confirmation that the finding is a general property of the `PENDING`-only
+retry condition shared by `1c`/`3c`/`4c`, not something narrowly specific to
+the `SHIP-FAIL` scenario. The script's own teardown ran regardless (`trap
+... EXIT`) and left the host clean, confirmed via `docker ps`/`ss -ltnp`
+immediately after.
+
+**Attempt 2 — GREEN**, run immediately after, fresh containers: `103/103`
+assertions, `0` failed, newman exit `0`:
+
+```
+┌─────────────────────────┬───────────────────┬──────────────────┐
+│                         │          executed │           failed │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              iterations │                 1 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│                requests │                39 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│            test-scripts │                78 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│      prerequest-scripts │                53 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              assertions │               103 │                0 │
+├─────────────────────────┴───────────────────┴──────────────────┤
+│ total run duration: 6.6s                                       │
+├────────────────────────────────────────────────────────────────┤
+│ total data received: 6.29kB (approx)                           │
+├────────────────────────────────────────────────────────────────┤
+│ average response time: 19ms [min: 4ms, max: 139ms, s.d.: 27ms] │
+└────────────────────────────────────────────────────────────────┘
+```
+
+Reported honestly rather than only keeping the green run: the script's own
+RED-path message points back to this file's documented root cause rather
+than treating the failure as a generic flake, and the host was verified
+clean (`docker ps`, `ss -ltnp` for every port this lane used — none left
+bound) after BOTH attempts. See
+`examples/06-shipping-service/CUTOVER.md` for the condensed version of this
+lane's findings.
+
+# The r06 CUTOVER Phase-2 repair lane — the AWAITING_SHIPMENT poll-script bug, fixed, stability proven
+
+This section records the follow-up pass that fixes the poll-script gap the
+r06 CUTOVER lane found and left open ("a pre-existing gap in the
+already-committed collection's poll scripts"), and re-proves not just a
+single green run but **stability** — five-plus consecutive fully-orchestrated
+runs with zero intermittent RED. Scope for this lane was `tooling/newman/`
+only; no application code was touched.
+
+## The fix
+
+`tooling/newman/mea.postman_collection.json`'s checkout bounded-wait poll
+scripts retried ONLY while `json.status === 'PENDING'`. r06's orchestrated
+shipping path introduces a genuinely transitional intermediate status,
+`AWAITING_SHIPMENT`, between `PENDING` and the real terminal value
+(`CONFIRMED` / `SHIPPING_FAILED` / `PAYMENT_DECLINED`). A poll landing in
+that short window saw a status that was neither `PENDING` (so the retry loop
+stopped) nor the strict terminal value (so the assertion failed) — a
+reproducible false RED on an otherwise-healthy saga, first caught on `4c`
+(Run 1 above, `AWAITING_SHIPMENT` vs expected `SHIPPING_FAILED`, attempt
+3/20) and independently reproduced on `1c` by `demos/demo-shipping-cutover.sh`.
+
+The fix widens the retry guard from a single allowed value to a
+non-terminal **set**, so any future intermediate status the same shape
+introduces is tolerated by construction, not just this one:
+
+```javascript
+// before (1c / 3c / 4c / N1b, identical shape, only the variable names differ):
+if (json.status === 'PENDING' && attempt < maxAttempts - 1) {
+    pm.collectionVariables.set('happyPathPollAttempt', String(attempt + 1));
+    postman.setNextRequest(pm.info.requestName);
+    return;
+}
+
+// after:
+var NON_TERMINAL_STATUSES = ['PENDING', 'AWAITING_SHIPMENT'];
+if (NON_TERMINAL_STATUSES.indexOf(json.status) !== -1 && attempt < maxAttempts - 1) {
+    pm.collectionVariables.set('happyPathPollAttempt', String(attempt + 1));
+    postman.setNextRequest(pm.info.requestName);
+    return;
+}
+```
+
+Applied identically to all four sites sharing this `=== 'PENDING'` retry
+guard — `1c` (happy path, asserts `CONFIRMED`), `3c` (asserts
+`PAYMENT_DECLINED`), `4c` (asserts `SHIPPING_FAILED`), and `N1b` (the
+Notification Context Contract's own order-confirmation poll, asserts
+`CONFIRMED` — found by grepping the exact pattern across the whole file
+rather than trusting the bug report's named list was exhaustive; it is
+structurally the same self-loop and would have the same false-RED exposure
+if the Notification contract is ever run against the orchestrated topology
+with `notificationContractEnabled=true`). The strict terminal assertions
+themselves are untouched in every case — only the loop-continuation
+condition widened. `grep -n "=== 'PENDING'"` against the fixed collection
+returns zero matches; `NON_TERMINAL_STATUSES` appears at all four sites.
+
+## What was running
+
+**Phase 1 — synchronous baseline (guard off):** throwaway
+`postgres:18.6-alpine` on `:5432` (`monolith`/`monolith`/`monolith`,
+migrated + seeded fresh), `examples/00-monolith` only, via `uv run gunicorn
+config.wsgi:application --bind 0.0.0.0:8000`, **default** env
+(`INVENTORY_MODE=local`, `PAYMENT_MODE=synchronous`,
+`SHIPPING_MODE=inprocess`) — checkout fully synchronous, `AWAITING_SHIPMENT`
+unreachable by construction. Torn down completely before Phase 2.
+
+**Phase 2 — fully-orchestrated, through the proxy:** a fresh throwaway
+`postgres:18.6-alpine` + single-node `apache/kafka:4.3.1` (this repo's own
+`compose.yaml`, `docker compose up -d postgres kafka`, both `healthy`),
+migrated + seeded fresh, plus every standalone service from the r06 CUTOVER
+lane, unchanged:
+
+| Component | Address | Mode |
+|---|---|---|
+| `examples/04-inventory-service` | HTTP `:8084` / gRPC `:9004` | `alembic upgrade head`, then `uvicorn` |
+| `examples/05-payment-service` | `:8085` | `alembic upgrade head`, then `uvicorn` — order.placed consumer, own outbox relay, shipment.failed refund consumer all confirmed `partitionsAssigned` via `/health` |
+| `examples/06-shipping-service` | `:8087` | `alembic upgrade head`, then `uvicorn` — payment.captured consumer, own outbox relay, crash-resume scan all confirmed via `/health` (`resumeComplete: true`) |
+| `examples/00-monolith` | `:8000` | `manage.py migrate && manage.py seed`, then `gunicorn config.wsgi`, `INVENTORY_MODE=grpc INVENTORY_GRPC_TARGET=localhost:9004 PAYMENT_MODE=choreographed SHIPPING_MODE=orchestrated KAFKA_BOOTSTRAP_SERVERS=localhost:9092`, PLUS three background `manage.py` processes with the same env: `outbox_relay`, `order_placed_consumer`, `order_saga_listener` |
+| `examples/01-strangler-proxy` | `:8888` | `uvicorn`, `STRANGLER_INVENTORY_ENABLED=STRANGLER_PAYMENT_ENABLED=STRANGLER_SHIPPING_ENABLED=true` |
+
+newman 6.2.2 for every run below, same as every prior lane in this file.
+
+## Phase 1 results — synchronous baseline, GREEN twice
+
+```
+newman run tooling/newman/mea.postman_collection.json -e tooling/newman/local.postman_environment.json
+```
+
+| Run | executed/failed | requests | assertions | duration |
+|---|---|---|---|---|
+| 1 | 1/0 | 29 | 59 | 1147ms |
+| 2 | 1/0 | 29 | 59 | 1158ms |
+
+Both runs **GREEN, 0 failed, newman exit 0**, byte-identical shape (`29`
+requests / `58` test-scripts / `33` prerequest-scripts / `59` assertions) to
+every prior synchronous baseline in this file. Scenario 1 resolved `201
+CONFIRMED` immediately (attempt 1), Scenario 3/4 resolved `402`/`422`
+immediately — the fix is a no-op on this path, exactly as required: the
+synchronous monolith never emits `AWAITING_SHIPMENT`, so the widened
+`NON_TERMINAL_STATUSES` set never has a second value to check against in
+practice.
+
+## Phase 2 results — fully-orchestrated through the proxy, 6 CONSECUTIVE GREEN runs
+
+```
+newman run tooling/newman/mea.postman_collection.json -e tooling/newman/proxy.postman_environment.json --env-var paymentContractEnabled=true --env-var inventoryContractEnabled=true --env-var shippingContractEnabled=true
+```
+
+run back to back, same long-lived topology, no restarts between runs (fresh
+order ids each time off the shared Postgres sequence — same methodology
+Run 1b used above):
+
+| Run | exit | executed/failed | requests | assertions | duration | `1c` CONFIRMED attempt | `3c` DECLINED attempt | `4c` SHIPPING_FAILED attempt |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 0 | 1/0 | 42 | 106 | 9.0s | 5/40 | 3/20 | 5/20 |
+| 2 | 0 | 1/0 | 41 | 105 | 8.2s | 4/40 | 3/20 | 5/20 |
+| 3 | 0 | 1/0 | 38 | 102 | 5.8s | 4/40 | 2/20 | 3/20 |
+| 4 | 0 | 1/0 | 40 | 104 | 7.5s | 4/40 | 3/20 | 4/20 |
+| 5 | 0 | 1/0 | 39 | 103 | 6.6s | 4/40 | 3/20 | 3/20 |
+| 6 | 0 | 1/0 | 39 | 103 | 6.6s | 3/40 | 3/20 | 4/20 |
+
+**6/6 GREEN, 0 failed every single run, newman exit 0 every single run.**
+The run-to-run request/assertion-count variance is the same ordinary
+bounded-wait-retry-chain variance every prior lane in this file already
+treats as expected (e.g. Run 1 vs Run 1b above), not a missing assertion.
+
+**This is not a vacuous pass** — `order_saga_listener.log` across this
+6-run window shows **18 distinct orders** (3 per run) genuinely transitioning
+through `AWAITING_SHIPMENT` mid-saga, e.g.:
+
+```
+18:11:14,205 INFO  payment.captured order_id=2 -> AWAITING_SHIPMENT (orchestrated)
+18:11:14,205 INFO  order_saga.consumed topic=payment.captured order_id=2 status=AWAITING_SHIPMENT
+```
+
+Every one of those 18 transitions is exactly the race window `4c`'s Run 1
+false-RED was caught in; with the fix in place, a poll landing on
+`AWAITING_SHIPMENT` now simply retries (consuming one of the attempt budget
+slots reflected in the table above) instead of falling through to the
+strict terminal assertion early. Zero of the 6 runs produced an
+intermittent RED despite the window being hit on every single run — the
+stability criterion this repair lane exists to prove.
+
+## Teardown
+
+All services (monolith + its 3 background `manage.py` processes, proxy,
+inventory-service, payment-service, shipping-service), the Phase 1 throwaway
+Postgres container, and the Phase 2 `docker compose` stack (postgres +
+kafka, `docker compose down -v`) were stopped and removed after this lane.
+`ss -ltnp` for every port this lane used (`5432`, `9092`, `8000`, `8084`,
+`8085`, `8087`, `8888`, `9004`) and `docker ps -a` were both checked clean
+afterward.
+
+## Summary
+
+| Proof | Result |
+|---|---|
+| Synchronous baseline (guard off), run 1 | **GREEN** — 59/59 assertions, 0 failed |
+| Synchronous baseline (guard off), run 2 | **GREEN** — 59/59 assertions, 0 failed |
+| Fully-orchestrated through the proxy, 6 consecutive runs | **GREEN x6** — 0 failed every run, newman exit 0 every run; 18 real `AWAITING_SHIPMENT` transitions absorbed across the window with zero intermittent RED |
+
+The r06 CUTOVER lane's finding is now closed: `1c`/`3c`/`4c`/`N1b` retry
+through every known non-terminal status, not just `PENDING`, and that fix is
+proven stable, not just proven once.

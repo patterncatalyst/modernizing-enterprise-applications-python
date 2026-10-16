@@ -160,9 +160,18 @@
                   "// CONFIRMED by the time this poll fires resolves on the very first try",
                   "// with zero added latency -- the non-vacuity proof this lane exists to",
                   "// capture (see GOLDEN-BASELINE.md).",
+                  "//",
+                  "// r06: this poll gets its OWN budget (happyPathPollMaxAttempts x",
+                  "// happyPathPollDelayMs), deliberately NOT the shared checkoutPollMaxAttempts",
+                  "// / checkoutPollDelayMs that Scenarios 3/4 still use. The orchestrated",
+                  "// shipping saga adds real hops downstream of CONFIRMED-today's path",
+                  "// (order.placed -> payment.captured -> shipping saga ->",
+                  "// shipment.dispatched -> CONFIRMED) that Scenarios 3/4 don't have, so only",
+                  "// this poll's budget widens -- Scenario 3/4's own budgets are untouched",
+                  "// (see GOLDEN-BASELINE.md).",
                   "var attempt = Number(pm.collectionVariables.get('happyPathPollAttempt')) || 0;",
                   "if (attempt > 0) {",
-                  "    var delayMs = Number(pm.collectionVariables.get('checkoutPollDelayMs'));",
+                  "    var delayMs = Number(pm.collectionVariables.get('happyPathPollDelayMs'));",
                   "    var start = Date.now();",
                   "    while (Date.now() - start < delayMs) { /* busy-wait */ }",
                   "}"
@@ -178,10 +187,17 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "var json = pm.response.json();",
-                  "var maxAttempts = Number(pm.collectionVariables.get('checkoutPollMaxAttempts'));",
+                  "var maxAttempts = Number(pm.collectionVariables.get('happyPathPollMaxAttempts'));",
                   "var attempt = Number(pm.collectionVariables.get('happyPathPollAttempt')) || 0;",
                   "",
-                  "if (json.status === 'PENDING' && attempt < maxAttempts - 1) {",
+                  "// r06 fix: retry through EVERY known non-terminal status, not just",
+                  "// PENDING -- the orchestrated shipping saga introduces an intermediate",
+                  "// AWAITING_SHIPMENT status between PENDING and CONFIRMED, and a poll",
+                  "// landing in that short window must keep retrying rather than fall",
+                  "// through to the strict terminal assertion early (see",
+                  "// GOLDEN-BASELINE.md, r06 CUTOVER lane).",
+                  "var NON_TERMINAL_STATUSES = ['PENDING', 'AWAITING_SHIPMENT'];",
+                  "if (NON_TERMINAL_STATUSES.indexOf(json.status) !== -1 && attempt < maxAttempts - 1) {",
                   "    pm.collectionVariables.set('happyPathPollAttempt', String(attempt + 1));",
                   "    postman.setNextRequest(pm.info.requestName);",
                   "    return;",
@@ -189,8 +205,9 @@
                   "",
                   "// Either terminal, or the bounded-wait budget is exhausted: assert",
                   "// STRICTLY -- this must FAIL, never hang and never soft-pass, on a",
-                  "// stuck PENDING.",
-                  "pm.test('Order reaches terminal status CONFIRMED within the bounded-wait budget (' + maxAttempts + ' x ' + pm.collectionVariables.get('checkoutPollDelayMs') + 'ms, attempt ' + (attempt + 1) + '/' + maxAttempts + ')', function () {",
+                  "// stuck PENDING. NOT relaxed by the r06 budget widening above -- only",
+                  "// the number of retries available changed, never this assertion.",
+                  "pm.test('Order reaches terminal status CONFIRMED within the bounded-wait budget (' + maxAttempts + ' x ' + pm.collectionVariables.get('happyPathPollDelayMs') + 'ms, attempt ' + (attempt + 1) + '/' + maxAttempts + ')', function () {",
                   "    pm.expect(json.status).to.eql('CONFIRMED');",
                   "});",
                   "pm.test('Persisted order id matches the created id', function () {",
@@ -493,7 +510,11 @@
                   "var maxAttempts = Number(pm.collectionVariables.get('checkoutPollMaxAttempts'));",
                   "var attempt = Number(pm.collectionVariables.get('declinePollAttempt')) || 0;",
                   "",
-                  "if (json.status === 'PENDING' && attempt < maxAttempts - 1) {",
+                  "// r06 fix: retry through EVERY known non-terminal status, not just",
+                  "// PENDING -- see 1c's identical comment and GOLDEN-BASELINE.md's r06",
+                  "// CUTOVER lane for why AWAITING_SHIPMENT must also be tolerated here.",
+                  "var NON_TERMINAL_STATUSES = ['PENDING', 'AWAITING_SHIPMENT'];",
+                  "if (NON_TERMINAL_STATUSES.indexOf(json.status) !== -1 && attempt < maxAttempts - 1) {",
                   "    pm.collectionVariables.set('declinePollAttempt', String(attempt + 1));",
                   "    postman.setNextRequest(pm.info.requestName);",
                   "    return;",
@@ -708,7 +729,13 @@
                   "var maxAttempts = Number(pm.collectionVariables.get('checkoutPollMaxAttempts'));",
                   "var attempt = Number(pm.collectionVariables.get('shipFailPollAttempt')) || 0;",
                   "",
-                  "if (json.status === 'PENDING' && attempt < maxAttempts - 1) {",
+                  "// r06 fix: retry through EVERY known non-terminal status, not just",
+                  "// PENDING -- this is the exact poll that found the bug (see",
+                  "// GOLDEN-BASELINE.md's r06 CUTOVER lane Run 1): a poll landing during",
+                  "// the brief AWAITING_SHIPMENT window must keep retrying instead of",
+                  "// falling through to the strict terminal assertion early.",
+                  "var NON_TERMINAL_STATUSES = ['PENDING', 'AWAITING_SHIPMENT'];",
+                  "if (NON_TERMINAL_STATUSES.indexOf(json.status) !== -1 && attempt < maxAttempts - 1) {",
                   "    pm.collectionVariables.set('shipFailPollAttempt', String(attempt + 1));",
                   "    postman.setNextRequest(pm.info.requestName);",
                   "    return;",
@@ -773,6 +800,119 @@
                   "",
                   "pm.test('Quantity on hand nets back to the pre-checkout value within the bounded-wait budget -- compensating release (' + maxAttempts + ' x ' + pm.collectionVariables.get('checkoutPollDelayMs') + 'ms, attempt ' + (attempt + 1) + '/' + maxAttempts + ')', function () {",
                   "    pm.expect(json.quantityOnHand).to.eql(before);",
+                  "});",
+                  "",
+                  "// r06: 4e immediately follows and polls /api/payments?orderId=<this order>",
+                  "// for a REFUND -- but the sync 422 path (today's monolith) never captured",
+                  "// an order id in the first place (same reason 4c is skipped above via",
+                  "// 4b's own setNextRequest), so there is no valid orderId to query: an",
+                  "// empty orderId=<blank> would reach the live endpoint and 500, which is",
+                  "// not the clean, side-effect-free request every other guarded folder in",
+                  "// this collection fires unconditionally. Skip straight past 4e to the",
+                  "// next folder in that case; 4e's own guard still handles the flag-off-",
+                  "// but-order-id-exists case (async branch) the normal inert way.",
+                  "if (!pm.collectionVariables.get('shipFailOrderId')) {",
+                  "    postman.setNextRequest('R1. List reviews by sku -> 200, camelCase array');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4e. Bounded-wait poll: payment refunded after the shipping failure (r06, env-guarded)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments?orderId={{shipFailOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments"],
+              "query": [{ "key": "orderId", "value": "{{shipFailOrderId}}" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// INERT GUARD, same test-script-adjacent idiom as the Inventory/Payment",
+                  "// Context Contract folders (see README.md): this is NOT the collection's",
+                  "// last folder, so this never calls postman.setNextRequest(null) -- it",
+                  "// would strand everything after Scenario 4. The request itself is a",
+                  "// cheap, side-effect-free GET (the same endpoint the Payment Context",
+                  "// Contract folder already exercises unconditionally), safe to fire even",
+                  "// when the guard is off or when shipFailOrderId is empty (the sync",
+                  "// 422 path -- see below); only the busy-wait and the assertions are",
+                  "// gated.",
+                  "if (pm.environment.get('shippingContractEnabled') !== 'true') {",
+                  "    return;",
+                  "}",
+                  "// Sync path (today's monolith, 422): 4b never captured an order id, so",
+                  "// there is nothing to poll for yet -- skip the busy-wait, the test",
+                  "// script below also no-ops on the same check.",
+                  "if (!pm.collectionVariables.get('shipFailOrderId')) {",
+                  "    return;",
+                  "}",
+                  "var attempt = Number(pm.collectionVariables.get('shipFailRefundPollAttempt')) || 0;",
+                  "if (attempt > 0) {",
+                  "    var delayMs = Number(pm.collectionVariables.get('shipFailRefundPollDelayMs'));",
+                  "    var start = Date.now();",
+                  "    while (Date.now() - start < delayMs) { /* busy-wait */ }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// r06 win: the orchestrated shipping saga's compensating action for a",
+                  "// SHIPPING_FAILED order is a REFUND of the payment captured earlier in",
+                  "// the saga (payment.captured already happened before the shipping saga",
+                  "// could fail) -- unlike today's in-process monolith, which rolls the",
+                  "// whole transaction.atomic() back instead and never calls this code",
+                  "// path. Guarded so this stays INERT against that in-process monolith:",
+                  "// no refund exists there yet (see order/services.py's KNOWN DEFERRAL",
+                  "// docstrings), so leaving this guard off is what keeps the baseline",
+                  "// green rather than papering over a real gap.",
+                  "if (pm.environment.get('shippingContractEnabled') !== 'true') {",
+                  "    return;",
+                  "}",
+                  "// Sync path: no order was ever persisted for a SHIP-FAIL checkout today",
+                  "// (transaction.atomic() rolled back the order row itself), so there is",
+                  "// no payment to refund against -- this guard's proof is specific to the",
+                  "// orchestrated/async saga path where the order DOES persist.",
+                  "if (!pm.collectionVariables.get('shipFailOrderId')) {",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Payment list request succeeds', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = [];",
+                  "try { json = pm.response.json(); } catch (e) { json = []; }",
+                  "",
+                  "var orderId = Number(pm.collectionVariables.get('shipFailOrderId'));",
+                  "var payment = Array.isArray(json) ? json.filter(function (p) { return p.orderId === orderId; })[0] : undefined;",
+                  "",
+                  "var maxAttempts = Number(pm.collectionVariables.get('shipFailRefundPollMaxAttempts'));",
+                  "var attempt = Number(pm.collectionVariables.get('shipFailRefundPollAttempt')) || 0;",
+                  "",
+                  "if ((!payment || payment.status !== 'REFUNDED') && attempt < maxAttempts - 1) {",
+                  "    pm.collectionVariables.set('shipFailRefundPollAttempt', String(attempt + 1));",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "    return;",
+                  "}",
+                  "",
+                  "// Either refunded, or the bounded-wait budget is exhausted: assert",
+                  "// STRICTLY -- this must FAIL, never hang and never soft-pass.",
+                  "pm.test('Payment for the shipping-failed order reaches REFUNDED within the bounded-wait budget (' + maxAttempts + ' x ' + pm.collectionVariables.get('shipFailRefundPollDelayMs') + 'ms, attempt ' + (attempt + 1) + '/' + maxAttempts + ')', function () {",
+                  "    pm.expect(payment, 'no payment found for orderId=' + orderId).to.not.be.undefined;",
+                  "    pm.expect(payment.status).to.eql('REFUNDED');",
                   "});"
                 ]
               }
@@ -1265,6 +1405,142 @@
       ]
     },
     {
+      "name": "Shipping Context Contract",
+      "item": [
+        {
+          "name": "S1. List shipments by orderId -> 200, camelCase array",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments?orderId={{happyPathOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shipments"],
+              "query": [{ "key": "orderId", "value": "{{happyPathOrderId}}" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Same inert-by-default guard pattern as the Inventory/Payment Context",
+                  "// Contract folders (see README.md) -- test-script-level only, no",
+                  "// setNextRequest, so this non-terminal folder can never strand the",
+                  "// Notification Context Contract folder that follows it. The request",
+                  "// itself is a cheap, side-effect-free GET, safe to fire unconditionally.",
+                  "if (pm.environment.get('shippingContractEnabled') !== 'true') {",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Shipment list returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Content-Type is application/json', function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Response is a non-empty array scoped to the happy-path order', function () {",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.length).to.be.at.least(1);",
+                  "    json.forEach(function (shipment) {",
+                  "        pm.expect(shipment.orderId).to.eql(Number(pm.collectionVariables.get('happyPathOrderId')));",
+                  "    });",
+                  "});",
+                  "pm.test('Every shipment is camelCase: id, orderId, address, status, createdAt', function () {",
+                  "    json.forEach(function (shipment) {",
+                  "        pm.expect(shipment).to.have.all.keys('id', 'orderId', 'address', 'status', 'createdAt');",
+                  "    });",
+                  "});",
+                  "pm.collectionVariables.set('shipmentId', json[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "S2. Get the dispatched shipment by id -> 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shipments", "{{shipmentId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Same inert-by-default guard as S1 -- see README.md.",
+                  "if (pm.environment.get('shippingContractEnabled') !== 'true') {",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Shipment lookup returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Returned shipment id matches the requested id', function () {",
+                  "    pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('shipmentId')));",
+                  "});",
+                  "pm.test('camelCase shape: id, orderId, address, status, createdAt', function () {",
+                  "    pm.expect(json).to.have.all.keys('id', 'orderId', 'address', 'status', 'createdAt');",
+                  "});",
+                  "pm.test('Shipment status is DISPATCHED (happy-path checkout)', function () {",
+                  "    pm.expect(json.status).to.eql('DISPATCHED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "S3. Get unknown shipment id -> 404, uniform error body",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/999999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shipments", "999999999"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Same inert-by-default guard as S1 -- see README.md.",
+                  "if (pm.environment.get('shippingContractEnabled') !== 'true') {",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Unknown shipment id returns 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Uniform error body: error/message/timestamp present', function () {",
+                  "    pm.expect(json.error).to.not.be.undefined;",
+                  "    pm.expect(json.message).to.not.be.undefined;",
+                  "    pm.expect(json.timestamp).to.not.be.undefined;",
+                  "});",
+                  "pm.test('Documented error contract: error=NOT_FOUND', function () {",
+                  "    pm.expect(json.error).to.eql('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Notification Context Contract",
       "item": [
         {
@@ -1382,7 +1658,11 @@
                   "var maxAttempts = Number(pm.collectionVariables.get('notificationPollMaxAttempts'));",
                   "var attempt = Number(pm.collectionVariables.get('notificationOrderPollAttempt')) || 0;",
                   "",
-                  "if (json.status === 'PENDING' && attempt < maxAttempts - 1) {",
+                  "// r06 fix: retry through EVERY known non-terminal status, not just",
+                  "// PENDING -- see 1c's identical comment and GOLDEN-BASELINE.md's r06",
+                  "// CUTOVER lane for why AWAITING_SHIPMENT must also be tolerated here.",
+                  "var NON_TERMINAL_STATUSES = ['PENDING', 'AWAITING_SHIPMENT'];",
+                  "if (NON_TERMINAL_STATUSES.indexOf(json.status) !== -1 && attempt < maxAttempts - 1) {",
                   "    pm.collectionVariables.set('notificationOrderPollAttempt', String(attempt + 1));",
                   "    postman.setNextRequest(pm.info.requestName);",
                   "    return;",
@@ -1524,6 +1804,12 @@
     { "key": "shipFailStockPollAttempt", "value": "0", "type": "string" },
     { "key": "checkoutPollMaxAttempts", "value": "20", "type": "string" },
     { "key": "checkoutPollDelayMs", "value": "750", "type": "string" },
+    { "key": "happyPathPollMaxAttempts", "value": "40", "type": "string" },
+    { "key": "happyPathPollDelayMs", "value": "750", "type": "string" },
+    { "key": "shipFailRefundPollAttempt", "value": "0", "type": "string" },
+    { "key": "shipFailRefundPollMaxAttempts", "value": "20", "type": "string" },
+    { "key": "shipFailRefundPollDelayMs", "value": "750", "type": "string" },
+    { "key": "shipmentId", "value": "", "type": "string" },
     { "key": "seededReviewId", "value": "", "type": "string" },
     { "key": "newReviewId", "value": "", "type": "string" },
     { "key": "paymentId", "value": "", "type": "string" },

@@ -45,3 +45,29 @@ def test_local_mode_checkout_snapshots_sku_and_name_on_wire(api_client, customer
     assert item.sku == widget.sku
     assert item.item_name == widget.name
     assert item.unit_price_cents == widget.price_cents
+
+
+def test_order_serializer_exposes_shipping_address(api_client, customer, widget):
+    """r06: `shippingAddress` is an ADDITIVE field on `OrderSerializer` --
+    the shipping orchestrator's enrich-fetch reads it from here (see
+    order/serializers.py::OrderSerializer's docstring). Exercised through
+    the real view/serializer stack on both `POST /api/orders` and
+    `GET /api/orders/{id}`."""
+    address = "221B Baker Street"
+    response = api_client.post(
+        "/api/orders",
+        {
+            "customerId": customer.id,
+            "items": [{"sku": widget.sku, "quantity": 1}],
+            "paymentMethod": "CARD-VISA",
+            "shippingAddress": address,
+        },
+        format="json",
+    )
+    assert response.status_code == 201
+    assert response.json()["shippingAddress"] == address
+
+    order_id = response.json()["id"]
+    detail = api_client.get(f"/api/orders/{order_id}")
+    assert detail.status_code == 200
+    assert detail.json()["shippingAddress"] == address
