@@ -1,0 +1,177 @@
+# code-ci.yml -- r01 walking-skeleton CI lane: the monolith-equivalence gate.
+#
+# Summary-job gate pattern (see
+# ~/.claude/skills/lgtm-github/references/branch-protection.md): a cheap
+# `changes` job decides whether the heavy job runs; `monolith-equivalence-gate`
+# does the real work; `code-ci-ok` is the single required check, `if: always()`,
+# and passes when every needed job is success-or-skipped. No `paths:` filter on
+# `on:` -- a path-filtered-out run of a workflow with a required summary job
+# reports nothing, which would wedge the ruleset.
+#
+# What the gate proves: the Newman behavior-equivalence suite captured against
+# the monolith (tooling/newman/mea.postman_collection.json,
+# DRQ-010/DRQ-022 in _plans/decisions.md) can run against a freshly migrated +
+# seeded monolith in CI, not just on a developer's laptop. This is the r01
+# walking-skeleton's only extraction target -- examples/00-monolith/ IS the
+# system under test here, not a referent for something already extracted (that
+# arrives starting r02, mirroring the Java sibling's per-context gates).
+#
+# Stack: Django 5.2 + DRF (uv, Python 3.14), gunicorn on :8000
+# (examples/00-monolith/README.md's Quickstart), Postgres 18.6-alpine
+# (.env.example's POSTGRES_IMAGE_TAG, matching compose.yaml), Newman 6.2.2 on
+# Node 22 (decisions.md's version matrix).
+
+name: Code CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # Decides whether the heavy job runs. The workflow always runs (no `paths:`
+  # filter on `on:` above), so the required summary job always reports.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.diff.outputs.run }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - id: diff
+        run: |
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          if ! files="$(git diff --name-only "$base" "${{ github.sha }}" 2>/dev/null)"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"   # cannot diff: run everything
+          elif grep -qE '^(examples/00-monolith/|tooling/newman/|infra/|compose\.yaml$|\.env\.example$|\.github/workflows/code-ci\.yml$)' <<<"$files"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  monolith-equivalence-gate:
+    name: monolith-equivalence-gate
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-latest
+
+    # Postgres, pinned to the same tag/creds the project's compose stack and
+    # the monolith's own settings.py defaults use (.env.example:
+    # POSTGRES_IMAGE_TAG=18.6-alpine, POSTGRES_DB/_USER/_PASSWORD=monolith) --
+    # the SAME contract as local dev, not a CI-only substitute.
+    services:
+      postgres:
+        image: docker.io/library/postgres:18.6-alpine
+        env:
+          POSTGRES_DB: monolith
+          POSTGRES_USER: monolith
+          POSTGRES_PASSWORD: monolith
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U monolith -d monolith"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+
+    env:
+      DATABASE_URL: postgresql://monolith:monolith@localhost:5432/monolith
+      LOG_DIR: logs
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v7
+
+      - name: Install uv (pinned) + Python 3.14
+        uses: astral-sh/setup-uv@v10.3.0   # no floating v10 tag; pin exact
+        with:
+          version: "0.13.1"            # decisions.md version matrix: uv 0.13.1
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: "examples/00-monolith/uv.lock"
+
+      - name: uv sync (monolith)
+        # --locked: fail if uv.lock is out of date rather than silently
+        # re-resolving, matching the Dockerfile's reproducibility discipline
+        # (examples/00-monolith/Dockerfile: `uv sync --locked --no-dev`).
+        working-directory: examples/00-monolith
+        run: uv sync --locked --group dev
+
+      - name: Migrate + seed the monolith's database
+        working-directory: examples/00-monolith
+        run: |
+          set -euo pipefail
+          uv run python manage.py migrate
+          uv run python manage.py seed
+
+      - name: Start the monolith (gunicorn) on :8000
+        working-directory: examples/00-monolith
+        run: |
+          mkdir -p logs
+          nohup uv run gunicorn config.wsgi -b 0.0.0.0:8000 > gunicorn.out.log 2>&1 &
+          echo $! > gunicorn.pid
+
+      - name: Wait for the monolith to be ready on :8000
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:8000/api/orders" > /dev/null; then
+              echo "Monolith is up."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Monolith did not become ready in time." >&2
+          cat examples/00-monolith/logs/monolith.log 2>/dev/null || true
+          cat examples/00-monolith/gunicorn.out.log 2>/dev/null || true
+          exit 1
+
+      - name: Set up Node (for newman)
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Install newman
+        run: npm install -g newman@6.2.2   # pin: decisions.md version matrix
+
+      - name: Run the behavior-equivalence suite against the monolith -- the equivalence gate
+        # THE GATE: a non-zero newman exit code fails the job.
+        run: |
+          newman run tooling/newman/mea.postman_collection.json \
+            -e tooling/newman/local.postman_environment.json
+
+      - name: Dump monolith log on failure
+        if: failure()
+        run: |
+          echo "::group::examples/00-monolith/logs/monolith.log"
+          cat examples/00-monolith/logs/monolith.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/00-monolith/gunicorn.out.log"
+          cat examples/00-monolith/gunicorn.out.log 2>/dev/null || true
+          echo "::endgroup::"
+
+      - name: Stop the monolith
+        if: always()
+        run: |
+          if [ -f examples/00-monolith/gunicorn.pid ]; then
+            kill "$(cat examples/00-monolith/gunicorn.pid)" || true
+          fi
+
+  # The one check the ruleset requires. Passes when every needed job
+  # succeeded or was skipped by `changes`.
+  code-ci-ok:
+    name: code-ci-ok
+    if: always()
+    needs: [changes, monolith-equivalence-gate]
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: jq -e 'to_entries | all(.value.result == "success" or .value.result == "skipped")' <<<"$NEEDS"
