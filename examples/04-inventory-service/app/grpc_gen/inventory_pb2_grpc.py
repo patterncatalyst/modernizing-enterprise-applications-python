@@ -122,7 +122,9 @@ class InventoryGrpcServiceServicer:
         """Compensating re-increment: once the decrement lives in this service's
         own DB, the monolith's local transaction can no longer roll it back on
         a later payment decline. The monolith calls Release to restore the
-        observable baseline.
+        observable baseline. Idempotent when `idempotency_key` is set (DRQ-043):
+        a retried Release carrying the SAME key is a no-op, so the payment saga
+        can safely retry this call at least once.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')

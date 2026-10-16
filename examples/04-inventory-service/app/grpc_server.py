@@ -100,26 +100,28 @@ class InventoryGrpcServiceServicer(inventory_pb2_grpc.InventoryGrpcServiceServic
         monolith's local transaction can no longer roll it back, so the
         monolith must explicitly restore the observable baseline.
 
-        Idempotency / at-least-once consideration (documented, not solved
-        here -- NOT speculative saga infrastructure, which is explicitly out
-        of scope): unlike `Reserve`'s conditional `UPDATE`,
-        `app/repository.py::release`'s increment is UNCONDITIONAL and
-        carries no dedupe/idempotency key. A retried `Release` call whose
-        effect already landed server-side would over-restore stock. A full
-        fix -- an idempotency key per reservation/compensation, or a saga
-        ledger recording reserve/release pairs -- is deliberately deferred to
-        a later choreographed-saga chapter; this docstring is that
-        deferral's record.
+        Idempotent when the caller sends `idempotency_key` (DRQ-043, the
+        IDEMPOTENT-COMPENSATION lane): a retried `Release` carrying the SAME
+        key is a no-op that returns the CURRENT stock rather than
+        over-restoring it a second time -- see
+        `app/repository.py::release`'s docstring for the single-statement,
+        race-safe dedupe mechanism (an `INSERT ... ON CONFLICT DO NOTHING`
+        against `inventory.compensations`'s unique index on
+        `idempotency_key`, in the SAME session/transaction as the
+        conditional re-increment). An empty/absent key falls back to the
+        original unconditional, non-deduped behavior for callers that
+        predate this field.
         """
         sku = request.stock_keeping_unit
         qty = request.requested_qty
+        idempotency_key = request.idempotency_key
         async with self._session_factory() as session:
-            rowcount = await repository.release(session, sku, qty)
+            reservation_ok = await repository.release(session, sku, qty, idempotency_key)
             item = await repository.get_by_sku(session, sku)
         on_hand_qty = item.quantity_on_hand if item is not None else 0
         return inventory_pb2.ReserveReply(
             stock_keeping_unit=sku,
-            reservation_ok=rowcount == 1,
+            reservation_ok=reservation_ok,
             on_hand_qty=on_hand_qty,
         )
 
