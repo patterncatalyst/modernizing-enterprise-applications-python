@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 700" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="40" y="170" width="960" height="220" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="52" y="190" font-size="12" font-weight="700" fill="#1d1d1d">reversible -- STRANGLER_REVIEW_ENABLED can flip either direction (config + restart, not code)</text>
+<rect x="1000" y="170" width="320" height="220" rx="12" fill="#f4f4f4" stroke="#ddd"/>
+<text x="1012" y="190" font-size="12" font-weight="700" fill="#1d1d1d">irreversible once crossed</text>
+<rect x="60" y="220" width="280" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="200.0" y="265.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">1. Intercept -- ch.14</text>
+<text x="200.0" y="282.5" font-size="11.5" fill="#555555" text-anchor="middle">the proxy sees every request first</text>
+<text x="200.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">:8888, Starlette + httpx</text>
+<rect x="380" y="220" width="280" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="520.0" y="265.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">2. Route</text>
+<text x="520.0" y="282.5" font-size="11.5" fill="#555555" text-anchor="middle">the flag decides the backend</text>
+<text x="520.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">for /api/reviews* only</text>
+<rect x="700" y="220" width="280" height="110" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="840.0" y="265.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">3. Incrementally replace</text>
+<text x="840.0" y="282.5" font-size="11.5" fill="#555555" text-anchor="middle">review-service goes live,</text>
+<text x="840.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">cutover proven by Newman first</text>
+<rect x="1020" y="220" width="280" height="110" rx="9" fill="#111111" stroke="#111111" stroke-width="2"/>
+<text x="1160.0" y="265.5" font-size="13.5" font-weight="700" fill="#ffffff" text-anchor="middle">4. Retire -- later iteration</text>
+<text x="1160.0" y="282.5" font-size="11.5" fill="#dddddd" text-anchor="middle">the monolith&#x27;s Review app</text>
+<text x="1160.0" y="297.5" font-size="11.5" fill="#dddddd" text-anchor="middle">removed last, not first</text>
+<rect x="460" y="480" width="560" height="110" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="740.0" y="525.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Retire before that check passes?</text>
+<text x="740.0" y="542.5" font-size="11.5" fill="#555555" text-anchor="middle">the fallback backend is gone --</text>
+<text x="740.0" y="557.5" font-size="11.5" fill="#555555" text-anchor="middle">&quot;incremental&quot; becomes a big-bang rewrite</text>
+<path d="M340.0,275.0 L380.0,275.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="366.0" y="269.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">flag defaults to false (monolith)</text>
+<text x="366.0" y="269.0" font-size="11" fill="#555" text-anchor="middle">flag defaults to false (monolith)</text>
+<path d="M660.0,275.0 L700.0,275.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="686.0" y="269.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">flag flips true, 58/58 green</text>
+<text x="686.0" y="269.0" font-size="11" fill="#555" text-anchor="middle">flag flips true, 58/58 green</text>
+<path d="M980.0,275.0 L1020.0,275.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="1000.0" y="130.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">verified first, not just tested</text>
+<text x="1000.0" y="130.0" font-size="11" fill="#2f5f3d" text-anchor="middle">verified first, not just tested</text>
+<path d="M818.8461538461538,330.0 L761.1538461538462,480.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="796.0" y="399.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">retire before the check passes -&gt;</text>
+<text x="796.0" y="399.0" font-size="11" fill="#555" text-anchor="middle">retire before the check passes -&gt;</text>
+<text x="700.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.14 -- the strangler fig&#x27;s four moves, in the order that matters</text>
+<text x="700.0" y="56" font-size="12" fill="#555555" text-anchor="middle">retiring out of order is how an &quot;incremental&quot; migration quietly becomes a big-bang rewrite</text>
+<text x="60" y="375" font-size="10.5" fill="#555555" text-anchor="start">both backends still exist here -- the flag can flip either way, no redeploy required</text>
+<text x="1020" y="352" font-size="10" fill="#555555" text-anchor="start">the flag still routes; the destination</text>
+<text x="1020" y="367" font-size="10" fill="#555555" text-anchor="start">it used to select is gone (404)</text>
+<text x="40" y="684" font-size="10" fill="#777777" text-anchor="start">Sourced from examples/01-strangler-proxy/CUTOVER.md and examples/00-monolith/SMELLS.md #7.</text>
+</svg>
