@@ -1,0 +1,51 @@
+# notification-service -- UBI 10, multi-stage, non-root.
+#
+# Same verified base image as ../00-monolith and ../02-review-service (UBI 10
+# publishes only the `-minimal` Python 3.14 image; every dependency here
+# ships a prebuilt wheel -- aiokafka included, which publishes cp314
+# manylinux wheels -- so `uv sync` never needs a C compiler). Re-verify the
+# tag with `skopeo list-tags docker://registry.access.redhat.com/ubi10/python-314-minimal`
+# before bumping.
+ARG UBI_PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506
+ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.13.1
+
+FROM ${UV_IMAGE} AS uv
+
+FROM ${UBI_PYTHON_IMAGE} AS builder
+COPY --from=uv /uv /uvx /usr/local/bin/
+
+WORKDIR /app
+
+# Resolve dependencies first so dependency installs cache independently of
+# application code changes.
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked --no-install-project --no-dev
+
+COPY app ./app
+COPY migrations ./migrations
+COPY alembic.ini ./
+RUN uv sync --locked --no-dev
+
+FROM ${UBI_PYTHON_IMAGE}
+
+WORKDIR /app
+COPY --from=builder /app /app
+ENV PATH="/app/.venv/bin:${PATH}" \
+    PYTHONUNBUFFERED=1
+
+# Non-root, OpenShift/arbitrary-UID compatible -- same convention as
+# ../00-monolith and ../02-review-service's Containerfiles (no shadow-utils
+# on the minimal image, so fix ownership instead of creating a user with
+# useradd).
+USER root
+RUN chgrp -R 0 /app && chmod -R g=u /app
+USER 1001:0
+
+EXPOSE 8002
+
+# `alembic upgrade head` runs this service's own migration (creates the
+# `notification` schema + table + indexes if they don't already exist, a
+# no-op otherwise) before the server starts -- there is no separate
+# init-container story in this project's compose/CRC stacks, so the
+# container's own startup is the migration trigger.
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8002"]
