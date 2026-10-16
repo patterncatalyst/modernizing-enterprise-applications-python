@@ -1272,3 +1272,264 @@ any flag combination, and a dead inventory-service fails both the read path
 cleanly and loudly rather than silently. The throwaway Postgres container
 and every process started for this lane (monolith, inventory-service,
 proxy) were torn down afterward; the host was left clean.
+
+---
+
+# The r05 NEWMAN-ASYNC CONVERSION lane — tolerating the upcoming 201→202 flip, GREEN against today's synchronous monolith
+
+This section records the conversion of `mea.postman_collection.json`'s four
+checkout scenarios (plus the Notification folder's N1) so the suite will
+survive the upcoming **201→202 contract change** (checkout becomes async,
+choreographed by a saga) **without losing its value as an honest
+before/after equivalence check** — and the proof that the converted suite is
+still **fully GREEN against the current, UNMODIFIED, synchronous monolith**
+(which still returns `201`/`402`/`422` today; the choreographed flip itself
+lands in a sibling lane, not this one). This lane touched only
+`tooling/newman/` — no application code changed.
+
+## What changed in the collection
+
+- **Scenario 1 (Happy-Path):** `1b`'s `POST /api/orders` now asserts `201 OR
+  202` (capturing `id`/`Location` either way, and — if `201` — asserting
+  `CONFIRMED` immediately; if `202` — asserting `PENDING`). The former `1c`
+  ("get the order back") is now a **bounded-wait poll** (`1c`, reusing the
+  Notification folder's idiom verbatim in shape: busy-wait only on a retry,
+  never on attempt 0, `checkoutPollMaxAttempts` x `checkoutPollDelayMs` = 20 x
+  750ms budget) that strictly asserts the terminal status is `CONFIRMED` —
+  never a naked `2xx` — plus the total/items assertions that used to live in
+  `1b`. `1d`'s stock-delta check is unchanged, now reading after the terminal
+  poll.
+- **Scenario 3 (Payment-Declined):** `3b` now asserts `402 OR 202`. Today's
+  monolith rolls back the ENTIRE `transaction.atomic()` on a decline —
+  including the `Order` row itself (`order/services.py`,
+  `payment/services.py::charge()`) — so a `402` response has **no order id to
+  poll**; `3b`'s test script detects this and jumps straight past the new
+  `3c` (bounded-wait poll for `PAYMENT_DECLINED`, async-path only) via
+  `postman.setNextRequest('3d. ...')`, landing on `3d`, a bounded-wait poll of
+  `GET /api/inventory/{sku}` asserting **strict net-zero** stock. `3d` runs
+  **unconditionally in both modes** — this is the lane's non-vacuity proof.
+- **Scenario 4 (Shipping-Failure):** identical shape to Scenario 3: `4b`
+  asserts `422 OR 202`, jumps past `4c` (bounded-wait poll for
+  `SHIPPING_FAILED`, async-path only) when sync, lands on `4d` (bounded-wait
+  net-zero stock poll, unconditional).
+- **Scenario 2 (Out-of-Stock):** left exactly as-is — still strictly `409`,
+  unchanged — the reservation rejects before any async work could begin, so
+  there is nothing to tolerate here.
+- **New "Payment Context Contract" folder** (P1–P3), inserted between
+  Inventory Context Contract and Notification Context Contract, env-guarded
+  by `paymentContractEnabled === 'true'` using the same test-script-level,
+  no-`setNextRequest` guard idiom as the Inventory folder (non-terminal
+  position, so it can never strand Notification): `GET
+  /api/payments?orderId={{happyPathOrderId}}` → `200` camelCase array
+  (`id, orderId, amountCents, method, status, createdAt`), scoped to the
+  Scenario 1 happy-path order and capturing its payment id; `GET
+  /api/payments/{id}` → `200`, same shape, `status: "CAPTURED"`; `GET
+  /api/payments/999999999` → `404` uniform error body, `error: "NOT_FOUND"`.
+- **Notification Context Contract N1 fix:** N1 previously assumed
+  `POST /api/orders` → `201`/`CONFIRMED` unconditionally. It now asserts `201
+  OR 202` only; the terminal `CONFIRMED` check moved to a new **N1b**
+  (bounded-wait poll of `GET /api/orders/{id}`, inserted between N1 and N2,
+  same inert-guard-when-off idiom as N1 since this folder is still terminal)
+  so the folder survives the async flip too, without needing Kafka for N1b's
+  own check (only N2's notification poll needs Kafka).
+- **New collection variables:** `checkoutPollMaxAttempts` (`20`),
+  `checkoutPollDelayMs` (`750`) — the shared bounded-wait budget for every
+  new checkout-scenario poll, mirroring `notificationPollMaxAttempts`/
+  `notificationPollDelayMs` exactly; plus one poll-attempt counter per new
+  poll item (`happyPathPollAttempt`, `declinePollAttempt`,
+  `declineStockPollAttempt`, `shipFailPollAttempt`,
+  `shipFailStockPollAttempt`, `notificationOrderPollAttempt`), one
+  checkout-mode flag per branching scenario (`declineCheckoutMode`,
+  `shipFailCheckoutMode`), one captured order id per branching scenario
+  (`declineOrderId`, `shipFailOrderId`), and `paymentId` for the new Payment
+  folder.
+
+## Why Scenario 4's `SHIPPING_FAILED` poll never runs against today's monolith (and that's by design, not a gap)
+
+`Order.Status` (`order/models.py`) only defines `PENDING`, `CONFIRMED`, and
+`PAYMENT_DECLINED` today — there is no `SHIPPING_FAILED` choice yet, because
+`shipping.services.dispatch()`'s `ShippingFailed` exception is raised INSIDE
+the same `transaction.atomic()` that creates the `Order` row, so that row
+never commits and no order ever exists for this path to begin with
+(confirmed directly: `tests/test_checkout.py::test_ship_fail_sentinel_...`
+and the error-response body contain no `id` field at all). The `SHIPPING_FAILED`
+string only has a status to assert once the choreographed saga lands (a
+sibling lane), which is also the point at which `POST /api/orders` starts
+returning `202` with an order already persisted in `PENDING`. Rather than
+weaken `4c`'s assertion to tolerate today's non-existent terminal state, this
+lane **gates `4c` entirely behind the async branch** (same mechanism as
+`3c`): `4b`'s test script jumps straight to `4d` (the always-on, unconditional
+net-zero stock poll) whenever the response is the current synchronous `422`,
+and only lets the natural item order fall through into `4c` when the response
+is the future `202`. This keeps `4c`'s own assertion strict (`SHIPPING_FAILED`,
+never a tolerant "any terminal status") while keeping the baseline green
+today, because `4c` is simply never reached today — not because its
+assertion was loosened to pass vacuously. Scenario 3's `PAYMENT_DECLINED`
+poll (`3c`) is gated identically, for the identical reason (the decline also
+never persists an order today).
+
+## What was running
+
+| Component | Address | Mode |
+|---|---|---|
+| Postgres | `localhost:5432` (`monolith`/`monolith`/`monolith`) | throwaway `postgres:18.6-alpine`, empty volume, migrated + seeded fresh |
+| `examples/00-monolith` | `:8000` | `uv run python manage.py runserver 0.0.0.0:8000`, DEFAULT config (`INVENTORY_MODE=local`, the only mode this module ships with by default) — still fully synchronous, returns `201`/`402`/`422` today |
+
+No Kafka, no inventory-service, no strangler proxy — this lane runs the
+converted collection straight against the bare monolith, the same way the r01
+baseline did, to prove the conversion holds with nothing else in play.
+
+## Run 1
+
+`newman run tooling/newman/mea.postman_collection.json -e tooling/newman/local.postman_environment.json --env-var paymentContractEnabled=true` (the monolith's `/api/payments` surface is in-process and always up, so the flag was enabled for this baseline):
+
+```
+┌─────────────────────────┬───────────────────┬───────────────────┐
+│                         │          executed │            failed │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│              iterations │                 1 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│                requests │                26 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│            test-scripts │                52 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│      prerequest-scripts │                30 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│              assertions │                70 │                 0 │
+├─────────────────────────┴───────────────────┴───────────────────┤
+│ total run duration: 2.1s                                        │
+├─────────────────────────────────────────────────────────────────┤
+│ total data received: 3.42kB (approx)                            │
+├─────────────────────────────────────────────────────────────────┤
+│ average response time: 63ms [min: 31ms, max: 178ms, s.d.: 32ms] │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Fully green, 0 failed, newman exit code 0, newman 6.2.2.** `26` requests:
+the pre-existing 19 minus the two scenarios' skipped order-status polls (`3c`,
+`4c` never fired — both jumped past as documented above) plus the two new
+always-on stock polls (`3d`, `4d` replacing the old `3c`/`4c` stock checks)
+plus the three new Payment folder requests (P1–P3) plus N1 (the run still
+ends at N1 — `notificationContractEnabled` was not set, so N1's own
+pre-existing inert guard still ends the run there exactly as before; N1b/N2
+never reached). Critically:
+
+- **Scenario 1** — `1b` got `201` (today's synchronous contract);
+  `1c`'s bounded-wait poll resolved `CONFIRMED` **on attempt 1/20 — 0
+  retries** — the non-vacuity proof the task set out to capture.
+- **Scenario 3** — `3b` got `402`; jumped straight to `3d`, which resolved
+  net-zero stock **on attempt 1/20 — 0 retries**.
+- **Scenario 4** — `4b` got `422`; jumped straight to `4d`, which resolved
+  net-zero stock **on attempt 1/20 — 0 retries**.
+- **Payment Context Contract** — P1 found exactly one payment for the
+  Scenario 1 happy-path order (`orderId=2` in this run), P2 confirmed its
+  `CAPTURED` status by id, P3 confirmed the uniform `404` for an unknown id.
+
+## Run 2 — back-to-back, same process, no database reset (idempotency)
+
+```
+┌─────────────────────────┬───────────────────┬───────────────────┐
+│                         │          executed │            failed │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│              iterations │                 1 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│                requests │                26 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│            test-scripts │                52 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│      prerequest-scripts │                30 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│              assertions │                70 │                 0 │
+├─────────────────────────┴───────────────────┴───────────────────┤
+│ total run duration: 2.2s                                        │
+├─────────────────────────────────────────────────────────────────┤
+│ total data received: 3.75kB (approx)                            │
+├─────────────────────────────────────────────────────────────────┤
+│ average response time: 65ms [min: 32ms, max: 199ms, s.d.: 36ms] │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Byte-identical shape to Run 1, fully green, 0 failed** — confirms the
+conversion's "capture stock/mode before" pattern is still safe to re-run
+against a long-lived process with no fresh database reset, exactly the same
+property r01's baseline established and every later lane has preserved.
+
+## The no-flags control run — existing callers still unaffected
+
+`newman run tooling/newman/mea.postman_collection.json -e tooling/newman/local.postman_environment.json` (no `--env-var` at all):
+
+```
+┌─────────────────────────┬───────────────────┬───────────────────┐
+│                         │          executed │            failed │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│              iterations │                 1 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│                requests │                26 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│            test-scripts │                52 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│      prerequest-scripts │                30 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│              assertions │                59 │                 0 │
+├─────────────────────────┴───────────────────┴───────────────────┤
+│ total run duration: 2.1s                                        │
+├─────────────────────────────────────────────────────────────────┤
+│ total data received: 7.2kB (approx)                             │
+├─────────────────────────────────────────────────────────────────┤
+│ average response time: 64ms [min: 40ms, max: 174ms, s.d.: 31ms] │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Still fully green, 0 failed.** The 3 new Payment folder requests fire
+(harmless, idempotent `GET`s) but assert nothing (guard off, 70 − 11 = 59
+assertions, exactly P1/P2/P3's own 11 assertions worth of difference) and —
+critically — do **not** strand the Notification folder: the run still ends
+at N1 exactly as it always has. Same bar the r03 and r04 lanes each set for
+their own new folders.
+
+## N1/N1b verified independently (no Kafka needed for this half)
+
+`--folder "Notification Context Contract" --env-var notificationContractEnabled=true`, Kafka/outbox-relay/consumer all deliberately NOT started (out of scope for this lane — N1b's own check doesn't need them):
+
+```
+↳ N1. Checkout for the notification contract -> 201 or 202 Accepted
+  POST http://localhost:8000/api/orders [201 Created, 505B, 51ms]
+  ✓  Order created returns 201 or 202
+
+↳ N1b. Bounded-wait poll: order reaches CONFIRMED
+  GET http://localhost:8000/api/orders/12 [200 OK, 468B, 52ms]
+  ✓  Order lookup returns 200
+  ✓  Order reaches terminal status CONFIRMED within the bounded-wait budget (20 x 750ms, attempt 1/20)
+```
+
+**N1b resolved CONFIRMED on attempt 1/20 — 0 retries**, confirming the N1 fix
+holds against the current synchronous monolith without needing Kafka at all.
+N2 (the actual Kafka-dependent notification poll, unchanged by this lane)
+then ran its full 20-attempt budget and failed strictly, exactly as expected
+with no outbox relay/consumer running to ever populate it — a pre-existing,
+out-of-scope behavior this lane did not touch, included here only to show
+N1b doesn't regress anything downstream of it.
+
+## Summary
+
+| Scenario | Today's response | Order persisted? | Poll reached | Poll result |
+|---|---|---|---|---|
+| 1 — Happy-Path | `201 CONFIRMED` | yes | `1c` (order status) | **CONFIRMED, attempt 1/20 — 0 retries** |
+| 2 — Out-of-Stock | `409 OUT_OF_STOCK` | n/a (rejected pre-write) | — (unchanged) | n/a |
+| 3 — Payment-Declined | `402 PAYMENT_DECLINED` | **no** (whole tx rolled back) | `3c` skipped; `3d` (stock) | **net-zero, attempt 1/20 — 0 retries** |
+| 4 — Shipping-Failure | `422 SHIPPING_FAILED` | **no** (whole tx rolled back) | `4c` skipped; `4d` (stock) | **net-zero, attempt 1/20 — 0 retries** |
+| N — Notification | `201 CONFIRMED` | yes | `N1b` (order status) | **CONFIRMED, attempt 1/20 — 0 retries** |
+
+Every bounded-wait poll this lane added resolves on its very first attempt
+against today's unmodified synchronous monolith — the explicit non-vacuity
+proof the task asked for. No acceptance criterion was left unmet: the
+converted collection is green against the synchronous monolith (above, twice
+over); every checkout folder still strictly asserts a terminal status plus
+its side effect (never a naked `2xx`, and never able to pass on a stuck
+`PENDING` — the bounded-wait idiom's strict final assertion guarantees that);
+the new Payment Context Contract folder is added, env-guarded, and inert
+(fires, asserts nothing) when its flag is off; existing folders are
+unaffected when all new guards are off (no-flags control run, above); and N1
+is now 201/202-tolerant with its own bounded-wait to a confirmed order. The
+throwaway Postgres container and the monolith process started for this lane
+were torn down afterward; the host was left clean.

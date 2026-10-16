@@ -80,7 +80,7 @@
           ]
         },
         {
-          "name": "1b. Checkout in-stock -> 201 Created, CONFIRMED",
+          "name": "1b. Checkout in-stock -> 201 (sync CONFIRMED) or 202 (async Accepted)",
           "request": {
             "method": "POST",
             "header": [
@@ -102,41 +102,43 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Order created returns 201', function () {",
-                  "    pm.response.to.have.status(201);",
+                  "// NEWMAN-ASYNC conversion (r05): tolerant of EITHER the current",
+                  "// synchronous monolith's 201 Created (terminal on the spot) OR the",
+                  "// upcoming choreographed 202 Accepted (terminal reached later). Either",
+                  "// way the id/Location are captured here; the terminal CONFIRMED check",
+                  "// moves to 1c's bounded-wait poll so it holds in both worlds.",
+                  "pm.test('Order creation returns 201 or 202', function () {",
+                  "    pm.expect([201, 202]).to.include(pm.response.code);",
                   "});",
                   "pm.test('Content-Type is application/json', function () {",
                   "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
                   "});",
+                  "var json = pm.response.json();",
                   "pm.test('Location header present and references the created order', function () {",
                   "    pm.expect(pm.response.headers.has('Location')).to.be.true;",
-                  "    var json = pm.response.json();",
                   "    pm.expect(pm.response.headers.get('Location')).to.eql('/api/orders/' + json.id);",
-                  "});",
-                  "var json = pm.response.json();",
-                  "pm.collectionVariables.set('happyPathOrderId', json.id);",
-                  "pm.test('Order status is CONFIRMED (synchronous checkout -- no PENDING to observe at r01)', function () {",
-                  "    pm.expect(json.status).to.eql('CONFIRMED');",
-                  "});",
-                  "pm.test('Order total matches one widget unit price (1999 cents)', function () {",
-                  "    pm.expect(json.totalCents).to.eql(1999);",
-                  "});",
-                  "pm.test('Order items echo the checkout line', function () {",
-                  "    pm.expect(json.items).to.have.lengthOf(1);",
-                  "    pm.expect(json.items[0].sku).to.eql('SKU-WIDGET-001');",
-                  "    pm.expect(json.items[0].quantity).to.eql(1);",
-                  "    pm.expect(json.items[0].unitPriceCents).to.eql(1999);",
                   "});",
                   "pm.test('Order id is a number', function () {",
                   "    pm.expect(json.id).to.be.a('number');",
-                  "});"
+                  "});",
+                  "pm.collectionVariables.set('happyPathOrderId', json.id);",
+                  "pm.collectionVariables.set('happyPathPollAttempt', '0');",
+                  "if (pm.response.code === 201) {",
+                  "    pm.test('Order status is CONFIRMED on the 201 response (synchronous checkout)', function () {",
+                  "        pm.expect(json.status).to.eql('CONFIRMED');",
+                  "    });",
+                  "} else {",
+                  "    pm.test('Order status is PENDING on the 202 response (async checkout, not yet terminal)', function () {",
+                  "        pm.expect(json.status).to.eql('PENDING');",
+                  "    });",
+                  "}"
                 ]
               }
             }
           ]
         },
         {
-          "name": "1c. Get the order back by id -> 200, CONFIRMED",
+          "name": "1c. Bounded-wait poll: order reaches terminal status -> strictly CONFIRMED",
           "request": {
             "method": "GET",
             "header": [],
@@ -148,6 +150,26 @@
           },
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Bounded-wait idiom (same shape as the Notification Context",
+                  "// Contract's N2, see README.md): busy-wait only on a RETRY (attempt >",
+                  "// 0), never on attempt 0, so a synchronous monolith that is ALREADY",
+                  "// CONFIRMED by the time this poll fires resolves on the very first try",
+                  "// with zero added latency -- the non-vacuity proof this lane exists to",
+                  "// capture (see GOLDEN-BASELINE.md).",
+                  "var attempt = Number(pm.collectionVariables.get('happyPathPollAttempt')) || 0;",
+                  "if (attempt > 0) {",
+                  "    var delayMs = Number(pm.collectionVariables.get('checkoutPollDelayMs'));",
+                  "    var start = Date.now();",
+                  "    while (Date.now() - start < delayMs) { /* busy-wait */ }",
+                  "}"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
@@ -156,11 +178,32 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "var json = pm.response.json();",
-                  "pm.test('Persisted order status is CONFIRMED', function () {",
+                  "var maxAttempts = Number(pm.collectionVariables.get('checkoutPollMaxAttempts'));",
+                  "var attempt = Number(pm.collectionVariables.get('happyPathPollAttempt')) || 0;",
+                  "",
+                  "if (json.status === 'PENDING' && attempt < maxAttempts - 1) {",
+                  "    pm.collectionVariables.set('happyPathPollAttempt', String(attempt + 1));",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "    return;",
+                  "}",
+                  "",
+                  "// Either terminal, or the bounded-wait budget is exhausted: assert",
+                  "// STRICTLY -- this must FAIL, never hang and never soft-pass, on a",
+                  "// stuck PENDING.",
+                  "pm.test('Order reaches terminal status CONFIRMED within the bounded-wait budget (' + maxAttempts + ' x ' + pm.collectionVariables.get('checkoutPollDelayMs') + 'ms, attempt ' + (attempt + 1) + '/' + maxAttempts + ')', function () {",
                   "    pm.expect(json.status).to.eql('CONFIRMED');",
                   "});",
                   "pm.test('Persisted order id matches the created id', function () {",
                   "    pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('happyPathOrderId')));",
+                  "});",
+                  "pm.test('Order total matches one widget unit price (1999 cents)', function () {",
+                  "    pm.expect(json.totalCents).to.eql(1999);",
+                  "});",
+                  "pm.test('Order items echo the checkout line', function () {",
+                  "    pm.expect(json.items).to.have.lengthOf(1);",
+                  "    pm.expect(json.items[0].sku).to.eql('SKU-WIDGET-001');",
+                  "    pm.expect(json.items[0].quantity).to.eql(1);",
+                  "    pm.expect(json.items[0].unitPriceCents).to.eql(1999);",
                   "});"
                 ]
               }
@@ -340,7 +383,7 @@
           ]
         },
         {
-          "name": "3b. Checkout with the DECLINE payment-method sentinel -> 402, PAYMENT_DECLINED",
+          "name": "3b. Checkout with the DECLINE payment-method sentinel -> 402 (sync) or 202 (async pending)",
           "request": {
             "method": "POST",
             "header": [
@@ -362,21 +405,102 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Declined payment returns 402 Payment Required', function () {",
-                  "    pm.response.to.have.status(402);",
+                  "// NEWMAN-ASYNC conversion (r05): today's synchronous monolith rolls",
+                  "// back the ENTIRE transaction.atomic() on a decline -- including the",
+                  "// Order row itself (SMELL[ch.22]) -- so there is no order id to poll",
+                  "// and the 402 response IS already terminal. The upcoming choreographed",
+                  "// path persists an order (PENDING) up front and returns 202, with the",
+                  "// compensating decline/release happening asynchronously. Branch on",
+                  "// which one actually came back.",
+                  "pm.test('Declined checkout returns 402 (sync decline) or 202 (async accepted, pending choreography)', function () {",
+                  "    pm.expect([402, 202]).to.include(pm.response.code);",
                   "});",
                   "pm.test('Content-Type is application/json', function () {",
                   "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
                   "});",
                   "var json = pm.response.json();",
-                  "pm.test('Documented error contract: error=PAYMENT_DECLINED', function () {",
-                  "    pm.expect(json.error).to.eql('PAYMENT_DECLINED');",
+                  "pm.collectionVariables.set('declinePollAttempt', '0');",
+                  "pm.collectionVariables.set('declineStockPollAttempt', '0');",
+                  "",
+                  "if (pm.response.code === 402) {",
+                  "    pm.collectionVariables.set('declineCheckoutMode', 'sync');",
+                  "    pm.collectionVariables.set('declineOrderId', '');",
+                  "    pm.test('Documented error contract: error=PAYMENT_DECLINED', function () {",
+                  "        pm.expect(json.error).to.eql('PAYMENT_DECLINED');",
+                  "    });",
+                  "    pm.test('Error body mentions the declined payment method', function () {",
+                  "        pm.expect(json.message).to.include('DECLINE');",
+                  "    });",
+                  "    pm.test('Error body carries a timestamp', function () {",
+                  "        pm.expect(json.timestamp).to.not.be.undefined;",
+                  "    });",
+                  "    // Sync path: no order id exists to poll -- jump straight past 3c",
+                  "    // (the order-status poll) to 3d's stock-nets-to-zero poll.",
+                  "    postman.setNextRequest('3d. Bounded-wait poll: stock nets back to zero after the decline');",
+                  "} else {",
+                  "    pm.collectionVariables.set('declineCheckoutMode', 'async');",
+                  "    pm.collectionVariables.set('declineOrderId', json.id);",
+                  "    pm.test('Order id is a number (async path persists an order row up front)', function () {",
+                  "        pm.expect(json.id).to.be.a('number');",
+                  "    });",
+                  "    pm.test('Order status is PENDING on the 202 response', function () {",
+                  "        pm.expect(json.status).to.eql('PENDING');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3c. Bounded-wait poll: order reaches PAYMENT_DECLINED (async path only)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{declineOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{declineOrderId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Only ever reached when 3b's response was 202 -- 3b jumps straight",
+                  "// past this item via setNextRequest when it got the sync 402 instead",
+                  "// (no order id would exist to poll). Same bounded-wait idiom as 1c/N2.",
+                  "var attempt = Number(pm.collectionVariables.get('declinePollAttempt')) || 0;",
+                  "if (attempt > 0) {",
+                  "    var delayMs = Number(pm.collectionVariables.get('checkoutPollDelayMs'));",
+                  "    var start = Date.now();",
+                  "    while (Date.now() - start < delayMs) { /* busy-wait */ }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Order lookup returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
                   "});",
-                  "pm.test('Error body mentions the declined payment method', function () {",
-                  "    pm.expect(json.message).to.include('DECLINE');",
-                  "});",
-                  "pm.test('Error body carries a timestamp', function () {",
-                  "    pm.expect(json.timestamp).to.not.be.undefined;",
+                  "var json = pm.response.json();",
+                  "var maxAttempts = Number(pm.collectionVariables.get('checkoutPollMaxAttempts'));",
+                  "var attempt = Number(pm.collectionVariables.get('declinePollAttempt')) || 0;",
+                  "",
+                  "if (json.status === 'PENDING' && attempt < maxAttempts - 1) {",
+                  "    pm.collectionVariables.set('declinePollAttempt', String(attempt + 1));",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Order reaches terminal status PAYMENT_DECLINED within the bounded-wait budget (' + maxAttempts + ' x ' + pm.collectionVariables.get('checkoutPollDelayMs') + 'ms, attempt ' + (attempt + 1) + '/' + maxAttempts + ')', function () {",
+                  "    pm.expect(json.status).to.eql('PAYMENT_DECLINED');",
                   "});"
                 ]
               }
@@ -384,7 +508,7 @@
           ]
         },
         {
-          "name": "3c. Stock rolled back after the decline (not left decremented)",
+          "name": "3d. Bounded-wait poll: stock nets back to zero after the decline",
           "request": {
             "method": "GET",
             "header": [],
@@ -396,6 +520,25 @@
           },
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// ALWAYS runs, in both sync and async modes -- this is the",
+                  "// non-vacuity proof: against today's synchronous monolith the",
+                  "// reservation already rolled back by the time 3b returned, so this",
+                  "// resolves on attempt 1 with 0 retries. Same bounded-wait idiom as",
+                  "// elsewhere in this collection.",
+                  "var attempt = Number(pm.collectionVariables.get('declineStockPollAttempt')) || 0;",
+                  "if (attempt > 0) {",
+                  "    var delayMs = Number(pm.collectionVariables.get('checkoutPollDelayMs'));",
+                  "    var start = Date.now();",
+                  "    while (Date.now() - start < delayMs) { /* busy-wait */ }",
+                  "}"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
@@ -405,7 +548,16 @@
                   "});",
                   "var json = pm.response.json();",
                   "var before = Number(pm.collectionVariables.get('widgetStockBeforeDecline'));",
-                  "pm.test('Quantity on hand is unchanged -- the reservation rolled back with the declined payment (same transaction.atomic(), order/services.py SMELL[ch.22])', function () {",
+                  "var maxAttempts = Number(pm.collectionVariables.get('checkoutPollMaxAttempts'));",
+                  "var attempt = Number(pm.collectionVariables.get('declineStockPollAttempt')) || 0;",
+                  "",
+                  "if (json.quantityOnHand !== before && attempt < maxAttempts - 1) {",
+                  "    pm.collectionVariables.set('declineStockPollAttempt', String(attempt + 1));",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Quantity on hand nets back to the pre-checkout value within the bounded-wait budget -- compensating release (' + maxAttempts + ' x ' + pm.collectionVariables.get('checkoutPollDelayMs') + 'ms, attempt ' + (attempt + 1) + '/' + maxAttempts + ')', function () {",
                   "    pm.expect(json.quantityOnHand).to.eql(before);",
                   "});"
                 ]
@@ -446,7 +598,7 @@
           ]
         },
         {
-          "name": "4b. Checkout with the SHIP-FAIL address sentinel -> 422, SHIPPING_FAILED",
+          "name": "4b. Checkout with the SHIP-FAIL address sentinel -> 422 (sync) or 202 (async pending)",
           "request": {
             "method": "POST",
             "header": [
@@ -468,21 +620,102 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Shipping failure returns 422 Unprocessable Entity', function () {",
-                  "    pm.response.to.have.status(422);",
+                  "// NEWMAN-ASYNC conversion (r05): same shape as Scenario 3's decline --",
+                  "// today's synchronous monolith rolls back the ENTIRE",
+                  "// transaction.atomic() on a shipping failure, including the Order row",
+                  "// itself (shipping.services.dispatch() SMELL[ch.22]), so there is no",
+                  "// order id to poll and the 422 IS already terminal. The upcoming",
+                  "// choreographed path persists an order (PENDING) up front and returns",
+                  "// 202, with the compensating release happening asynchronously.",
+                  "pm.test('Shipping-failed checkout returns 422 (sync failure) or 202 (async accepted, pending choreography)', function () {",
+                  "    pm.expect([422, 202]).to.include(pm.response.code);",
                   "});",
                   "pm.test('Content-Type is application/json', function () {",
                   "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
                   "});",
                   "var json = pm.response.json();",
-                  "pm.test('Documented error contract: error=SHIPPING_FAILED', function () {",
-                  "    pm.expect(json.error).to.eql('SHIPPING_FAILED');",
+                  "pm.collectionVariables.set('shipFailPollAttempt', '0');",
+                  "pm.collectionVariables.set('shipFailStockPollAttempt', '0');",
+                  "",
+                  "if (pm.response.code === 422) {",
+                  "    pm.collectionVariables.set('shipFailCheckoutMode', 'sync');",
+                  "    pm.collectionVariables.set('shipFailOrderId', '');",
+                  "    pm.test('Documented error contract: error=SHIPPING_FAILED', function () {",
+                  "        pm.expect(json.error).to.eql('SHIPPING_FAILED');",
+                  "    });",
+                  "    pm.test('Error body mentions the failed shipping address', function () {",
+                  "        pm.expect(json.message).to.include('SHIP-FAIL');",
+                  "    });",
+                  "    pm.test('Error body carries a timestamp', function () {",
+                  "        pm.expect(json.timestamp).to.not.be.undefined;",
+                  "    });",
+                  "    // Sync path: no order id exists to poll -- jump straight past 4c",
+                  "    // (the order-status poll) to 4d's stock-nets-to-zero poll.",
+                  "    postman.setNextRequest('4d. Bounded-wait poll: stock nets back to zero after the shipping failure');",
+                  "} else {",
+                  "    pm.collectionVariables.set('shipFailCheckoutMode', 'async');",
+                  "    pm.collectionVariables.set('shipFailOrderId', json.id);",
+                  "    pm.test('Order id is a number (async path persists an order row up front)', function () {",
+                  "        pm.expect(json.id).to.be.a('number');",
+                  "    });",
+                  "    pm.test('Order status is PENDING on the 202 response', function () {",
+                  "        pm.expect(json.status).to.eql('PENDING');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4c. Bounded-wait poll: order reaches SHIPPING_FAILED (async path only)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{shipFailOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{shipFailOrderId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Only ever reached when 4b's response was 202 -- 4b jumps straight",
+                  "// past this item via setNextRequest when it got the sync 422 instead",
+                  "// (no order id would exist to poll). Same bounded-wait idiom as 1c/3c/N2.",
+                  "var attempt = Number(pm.collectionVariables.get('shipFailPollAttempt')) || 0;",
+                  "if (attempt > 0) {",
+                  "    var delayMs = Number(pm.collectionVariables.get('checkoutPollDelayMs'));",
+                  "    var start = Date.now();",
+                  "    while (Date.now() - start < delayMs) { /* busy-wait */ }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Order lookup returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
                   "});",
-                  "pm.test('Error body mentions the failed shipping address', function () {",
-                  "    pm.expect(json.message).to.include('SHIP-FAIL');",
-                  "});",
-                  "pm.test('Error body carries a timestamp', function () {",
-                  "    pm.expect(json.timestamp).to.not.be.undefined;",
+                  "var json = pm.response.json();",
+                  "var maxAttempts = Number(pm.collectionVariables.get('checkoutPollMaxAttempts'));",
+                  "var attempt = Number(pm.collectionVariables.get('shipFailPollAttempt')) || 0;",
+                  "",
+                  "if (json.status === 'PENDING' && attempt < maxAttempts - 1) {",
+                  "    pm.collectionVariables.set('shipFailPollAttempt', String(attempt + 1));",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Order reaches terminal status SHIPPING_FAILED within the bounded-wait budget (' + maxAttempts + ' x ' + pm.collectionVariables.get('checkoutPollDelayMs') + 'ms, attempt ' + (attempt + 1) + '/' + maxAttempts + ')', function () {",
+                  "    pm.expect(json.status).to.eql('SHIPPING_FAILED');",
                   "});"
                 ]
               }
@@ -490,7 +723,7 @@
           ]
         },
         {
-          "name": "4c. Stock net-zero -- the whole checkout rolled back, including payment and inventory",
+          "name": "4d. Bounded-wait poll: stock nets back to zero after the shipping failure",
           "request": {
             "method": "GET",
             "header": [],
@@ -502,6 +735,24 @@
           },
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// ALWAYS runs, in both sync and async modes -- the non-vacuity proof:",
+                  "// against today's synchronous monolith the reservation (and payment",
+                  "// capture, and the order row itself) already rolled back by the time",
+                  "// 4b returned, so this resolves on attempt 1 with 0 retries.",
+                  "var attempt = Number(pm.collectionVariables.get('shipFailStockPollAttempt')) || 0;",
+                  "if (attempt > 0) {",
+                  "    var delayMs = Number(pm.collectionVariables.get('checkoutPollDelayMs'));",
+                  "    var start = Date.now();",
+                  "    while (Date.now() - start < delayMs) { /* busy-wait */ }",
+                  "}"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
@@ -511,7 +762,16 @@
                   "});",
                   "var json = pm.response.json();",
                   "var before = Number(pm.collectionVariables.get('widgetStockBeforeShipFail'));",
-                  "pm.test('Quantity on hand is unchanged -- ShippingFailed unwinds the SAME transaction.atomic() that reserved stock and captured payment (order/services.py SMELL[ch.22])', function () {",
+                  "var maxAttempts = Number(pm.collectionVariables.get('checkoutPollMaxAttempts'));",
+                  "var attempt = Number(pm.collectionVariables.get('shipFailStockPollAttempt')) || 0;",
+                  "",
+                  "if (json.quantityOnHand !== before && attempt < maxAttempts - 1) {",
+                  "    pm.collectionVariables.set('shipFailStockPollAttempt', String(attempt + 1));",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Quantity on hand nets back to the pre-checkout value within the bounded-wait budget -- compensating release (' + maxAttempts + ' x ' + pm.collectionVariables.get('checkoutPollDelayMs') + 'ms, attempt ' + (attempt + 1) + '/' + maxAttempts + ')', function () {",
                   "    pm.expect(json.quantityOnHand).to.eql(before);",
                   "});"
                 ]
@@ -869,10 +1129,146 @@
       ]
     },
     {
+      "name": "Payment Context Contract",
+      "item": [
+        {
+          "name": "P1. List payments by orderId -> 200, camelCase array",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments?orderId={{happyPathOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments"],
+              "query": [{ "key": "orderId", "value": "{{happyPathOrderId}}" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Same inert-by-default guard pattern as the Inventory Context",
+                  "// Contract folder (see README.md) -- test-script-level only, no",
+                  "// setNextRequest, so this non-terminal folder can never strand the",
+                  "// Notification Context Contract folder that follows it. The request",
+                  "// itself is a cheap, side-effect-free GET, safe to fire unconditionally.",
+                  "if (pm.environment.get('paymentContractEnabled') !== 'true') {",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Payment list returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Content-Type is application/json', function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Response is a non-empty array scoped to the happy-path order', function () {",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.length).to.be.at.least(1);",
+                  "    json.forEach(function (payment) {",
+                  "        pm.expect(payment.orderId).to.eql(Number(pm.collectionVariables.get('happyPathOrderId')));",
+                  "    });",
+                  "});",
+                  "pm.test('Every payment is camelCase: id, orderId, amountCents, method, status, createdAt', function () {",
+                  "    json.forEach(function (payment) {",
+                  "        pm.expect(payment).to.have.all.keys('id', 'orderId', 'amountCents', 'method', 'status', 'createdAt');",
+                  "    });",
+                  "});",
+                  "pm.collectionVariables.set('paymentId', json[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P2. Get the captured payment by id -> 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/{{paymentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "{{paymentId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Same inert-by-default guard as P1 -- see README.md.",
+                  "if (pm.environment.get('paymentContractEnabled') !== 'true') {",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Payment lookup returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Returned payment id matches the requested id', function () {",
+                  "    pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('paymentId')));",
+                  "});",
+                  "pm.test('camelCase shape: id, orderId, amountCents, method, status, createdAt', function () {",
+                  "    pm.expect(json).to.have.all.keys('id', 'orderId', 'amountCents', 'method', 'status', 'createdAt');",
+                  "});",
+                  "pm.test('Payment status is CAPTURED (happy-path checkout)', function () {",
+                  "    pm.expect(json.status).to.eql('CAPTURED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P3. Get unknown payment id -> 404, uniform error body",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/999999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "999999999"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Same inert-by-default guard as P1 -- see README.md.",
+                  "if (pm.environment.get('paymentContractEnabled') !== 'true') {",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Unknown payment id returns 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Uniform error body: error/message/timestamp present', function () {",
+                  "    pm.expect(json.error).to.not.be.undefined;",
+                  "    pm.expect(json.message).to.not.be.undefined;",
+                  "    pm.expect(json.timestamp).to.not.be.undefined;",
+                  "});",
+                  "pm.test('Documented error contract: error=NOT_FOUND', function () {",
+                  "    pm.expect(json.error).to.eql('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Notification Context Contract",
       "item": [
         {
-          "name": "N1. Checkout for the notification contract -> 201 Created, CONFIRMED",
+          "name": "N1. Checkout for the notification contract -> 201 or 202 Accepted",
           "request": {
             "method": "POST",
             "header": [
@@ -917,16 +1313,84 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Order created returns 201', function () {",
-                  "    pm.response.to.have.status(201);",
+                  "// NEWMAN-ASYNC conversion (r05): tolerant of either the current 201",
+                  "// CONFIRMED-on-create or the upcoming 202 Accepted -- either way the",
+                  "// terminal CONFIRMED check moves to N1b's bounded-wait poll so this",
+                  "// folder survives the async flip too.",
+                  "pm.test('Order created returns 201 or 202', function () {",
+                  "    pm.expect([201, 202]).to.include(pm.response.code);",
                   "});",
                   "var json = pm.response.json();",
-                  "pm.test('Order status is CONFIRMED (checkout stays synchronous -- only notification delivery moved to Kafka; order.placed is written to the outbox in the same transaction)', function () {",
-                  "    pm.expect(json.status).to.eql('CONFIRMED');",
-                  "});",
                   "pm.collectionVariables.set('notificationOrderId', String(json.id));",
                   "pm.collectionVariables.set('notificationCustomerId', String(json.customerId));",
-                  "pm.collectionVariables.set('notificationPollAttempt', '0');"
+                  "pm.collectionVariables.set('notificationPollAttempt', '0');",
+                  "pm.collectionVariables.set('notificationOrderPollAttempt', '0');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N1b. Bounded-wait poll: order reaches CONFIRMED",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{notificationOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{notificationOrderId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Same INERT GUARD as N1 -- this folder is terminal, so ending the run",
+                  "// here strands nothing. Redundant for the normal full-suite run (N1's",
+                  "// own guard already ended it before this item is reached), but keeps",
+                  "// this request inert if the folder is ever run in isolation.",
+                  "if (pm.environment.get('notificationContractEnabled') !== 'true') {",
+                  "    postman.setNextRequest(null);",
+                  "}",
+                  "",
+                  "// Bounded-wait idiom, same shape as N2's -- only delay on a retry,",
+                  "// never on attempt 0.",
+                  "var attempt = Number(pm.collectionVariables.get('notificationOrderPollAttempt')) || 0;",
+                  "if (attempt > 0) {",
+                  "    var delayMs = Number(pm.collectionVariables.get('notificationPollDelayMs'));",
+                  "    var start = Date.now();",
+                  "    while (Date.now() - start < delayMs) { /* busy-wait */ }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('notificationContractEnabled') !== 'true') {",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Order lookup returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "var maxAttempts = Number(pm.collectionVariables.get('notificationPollMaxAttempts'));",
+                  "var attempt = Number(pm.collectionVariables.get('notificationOrderPollAttempt')) || 0;",
+                  "",
+                  "if (json.status === 'PENDING' && attempt < maxAttempts - 1) {",
+                  "    pm.collectionVariables.set('notificationOrderPollAttempt', String(attempt + 1));",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Order reaches terminal status CONFIRMED within the bounded-wait budget (' + maxAttempts + ' x ' + pm.collectionVariables.get('notificationPollDelayMs') + 'ms, attempt ' + (attempt + 1) + '/' + maxAttempts + ')', function () {",
+                  "    pm.expect(json.status).to.eql('CONFIRMED');",
+                  "});"
                 ]
               }
             }
@@ -1045,14 +1509,27 @@
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8000", "type": "string" },
     { "key": "happyPathOrderId", "value": "", "type": "string" },
+    { "key": "happyPathPollAttempt", "value": "0", "type": "string" },
     { "key": "widgetStockBeforeHappyPath", "value": "", "type": "string" },
     { "key": "gizmoStockBeforeOverorder", "value": "", "type": "string" },
     { "key": "widgetStockBeforeDecline", "value": "", "type": "string" },
+    { "key": "declineCheckoutMode", "value": "", "type": "string" },
+    { "key": "declineOrderId", "value": "", "type": "string" },
+    { "key": "declinePollAttempt", "value": "0", "type": "string" },
+    { "key": "declineStockPollAttempt", "value": "0", "type": "string" },
     { "key": "widgetStockBeforeShipFail", "value": "", "type": "string" },
+    { "key": "shipFailCheckoutMode", "value": "", "type": "string" },
+    { "key": "shipFailOrderId", "value": "", "type": "string" },
+    { "key": "shipFailPollAttempt", "value": "0", "type": "string" },
+    { "key": "shipFailStockPollAttempt", "value": "0", "type": "string" },
+    { "key": "checkoutPollMaxAttempts", "value": "20", "type": "string" },
+    { "key": "checkoutPollDelayMs", "value": "750", "type": "string" },
     { "key": "seededReviewId", "value": "", "type": "string" },
     { "key": "newReviewId", "value": "", "type": "string" },
+    { "key": "paymentId", "value": "", "type": "string" },
     { "key": "notificationCustomerId", "value": "", "type": "string" },
     { "key": "notificationOrderId", "value": "", "type": "string" },
+    { "key": "notificationOrderPollAttempt", "value": "0", "type": "string" },
     { "key": "notificationPollAttempt", "value": "0", "type": "string" },
     { "key": "notificationPollMaxAttempts", "value": "20", "type": "string" },
     { "key": "notificationPollDelayMs", "value": "750", "type": "string" }
