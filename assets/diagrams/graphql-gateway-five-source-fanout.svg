@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 620" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="20" y="56" width="1360" height="500" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="76" font-size="12" font-weight="700" fill="#1d1d1d">graphql-gateway :8090 -- owns no data, bounded by depth/token limits</text>
+<rect x="50" y="110" width="220" height="80" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="160.0" y="148.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Client</text>
+<text x="160.0" y="165.0" font-size="11.5" fill="#555555" text-anchor="middle">{ order(id) { ... } }</text>
+<rect x="330" y="110" width="280" height="80" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="470.0" y="140.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Query.order</text>
+<text x="470.0" y="157.5" font-size="11.5" fill="#555555" text-anchor="middle">fetch_order(), then lazy</text>
+<text x="470.0" y="172.5" font-size="11.5" fill="#555555" text-anchor="middle">per-field resolvers</text>
+<rect x="330" y="230" width="280" height="90" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="470.0" y="265.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">QueryDepthLimiter / MaxTokensLimiter</text>
+<text x="470.0" y="282.5" font-size="11.5" fill="#555555" text-anchor="middle">fixed operator config, not</text>
+<text x="470.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">derived from the request</text>
+<rect x="700" y="70" width="260" height="70" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="830.0" y="103.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">order-service :8088</text>
+<text x="830.0" y="120.0" font-size="11.5" fill="#555555" text-anchor="middle">REST GET /api/orders/{id}</text>
+<rect x="700" y="160" width="260" height="70" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="830.0" y="193.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">payment-service :8085</text>
+<text x="830.0" y="210.0" font-size="11.5" fill="#555555" text-anchor="middle">REST, order.payments</text>
+<rect x="700" y="250" width="260" height="70" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="830.0" y="283.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">shipping-service :8087</text>
+<text x="830.0" y="300.0" font-size="11.5" fill="#555555" text-anchor="middle">REST, order.shipments</text>
+<rect x="700" y="340" width="260" height="70" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="830.0" y="373.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">inventory-service :9004</text>
+<text x="830.0" y="390.0" font-size="11.5" fill="#555555" text-anchor="middle">gRPC GetStock, item.stock</text>
+<rect x="700" y="430" width="260" height="70" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="830.0" y="463.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">review-service :8001</text>
+<text x="830.0" y="480.0" font-size="11.5" fill="#555555" text-anchor="middle">REST, item.reviews by sku</text>
+<rect x="1020" y="250" width="320" height="100" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="1180.0" y="290.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">A downstream failure nulls JUST that</text>
+<text x="1180.0" y="307.5" font-size="11.5" fill="#555555" text-anchor="middle">field + one entry in errors[] --</text>
+<text x="1180.0" y="322.5" font-size="11.5" fill="#555555" text-anchor="middle">siblings still resolve, never a 500</text>
+<rect x="1020" y="400" width="320" height="100" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="1180.0" y="440.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Unknown order id: data.order = null,</text>
+<text x="1180.0" y="457.5" font-size="11.5" fill="#555555" text-anchor="middle">NO errors[] entry --</text>
+<text x="1180.0" y="472.5" font-size="11.5" fill="#555555" text-anchor="middle">a missing order is a legitimate answer</text>
+<path d="M270.0,150.0 L330.0,150.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M610.0,132.5 L700.0,121.25" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="661.0" y="120.875" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">order (always)</text>
+<text x="661.0" y="120.875" font-size="11" fill="#555" text-anchor="middle">order (always)</text>
+<path d="M610.0,167.5 L700.0,178.75" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="661.0" y="167.125" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">payments (if selected)</text>
+<text x="661.0" y="167.125" font-size="11" fill="#555" text-anchor="middle">payments (if selected)</text>
+<path d="M576.6666666666666,190.0 L736.6666666666666,250.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="662.6666666666666" y="214.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">shipments (if selected)</text>
+<text x="662.6666666666666" y="214.0" font-size="11" fill="#555" text-anchor="middle">shipments (if selected)</text>
+<path d="M534.0,190.0 L774.0,340.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="660.0" y="259.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">stock (if selected)</text>
+<text x="660.0" y="259.0" font-size="11" fill="#555" text-anchor="middle">stock (if selected)</text>
+<path d="M515.7142857142857,190.0 L790.0,430.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="658.8571428571429" y="304.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">reviews (if selected)</text>
+<text x="658.8571428571429" y="304.0" font-size="11" fill="#555" text-anchor="middle">reviews (if selected)</text>
+<path d="M470.0,190.0 L470.0,230.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M960.0,347.14285714285717 L1020.0,334.2857142857143" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M865.5072463768116,140.0 L1129.2753623188405,400.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="700.0" y="30" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.26 -- one query, five sources, no data owned locally: partial failure is a null field, never a crashed request</text>
+<text x="40" y="596" font-size="11" fill="#555555" text-anchor="start">Every target above is fixed operator configuration -- never derived from the incoming request -- which is what keeps a fan-out gateway from becoming an SSRF/amplification vector.</text>
+</svg>
