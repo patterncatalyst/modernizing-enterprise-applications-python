@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1340 760" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="20" y="50" width="1300" height="560" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="70" font-size="12" font-weight="700" fill="#1d1d1d">Already running in this system</text>
+<rect x="560" y="10" width="220" height="40" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="670.0" y="35.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Client: POST /api/orders</text>
+<rect x="60" y="110" width="280" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="200.0" y="150.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">gRPC deadline: 5.0s</text>
+<text x="200.0" y="167.5" font-size="11.5" fill="#555555" text-anchor="middle">order.inventory_client.py</text>
+<text x="200.0" y="182.5" font-size="11.5" fill="#555555" text-anchor="middle">RpcError -&gt; 503, compensating Release</text>
+<rect x="380" y="110" width="300" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="530.0" y="150.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Transactional outbox</text>
+<text x="530.0" y="167.5" font-size="11.5" fill="#555555" text-anchor="middle">at-least-once + 2-layer idempotency</text>
+<text x="530.0" y="182.5" font-size="11.5" fill="#555555" text-anchor="middle">(status guard + unique-index ledger)</text>
+<rect x="720" y="110" width="280" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="860.0" y="150.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Strangler proxy 502 bridge</text>
+<text x="860.0" y="167.5" font-size="11.5" fill="#555555" text-anchor="middle">unreachable upstream -&gt; real 502,</text>
+<text x="860.0" y="182.5" font-size="11.5" fill="#555555" text-anchor="middle">never a swallowed 200</text>
+<rect x="1040" y="110" width="240" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1160.0" y="150.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Saga crash-resume</text>
+<text x="1160.0" y="167.5" font-size="11.5" fill="#555555" text-anchor="middle">resume_running_sagas()</text>
+<text x="1160.0" y="182.5" font-size="11.5" fill="#555555" text-anchor="middle">picks up at step_index</text>
+<rect x="380" y="280" width="300" height="120" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="530.0" y="323.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">NEW: tenacity retry-with-timeout</text>
+<text x="530.0" y="340.0" font-size="11.5" fill="#555555" text-anchor="middle">enrich_client.py -- 3 attempts,</text>
+<text x="530.0" y="355.0" font-size="11.5" fill="#555555" text-anchor="middle">exponential backoff, TRANSIENT only</text>
+<text x="530.0" y="370.0" font-size="11.5" fill="#555555" text-anchor="middle">(contract errors raised immediately)</text>
+<rect x="60" y="450" width="300" height="110" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="210.0" y="495.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">DEFERRED: pybreaker</text>
+<text x="210.0" y="512.5" font-size="11.5" fill="#555555" text-anchor="middle">circuit breaker -- no sustained-</text>
+<text x="210.0" y="527.5" font-size="11.5" fill="#555555" text-anchor="middle">failure load to justify it yet</text>
+<rect x="400" y="450" width="300" height="110" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="550.0" y="495.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">DEFERRED: asyncio.Semaphore</text>
+<text x="550.0" y="512.5" font-size="11.5" fill="#555555" text-anchor="middle">bulkhead -- one saga&#x27;s enrich call</text>
+<text x="550.0" y="527.5" font-size="11.5" fill="#555555" text-anchor="middle">can&#x27;t yet starve another&#x27;s</text>
+<rect x="760" y="450" width="480" height="110" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="1000.0" y="495.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Honesty discipline: stuck-* negative checks</text>
+<text x="1000.0" y="512.5" font-size="11.5" fill="#555555" text-anchor="middle">make failures VISIBLE (RED, not a false green) --</text>
+<text x="1000.0" y="527.5" font-size="11.5" fill="#555555" text-anchor="middle">the AWAITING_SHIPMENT poll-script bug, found live</text>
+<path d="M597.6923076923077,50.0 L340.0,121.27659574468086" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M648.4615384615385,50.0 L583.8461538461538,110.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M699.2307692307693,50.0 L786.9230769230769,110.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M745.3846153846154,50.0 L1040.0,128.16326530612244" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M530.0,210.0 L530.0,280.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="536.0" y="239.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">shipping&#x27;s enrich step</text>
+<text x="536.0" y="239.0" font-size="11" fill="#555" text-anchor="middle">shipping&#x27;s enrich step</text>
+<path d="M413.6363636363636,400.0 L316.66666666666663,450.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="371.1515151515151" y="419.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">not yet needed</text>
+<text x="371.1515151515151" y="419.0" font-size="11" fill="#555" text-anchor="middle">not yet needed</text>
+<path d="M537.2727272727273,400.0 L543.3333333333334,450.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="546.3030303030303" y="419.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">not yet needed</text>
+<text x="546.3030303030303" y="419.0" font-size="11" fill="#555" text-anchor="middle">not yet needed</text>
+<path d="M680.0,392.6595744680851 L843.3333333333334,450.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="767.6666666666667" y="415.32978723404256" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">made visible, not hidden</text>
+<text x="767.6666666666667" y="415.32978723404256" font-size="11" fill="#555" text-anchor="middle">made visible, not hidden</text>
+<text x="670.0" y="30" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.25 -- the resilience chassis: four mechanisms already load-bearing, one new one, two deliberately deferred</text>
+<text x="40" y="720" font-size="11" fill="#555555" text-anchor="start">Deferral is a decision, not an oversight: pybreaker/Semaphore solve problems this system doesn&#x27;t have yet (sustained failure, contention).</text>
+<text x="40" y="738" font-size="11" fill="#555555" text-anchor="start">6/6 consecutive stable runs after the poll-script fix -- a resilience lesson about the TEST SUITE, not just the system under test.</text>
+</svg>

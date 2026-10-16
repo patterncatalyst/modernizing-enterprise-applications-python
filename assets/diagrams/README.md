@@ -32,6 +32,11 @@ This file is the catalogue — one row per diagram, append-only.
 | `acid-to-acd-boundary` | ch.22 | What the single `transaction.atomic()` used to span (order + payment + shipping + outbox, full ACID) versus what it spans now (order + outbox only, A/C/D kept) — naming the Isolation gap where a PENDING order is visible and real before payment or shipping have an opinion. Source: `acid-to-acd-boundary.py`. |
 | `order-pending-to-terminal-lifecycle` | ch.22 | The state machine the ACD model introduces: PENDING's three idempotent terminal exits (CONFIRMED, SHIPPING_FAILED, PAYMENT_DECLINED) plus the honest stuck-PENDING failure mode a bounded-wait poll catches rather than hides. Source: `order-pending-to-terminal-lifecycle.py`. |
 | `idempotent-compensation-two-layers` | ch.23 | DRQ-043 closed: a compensating `Release` survives redelivery at both the Kafka-event layer (the saga's status-transition guard) and the RPC layer (inventory-service's `compensations` ledger, `INSERT ... ON CONFLICT DO NOTHING`), proven live by stock held at 94 across both redelivery paths. Source: `idempotent-compensation-two-layers.py`. |
+| `orchestrated-shipping-saga-sequence` | ch.24 | The four-step orchestrated saga top to bottom (`enrich -> dispatch -> book_carrier -> emit`), with `app/orchestrator.py`'s single coordinator sequencing every step and owning the reverse-order compensation decision on a `book_carrier` failure. Source: `orchestrated-shipping-saga-sequence.py`. |
+| `choreography-vs-orchestration-contrast` | ch.24 | r05's choreographed payment saga and r06's orchestrated shipping saga side by side — same kind of problem, opposite control-flow topology: the left panel has no box that knows the whole sequence, the right panel has exactly one. Source: `choreography-vs-orchestration-contrast.py`. |
+| `saga-state-machine-crash-resume` | ch.24 | The saga's own status state machine (RUNNING/COMPENSATING/COMPLETED/COMPENSATED), the `saga_log` row each step appends, and the crash-resume path (`resume_running_sagas()`) that is this service's durability upgrade over the Java sibling's in-memory Camel Saga coordinator — cites the live `resumedSagaCount: 1` proof. Source: `saga-state-machine-crash-resume.py`. |
+| `order-lifecycle-awaiting-shipment-refund` | ch.24 | The full order lifecycle once `SHIPPING_MODE=orchestrated` (PENDING -> AWAITING_SHIPMENT -> CONFIRMED/SHIPPING_FAILED) plus the refund hop that closes r05's stranded-payment gap (DRQ-054): the same `shipment.failed` event that drives SHIPPING_FAILED also drives payment-service's CAPTURED -> REFUNDED. Source: `order-lifecycle-awaiting-shipment-refund.py`. |
+| `shipping-resilience-chassis` | ch.25 | The resilience chassis: four mechanisms already load-bearing (gRPC deadline, outbox at-least-once + two-layer idempotency, the proxy's 502 fail-safe, saga crash-resume), the one concrete new mechanism (tenacity retry-with-timeout on `enrich`), and pybreaker/`asyncio.Semaphore` named as deliberately deferred. Source: `shipping-resilience-chassis.py`. |
 
 ## Regenerating
 
@@ -59,6 +64,11 @@ python3 -I choreographed-payment-saga-sequence.py
 python3 -I acid-to-acd-boundary.py
 python3 -I order-pending-to-terminal-lifecycle.py
 python3 -I idempotent-compensation-two-layers.py
+python3 -I orchestrated-shipping-saga-sequence.py
+python3 -I choreography-vs-orchestration-contrast.py
+python3 -I saga-state-machine-crash-resume.py
+python3 -I order-lifecycle-awaiting-shipment-refund.py
+python3 -I shipping-resilience-chassis.py
 ```
 
 Each spec validates its own output on the way out (`generate_diagram.emit()`
