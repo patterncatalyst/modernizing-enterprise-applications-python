@@ -23,11 +23,14 @@ context is only "done" once it passes unchanged.
 
 | File | Purpose |
 |---|---|
-| `mea.postman_collection.json` | The collection itself: Smoke + four checkout scenarios (the four checkout scenarios' terminal states/201→202-tolerant conversion and bounded-wait polls landed at r05, see below; Scenario 1's own poll got a wider, dedicated budget and Scenario 4 gained a new env-guarded refund poll at r06) + the r02 **Review Context Contract** folder + the r04 **Inventory Context Contract** folder + the r05 **Payment Context Contract** folder + the r06 **Shipping Context Contract** folder + the r03 **Notification Context Contract** folder (the suite's first bounded-wait/async folder). Every request is parameterized by `{{baseUrl}}`. |
+| `mea.postman_collection.json` | The collection itself: Smoke + four checkout scenarios (the four checkout scenarios' terminal states/201→202-tolerant conversion and bounded-wait polls landed at r05, see below; Scenario 1's own poll got a wider, dedicated budget and Scenario 4 gained a new env-guarded refund poll at r06) + the r02 **Review Context Contract** folder + the r04 **Inventory Context Contract** folder + the r05 **Payment Context Contract** folder + the r06 **Shipping Context Contract** folder + the r07 **Order Context Contract** folder + the r03 **Notification Context Contract** folder (the suite's first bounded-wait/async folder) + the r07 **GraphQL Gateway Contract** folder (STAGED, inert — the new last folder). Every request is parameterized by `{{baseUrl}}` (the GraphQL folder by `{{graphqlUrl}}`). |
 | `local.postman_environment.json` | Points `{{baseUrl}}` at the monolith, `http://localhost:8000`. |
 | `proxy.postman_environment.json` | Points `{{baseUrl}}` at the strangler proxy (`examples/01-strangler-proxy`), `http://localhost:8888` — the re-pointing target for the cutover evidence below. |
 | `shipping-service.postman_environment.json` | Forward-ref: points `{{baseUrl}}` at the standalone shipping-service's own address, `http://localhost:8087` — not yet exercised (the shipping-service hasn't landed live), added at r06 for the later cutover lane to re-point at, same as every other extracted-service environment file in this directory. |
+| `order-service.postman_environment.json` | Forward-ref: points `{{baseUrl}}` at the standalone order-service's own address, `http://localhost:8088` — not yet exercised (the order-service/order-context extraction hasn't landed live), added at r07 for the later decommission/cutover lane to re-point at. |
+| `graphql-gateway.postman_environment.json` | Forward-ref: points `{{graphqlUrl}}` at the standalone GraphQL gateway's own address, `http://localhost:8090` — not yet exercised (the gateway hasn't landed live), added at r07 for the later lane that brings the GraphQL Gateway Contract folder out of its STAGED/inert state. |
 | `GOLDEN-BASELINE.md` | The frozen record of the r01 baseline run, PLUS the r02 NEWMAN-CUTOVER lane's evidence trail (the exact `newman` summaries for the proxy flag-off/flag-on/flip-back/negative-check sequence, and the chunked-body defect discovered while proving it), PLUS the r02 PHASE-2 repair lane's evidence trail (the fix, the regression test, and the corrected re-run — fully green through the proxy in both flag states), PLUS the r03 NEWMAN-ASYNC lane's evidence trail (the Notification Context Contract's bounded-wait poll, live against a real Kafka broker, in both proxy flag states, plus its own negative check), PLUS the r05 NEWMAN-ASYNC CONVERSION lane's evidence trail (converting the four checkout scenarios to tolerate the upcoming 201→202 async flip, with every new bounded-wait poll resolving on attempt 1/0 retries against today's still-synchronous monolith), PLUS the r06 NEWMAN-SHIP Phase-2 lane's evidence trail (Scenario 1's widened poll budget, Scenario 4's new env-guarded refund poll, and the Shipping Context Contract folder, proven GREEN against the in-process monolith with the shipping guard off). |
+| `GOLDEN-BASELINE-r07.md` | **NEW at r07** (does not touch the r01-anchored `GOLDEN-BASELINE.md` above): the FINAL monolith-anchored baseline record — the last time the monolith is the referent before the order context is extracted and the monolith decommissioned — plus the Order Context Contract folder's evidence and the GraphQL Gateway Contract folder's inertness proof. |
 
 ## Scenarios asserted
 
@@ -221,6 +224,47 @@ context is only "done" once it passes unchanged.
     (it sits in the same non-terminal position, between Payment and
     Notification, so it can never strand Notification when its own flag is
     off).
+
+11. **Order Context Contract** (added at r07, see "The r07 NEWMAN-BASELINE
+    lane" in `GOLDEN-BASELINE-r07.md`) — the FINAL monolith-anchored proof of
+    the order context's own surface, captured right before the order context
+    is extracted and the monolith decommissioned. `POST /api/orders` (one
+    `SKU-WIDGET-001`, `CARD-VISA`) returns `201 Created` (today's synchronous
+    monolith) or `202 Accepted` (tolerant of the upcoming choreographed path,
+    same tolerance idiom as Scenario 1/N1) with a `Location` header and a
+    numeric `id`; `GET /api/orders/{id}` returns `200` with the camelCase
+    read-model shape (`id, customerId, status, totalCents, createdAt,
+    shippingAddress, items:[{sku,quantity,unitPriceCents}]`) — asserted on
+    shape, not on a specific terminal status, so this folder holds under
+    either checkout mode without its own bounded-wait poll; `GET
+    /api/orders` returns `200` with an array containing the created order;
+    `GET /api/orders/999999999` returns `404` with the uniform
+    `{error,message,timestamp}` body and `error: "NOT_FOUND"`. Env-guarded by
+    `orderContractEnabled === 'true'`, enabled per run via `--env-var
+    orderContractEnabled=true`. Uses the same test-script-level,
+    no-`setNextRequest` guard idiom as Inventory/Payment/Shipping (it sits in
+    the same non-terminal position, between Shipping and Notification, so it
+    can never strand Notification when its own flag is off); its `POST`
+    fires unconditionally regardless of the guard, the same as every other
+    checkout-firing request in this collection (Scenario 1/3/4, N1).
+
+12. **GraphQL Gateway Contract** (added at r07, STAGED) — a single, inert
+    placeholder for the order-service + GraphQL gateway that lands in a
+    LATER lane: `POST {{graphqlUrl}}/graphql` with a query aggregating
+    `order { id status totalCents items { sku stock { quantityOnHand } }
+    payments { status } shipments { status } reviews { rating } } }`,
+    asserting `200` and the aggregated shape once the gateway exists.
+    Env-guarded by `graphqlContractEnabled === 'true'`, default off. Unlike
+    every other guarded folder in this collection, this one is the
+    collection's new LAST folder and uses the Notification folder's own
+    terminal `postman.setNextRequest(null)` idiom (not the non-terminal
+    test-script-only idiom Inventory/Payment/Shipping/Order use) —
+    deliberately, because the gateway it targets is not running in this
+    lane: a pre-request script can only choose what runs *next*, never skip
+    the *current* request's send, so firing this request unconditionally
+    against a dead `:8090` would turn a connection refusal into a spurious
+    request-level failure. Placing it terminal lets the guard stop the run
+    before this item is ever reached whenever the flag is off (the default).
 
 All assertions target status codes, response-body fields, and `Content-Type`
 — the externally-observable contract — never internal DB rows directly, so
@@ -512,6 +556,45 @@ green with the guard on), why 4e's refund poll stays inert against this
 monolith either way, the no-flags control run proving existing callers are
 unaffected, and a robustness fix made while capturing this (4d now skips 4e
 entirely rather than firing a malformed request on the sync branch).
+
+### Running the r07 NEWMAN-BASELINE evidence against the bare monolith
+
+The Order Context Contract folder is env-guarded the same way as
+Payment/Shipping — add `--env-var orderContractEnabled=true`. The GraphQL
+Gateway Contract folder stays OFF (`graphqlContractEnabled` unset) for this
+entire lane — the gateway it targets does not exist yet. No proxy, Kafka, or
+standalone order-service/gateway is needed; this lane runs straight against
+the bare monolith, same as r01/r05/r06:
+
+```bash
+docker run -d --name mea-mono-pg -p 5432:5432 \
+  -e POSTGRES_USER=monolith -e POSTGRES_PASSWORD=monolith -e POSTGRES_DB=monolith \
+  postgres:18.6-alpine
+
+cd examples/00-monolith
+uv run python manage.py migrate
+uv run python manage.py seed
+uv run python manage.py runserver 0.0.0.0:8000 &
+
+# Required acceptance proof -- guard OFF, no --env-var at all (both the
+# Order and GraphQL guards default off):
+newman run tooling/newman/mea.postman_collection.json \
+    -e tooling/newman/local.postman_environment.json
+
+# Required acceptance proof -- Order guard ON, GraphQL guard left OFF:
+newman run tooling/newman/mea.postman_collection.json \
+    -e tooling/newman/local.postman_environment.json \
+    --env-var orderContractEnabled=true
+```
+
+See "The r07 NEWMAN-BASELINE lane" in `GOLDEN-BASELINE-r07.md` for the full
+evidence trail: the Order Context Contract folder's own evidence (genuinely
+green with its guard on, `POST /api/orders` tolerant of `201|202`, `GET
+/api/orders/{id}`'s read-model shape, the list endpoint, and the uniform
+`404`), the GraphQL Gateway Contract folder's inertness proof (never even
+reached, both with the guard off and with only `orderContractEnabled=true`
+set), and the no-flags control run proving every pre-existing folder is
+unaffected.
 
 ## How this collection will be used going forward
 
