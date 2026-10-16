@@ -1,0 +1,41 @@
+[project]
+name = "mea-monolith"
+version = "0.1.0"
+description = "Modernizing Enterprise Applications (Python) -- r01 walking-skeleton monolith: the 'before' Django/DRF system all six bounded contexts live in, with every smell intact."
+requires-python = ">=3.14"
+dependencies = [
+    "django==5.2.18",
+    "djangorestframework==3.18.3",
+    "drf-spectacular==0.30.0",
+    "psycopg[binary]==3.3.6",
+    "gunicorn==26.2.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-django==4.14.0",
+    "ruff==0.17.1",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "DJ"]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["config", "common", "order", "inventory", "payment", "shipping", "notification", "review"]
+
+[tool.uv]
+# This is a Django application, not a distributable library -- don't build/install
+# it as a package into its own virtualenv.
+package = false

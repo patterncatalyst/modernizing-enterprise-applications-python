@@ -1,0 +1,148 @@
+# compose.yaml — r01 walking-skeleton local infra/observability stack
+#
+# Python sibling of ~/Dev/modernizing-enterprise-applications. Docker-primary,
+# podman-compatible: this file uses only the plain Compose Specification (no
+# engine-specific keys), so either engine's compose plugin parses it:
+#
+#   docker compose --env-file .env up -d
+#   podman compose --env-file .env up -d
+#   docker compose ps
+#   docker compose down            # keep volumes
+#   docker compose down -v         # wipe volumes (fresh Kafka/Postgres state)
+#
+# Never the legacy hyphenated `docker-compose` v1 binary.
+#
+# Services:
+#   - postgres : the monolith's database. r01's only infra dependency — the
+#                monolith (examples/00-monolith, once it lands) connects to
+#                postgresql://monolith:monolith@localhost:5432/monolith.
+#                infra/db/init/00-init.sql provisions the extensions the
+#                first Flyway/Alembic migration will want; the `monolith`
+#                db/user themselves come from the POSTGRES_DB/POSTGRES_USER/
+#                POSTGRES_PASSWORD env vars below, which the official image
+#                creates automatically on first start (empty volume) before
+#                running anything in /docker-entrypoint-initdb.d/.
+#   - kafka    : single-broker KRaft-mode Kafka (no ZooKeeper). NOT needed by
+#                the r01 monolith — present now so later iterations' event-
+#                driven extractions (mirroring the Java book's r04+) have a
+#                broker to target without a second infra PR. Env block is
+#                ported verbatim from the Java repo's compose.yaml, which is
+#                health-tuned (advertised listeners, controller quorum,
+#                replication factors) for a single-node KRaft cluster.
+#   - lgtm     : grafana/otel-lgtm — Grafana + Tempo + Mimir + Loki + an
+#                embedded OTel Collector (config replaced by
+#                infra/otelcol/config.yaml). NOT needed by the r01 monolith
+#                either — present now so instrumentation added in later
+#                iterations has a backend to send to immediately.
+#
+# No Debezium/Kafka Connect, no Apicurio — out of scope for r01 (CDC and
+# schema-registry iterations arrive later; the Java repo's compose.yaml adds
+# them at r05/ch.19 and ch.28 respectively).
+#
+# Image tags are pinned once in .env (gitignored) / .env.example (tracked).
+# Re-verify tags with `skopeo list-tags` before bumping — see .env.example's
+# header for the verification date and method.
+
+services:
+  # ─── Postgres — the monolith's database ─────────────────────────────────
+  postgres:
+    image: docker.io/library/postgres:${POSTGRES_IMAGE_TAG}
+    container_name: meap-postgres
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale=C
+    volumes:
+      - postgres-data:/var/lib/postgresql:Z
+      - ./infra/db/init:/docker-entrypoint-initdb.d:Z
+    mem_limit: 1g
+    healthcheck:
+      # -h 127.0.0.1: TCP, not the Unix socket. The image's initdb phase runs
+      # a temporary server on the socket only and then restarts, so a socket
+      # probe can report ready before the real server listens.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+  # ─── Kafka (KRaft mode, single broker) — present for later iterations ───
+  kafka:
+    image: docker.io/apache/kafka:${KAFKA_IMAGE_TAG}
+    container_name: meap-kafka
+    ports:
+      - "${KAFKA_HOST_PORT:-9092}:9092"   # PLAINTEXT for clients on the host
+      - "9094:9094"                        # PLAINTEXT for clients inside the compose network
+    environment:
+      # KRaft mode — broker + controller roles combined, single node.
+      - KAFKA_NODE_ID=1
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,DOCKER://0.0.0.0:9094
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092,DOCKER://kafka:9094
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,DOCKER:PLAINTEXT
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_NUM_PARTITIONS=3
+      - KAFKA_DEFAULT_REPLICATION_FACTOR=1
+      - KAFKA_MIN_INSYNC_REPLICAS=1
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+      - KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0
+      - CLUSTER_ID=${KAFKA_CLUSTER_ID}
+    volumes:
+      - kafka-data:/var/lib/kafka/data:Z
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  # ─── Observability backend — present for later iterations ───────────────
+  lgtm:
+    image: docker.io/grafana/otel-lgtm:${LGTM_IMAGE_TAG}
+    container_name: meap-lgtm
+    ports:
+      - "3000:3000"   # Grafana UI
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP (preferred — see the lgtm-docker-stack skill's otlp-endpoints reference)
+      # Prometheus query + OTLP metrics ingest. Host port 19090, not 9090:
+      # Cockpit owns 9090 on Fedora Server and RHEL.
+      - "${PROMETHEUS_HOST_PORT:-19090}:9090"
+      - "3100:3100"   # Loki
+      - "3200:3200"   # Tempo
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      - ./infra/otelcol/config.yaml:/otel-lgtm/otelcol-config.yaml:Z
+      # Mounted over the image's own default provisioning filename so ours
+      # wins the uid collision (see infra/grafana/datasources.yaml's header).
+      - ./infra/grafana/datasources.yaml:/otel-lgtm/grafana/conf/provisioning/datasources/grafana-datasources.yaml:Z
+    mem_limit: 2g
+    # NOTE: the otel-lgtm image does not ship wget; curl IS present.
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  kafka-data:
+
+networks:
+  default:
+    name: meap-infra

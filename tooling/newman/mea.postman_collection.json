@@ -1,0 +1,543 @@
+{
+  "info": {
+    "name": "Modernizing Enterprise Applications (Python) — Behavior-Equivalence Suite",
+    "_postman_id": "mea-python-equivalence-suite",
+    "description": "r01 golden baseline (walking skeleton). Captured against the running Django monolith (examples/00-monolith) — the ONLY backend that exists at r01, so {{baseUrl}} points straight at it (http://localhost:8000). This is the Python sibling of ~/Dev/modernizing-enterprise-applications/tooling/newman/mea.postman_collection.json, scoped down to that project's r02 synchronous-monolith baseline: Smoke + four checkout scenarios, no bounded-wait polling of any kind, because r01 has no extracted services and no asynchrony to wait on yet. Every request is parameterized by {{baseUrl}} on purpose — this exact, unedited collection is meant to be re-pointed at each later iteration's extracted service/proxy as it lands, the same load-bearing contract the Java project's suite plays. See GOLDEN-BASELINE.md for the full run record and the four smell-cross-reference failure paths this exercises (common/exceptions.py's ApiError subclasses, order/services.py's single transaction.atomic()).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Smoke",
+      "item": [
+        {
+          "name": "Service is reachable",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Inventory list returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Content-Type is application/json', function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                  "});",
+                  "pm.test('Seed inventory includes all three seeded SKUs', function () {",
+                  "    var skus = pm.response.json().map(function (i) { return i.sku; });",
+                  "    pm.expect(skus).to.include('SKU-WIDGET-001');",
+                  "    pm.expect(skus).to.include('SKU-GADGET-002');",
+                  "    pm.expect(skus).to.include('SKU-GIZMO-003');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Scenario 1 — Happy-Path Checkout",
+      "item": [
+        {
+          "name": "1a. Capture stock before checkout",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/SKU-WIDGET-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory", "SKU-WIDGET-001"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Stock lookup returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('widgetStockBeforeHappyPath', json.quantityOnHand);",
+                  "pm.test('Stock on hand is a non-negative number', function () {",
+                  "    pm.expect(json.quantityOnHand).to.be.a('number');",
+                  "    pm.expect(json.quantityOnHand).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1b. Checkout in-stock -> 201 Created, CONFIRMED",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"items\": [ { \"sku\": \"SKU-WIDGET-001\", \"quantity\": 1 } ],\n  \"paymentMethod\": \"CARD-VISA\",\n  \"shippingAddress\": \"1 Equivalence Suite Way, Testville\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Order created returns 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Content-Type is application/json', function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                  "});",
+                  "pm.test('Location header present and references the created order', function () {",
+                  "    pm.expect(pm.response.headers.has('Location')).to.be.true;",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(pm.response.headers.get('Location')).to.eql('/api/orders/' + json.id);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('happyPathOrderId', json.id);",
+                  "pm.test('Order status is CONFIRMED (synchronous checkout -- no PENDING to observe at r01)', function () {",
+                  "    pm.expect(json.status).to.eql('CONFIRMED');",
+                  "});",
+                  "pm.test('Order total matches one widget unit price (1999 cents)', function () {",
+                  "    pm.expect(json.totalCents).to.eql(1999);",
+                  "});",
+                  "pm.test('Order items echo the checkout line', function () {",
+                  "    pm.expect(json.items).to.have.lengthOf(1);",
+                  "    pm.expect(json.items[0].sku).to.eql('SKU-WIDGET-001');",
+                  "    pm.expect(json.items[0].quantity).to.eql(1);",
+                  "    pm.expect(json.items[0].unitPriceCents).to.eql(1999);",
+                  "});",
+                  "pm.test('Order id is a number', function () {",
+                  "    pm.expect(json.id).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1c. Get the order back by id -> 200, CONFIRMED",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{happyPathOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{happyPathOrderId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Order lookup returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Persisted order status is CONFIRMED', function () {",
+                  "    pm.expect(json.status).to.eql('CONFIRMED');",
+                  "});",
+                  "pm.test('Persisted order id matches the created id', function () {",
+                  "    pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('happyPathOrderId')));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1d. Stock decremented by exactly the ordered quantity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/SKU-WIDGET-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory", "SKU-WIDGET-001"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Stock lookup returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "var before = Number(pm.collectionVariables.get('widgetStockBeforeHappyPath'));",
+                  "pm.test('Quantity on hand dropped by exactly 1 (the observable side effect of a successful checkout)', function () {",
+                  "    pm.expect(json.quantityOnHand).to.eql(before - 1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Scenario 2 — Out-of-Stock",
+      "item": [
+        {
+          "name": "2a. Capture stock before over-ordering",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/SKU-GIZMO-003",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory", "SKU-GIZMO-003"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Stock lookup returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('gizmoStockBeforeOverorder', json.quantityOnHand);",
+                  "pm.test('Stock on hand is a non-negative number', function () {",
+                  "    pm.expect(json.quantityOnHand).to.be.a('number');",
+                  "    pm.expect(json.quantityOnHand).to.be.at.least(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2b. Order quantity exceeding stock -> 409 CONFLICT, OUT_OF_STOCK",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"items\": [ { \"sku\": \"SKU-GIZMO-003\", \"quantity\": 999999 } ],\n  \"paymentMethod\": \"CARD-VISA\",\n  \"shippingAddress\": \"1 Equivalence Suite Way, Testville\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Out-of-stock order returns 409 Conflict', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test('Content-Type is application/json', function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Documented error contract: error=OUT_OF_STOCK', function () {",
+                  "    pm.expect(json.error).to.eql('OUT_OF_STOCK');",
+                  "});",
+                  "pm.test('Error body names the offending SKU', function () {",
+                  "    pm.expect(json.message).to.include('SKU-GIZMO-003');",
+                  "});",
+                  "pm.test('Error body carries a timestamp', function () {",
+                  "    pm.expect(json.timestamp).to.not.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2c. Stock left untouched by the rejected order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/SKU-GIZMO-003",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory", "SKU-GIZMO-003"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Stock lookup returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "var before = Number(pm.collectionVariables.get('gizmoStockBeforeOverorder'));",
+                  "pm.test('Quantity on hand is unchanged (InsufficientStock is raised before any writes, inventory/services.py reserve())', function () {",
+                  "    pm.expect(json.quantityOnHand).to.eql(before);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Scenario 3 — Payment-Declined",
+      "item": [
+        {
+          "name": "3a. Capture stock before the declined checkout",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/SKU-WIDGET-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory", "SKU-WIDGET-001"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Stock lookup returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('widgetStockBeforeDecline', json.quantityOnHand);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3b. Checkout with the DECLINE payment-method sentinel -> 402, PAYMENT_DECLINED",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"items\": [ { \"sku\": \"SKU-WIDGET-001\", \"quantity\": 1 } ],\n  \"paymentMethod\": \"DECLINE\",\n  \"shippingAddress\": \"1 Equivalence Suite Way, Testville\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Declined payment returns 402 Payment Required', function () {",
+                  "    pm.response.to.have.status(402);",
+                  "});",
+                  "pm.test('Content-Type is application/json', function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Documented error contract: error=PAYMENT_DECLINED', function () {",
+                  "    pm.expect(json.error).to.eql('PAYMENT_DECLINED');",
+                  "});",
+                  "pm.test('Error body mentions the declined payment method', function () {",
+                  "    pm.expect(json.message).to.include('DECLINE');",
+                  "});",
+                  "pm.test('Error body carries a timestamp', function () {",
+                  "    pm.expect(json.timestamp).to.not.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3c. Stock rolled back after the decline (not left decremented)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/SKU-WIDGET-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory", "SKU-WIDGET-001"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Stock lookup returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "var before = Number(pm.collectionVariables.get('widgetStockBeforeDecline'));",
+                  "pm.test('Quantity on hand is unchanged -- the reservation rolled back with the declined payment (same transaction.atomic(), order/services.py SMELL[ch.22])', function () {",
+                  "    pm.expect(json.quantityOnHand).to.eql(before);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Scenario 4 — Shipping-Failure",
+      "item": [
+        {
+          "name": "4a. Capture stock before the failed-shipment checkout",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/SKU-WIDGET-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory", "SKU-WIDGET-001"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Stock lookup returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('widgetStockBeforeShipFail', json.quantityOnHand);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4b. Checkout with the SHIP-FAIL address sentinel -> 422, SHIPPING_FAILED",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"items\": [ { \"sku\": \"SKU-WIDGET-001\", \"quantity\": 1 } ],\n  \"paymentMethod\": \"CARD-VISA\",\n  \"shippingAddress\": \"1 SHIP-FAIL Lane, Testville\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Shipping failure returns 422 Unprocessable Entity', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Content-Type is application/json', function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Documented error contract: error=SHIPPING_FAILED', function () {",
+                  "    pm.expect(json.error).to.eql('SHIPPING_FAILED');",
+                  "});",
+                  "pm.test('Error body mentions the failed shipping address', function () {",
+                  "    pm.expect(json.message).to.include('SHIP-FAIL');",
+                  "});",
+                  "pm.test('Error body carries a timestamp', function () {",
+                  "    pm.expect(json.timestamp).to.not.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4c. Stock net-zero -- the whole checkout rolled back, including payment and inventory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/SKU-WIDGET-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory", "SKU-WIDGET-001"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Stock lookup returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "var before = Number(pm.collectionVariables.get('widgetStockBeforeShipFail'));",
+                  "pm.test('Quantity on hand is unchanged -- ShippingFailed unwinds the SAME transaction.atomic() that reserved stock and captured payment (order/services.py SMELL[ch.22])', function () {",
+                  "    pm.expect(json.quantityOnHand).to.eql(before);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": { "type": "text/javascript", "exec": [""] }
+    },
+    {
+      "listen": "test",
+      "script": { "type": "text/javascript", "exec": [""] }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000", "type": "string" },
+    { "key": "happyPathOrderId", "value": "", "type": "string" },
+    { "key": "widgetStockBeforeHappyPath", "value": "", "type": "string" },
+    { "key": "gizmoStockBeforeOverorder", "value": "", "type": "string" },
+    { "key": "widgetStockBeforeDecline", "value": "", "type": "string" },
+    { "key": "widgetStockBeforeShipFail", "value": "", "type": "string" }
+  ]
+}

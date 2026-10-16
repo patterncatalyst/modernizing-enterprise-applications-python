@@ -20,6 +20,10 @@ venv/
 .coverage
 htmlcov/
 
+# App runtime
+logs/
+db.sqlite3
+
 # Jekyll / site
 _site/
 .jekyll-cache/

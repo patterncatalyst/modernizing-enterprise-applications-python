@@ -1,0 +1,108 @@
+# infra/otelcol/config.yaml
+#
+# OpenTelemetry Collector configuration for the local observability stack
+# (r01 walking skeleton). Mounted into the lgtm container, replacing its
+# bundled default config so we control the pipeline explicitly. Not needed
+# by the r01 monolith (Postgres is its only dependency) — present so
+# instrumentation added in later iterations has a controlled pipeline to
+# send to immediately.
+#
+# No sampling/cardinality-control processors yet (base config) — r01 has no
+# services emitting telemetry yet, so there is nothing to sample or
+# constrain. Layer in otel-collector-tail-sampling.yaml /
+# otel-collector-cardinality.yaml patterns from the lgtm-docker-stack skill
+# once multiple services are producing volume.
+#
+# Exporter names, endpoints and the health_check extension follow
+# grafana/otel-lgtm 0.36.0's own shipped default (`docker run --rm
+# --entrypoint cat grafana/otel-lgtm:0.36.0 /otel-lgtm/otelcol-config.yaml`):
+#   1. run-all.sh blocks until http://127.0.0.1:13133/ready answers, so the
+#      health_check extension on 0.0.0.0:13133 (path /ready) is mandatory.
+#   2. Exporters are named otlp_http/<signal>; the image's run-otelcol.sh
+#      overlay (OTEL_EXPORTER_OTLP_*_ENDPOINT) references exactly these names.
+#   3. Backends are addressed as 127.0.0.1, as the image does.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  # Self-monitoring: scrape the collector's own metrics endpoint (:8888),
+  # as the image's default config does.
+  prometheus/collector:
+    config:
+      scrape_configs:
+        - job_name: 'opentelemetry-collector'
+          static_configs:
+            - targets: ['127.0.0.1:8888']
+
+extensions:
+  # run-all.sh polls this endpoint before it reports the stack ready.
+  health_check:
+    endpoint: 0.0.0.0:13133
+    path: "/ready"
+
+processors:
+  # memory_limiter is the most important processor: without it a telemetry
+  # flood can OOM-kill the Collector and take observability offline.
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  batch:
+    timeout: 200ms
+    send_batch_size: 8192
+
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: local
+        action: upsert
+
+exporters:
+  # Tempo's OTLP ingest port is 4418 in this image's bundled tempo-config.yaml
+  # (distributor.receivers.otlp.protocols.http.endpoint) — NOT 3200, which is
+  # Tempo's query/API port. Sending traces to 3200 silently no-ops.
+  otlp_http/traces:
+    endpoint: http://127.0.0.1:4418
+    tls:
+      insecure: true
+
+  # Prometheus v3's native OTLP receiver (not the remote-write endpoint) —
+  # matches this image's bundled default and keeps metric metadata intact.
+  otlp_http/metrics:
+    endpoint: http://127.0.0.1:9090/api/v1/otlp
+    tls:
+      insecure: true
+
+  otlp_http/logs:
+    endpoint: http://127.0.0.1:3100/otlp
+    tls:
+      insecure: true
+
+  debug:
+    verbosity: basic
+    sampling_initial: 5
+    sampling_thereafter: 100
+
+service:
+  extensions: [health_check]
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp_http/traces]
+    metrics:
+      receivers: [otlp, prometheus/collector]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp_http/metrics]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp_http/logs]

@@ -1,0 +1,26 @@
+{%- comment -%}
+  Multi-language code tabs.
+
+  Emits an empty marker; assets/js/codetabs.js absorbs the next N fenced
+  code blocks (N = number of pipe-separated labels) into an accessible
+  tab group. Because the code blocks stay ordinary Markdown fences, Rouge
+  still highlights them at build time — no plugin required.
+
+  Usage (place the marker, then one fenced block per label, IN THIS ORDER):
+
+      {% raw %}{% include codetabs.html langs="Django|FastAPI" %}{% endraw %}
+
+      ```python
+      # Django
+      ```
+      ```python
+      # FastAPI
+      ```
+
+  Ported from the Java sibling (modernizing-enterprise-applications), same
+  mechanism supports more than two labels if a chapter ever needs it; this
+  project's chapters are Django → FastAPI migrations, so two labels is the
+  norm. Selecting a tab syncs every group on the page and is remembered
+  across pages.
+{%- endcomment -%}
+<div class="codetabs" data-langs="{{ include.langs }}"></div>

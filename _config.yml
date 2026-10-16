@@ -1,0 +1,98 @@
+# ────────────────────────────────────────────────────────────────────────────
+# Project: Modernizing Enterprise Applications — Python
+# Site identity, GitHub link target, and baseurl. Build configuration below
+# generally doesn't need changes.
+# ────────────────────────────────────────────────────────────────────────────
+
+# Site identity
+title: "Modernizing Enterprise Applications — Python"
+description: "A Django monolith strangled to FastAPI microservices, one seam at a time, driven by an AI Development Lifecycle (ADLC) and tested throughout."
+brand_emoji: "🏗️"   # Single emoji that appears next to the title in the header
+
+# GitHub identity for header link and example sourcing
+github_username: "patterncatalyst"
+github_repo: "modernizing-enterprise-applications-python"
+
+# baseurl
+# - On user/org Pages site (USERNAME.github.io): set to ""
+# - On project Pages site (USERNAME.github.io/PROJECT): set to "/PROJECT"
+# - For local dev override at runtime: bundle exec jekyll serve --baseurl ""
+baseurl: "/modernizing-enterprise-applications-python"
+
+# url is set at deploy time; leave blank for GitHub Pages auto-detection
+url: ""
+
+license: "Apache 2.0"
+
+# ────────────────────────────────────────────────────────────────────────────
+# Build configuration — generally don't change these.
+# ────────────────────────────────────────────────────────────────────────────
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+permalink: pretty
+
+# Collections — _docs, _plans, _example_pages, _parts are not Jekyll defaults;
+# this enables them. `plans` is unpublished (output: false): the three ADLC
+# ledger artifacts (decisions.md / build-plan.md / reconciliation.md) plus the
+# per-iteration and research notes live under _plans/ as the project's own
+# working memory, not as rendered site pages.
+collections:
+  docs:
+    output: true
+    permalink: /docs/:name/
+  plans:
+    output: false
+  example_pages:
+    output: true
+    permalink: /examples/:name/
+  parts:
+    output: true
+    permalink: /parts/:name/
+
+# Default front-matter — saves typing `layout: tutorial` on every doc.
+defaults:
+  - scope:
+      path: ""
+      type: docs
+    values:
+      layout: tutorial
+      sectionid: docs
+  - scope:
+      path: ""
+      type: plans
+    values:
+      layout: plan
+      render_with_liquid: false
+  - scope:
+      path: ""
+      type: example_pages
+    values:
+      layout: tutorial
+      sectionid: examples
+  - scope:
+      path: ""
+      type: parts
+    values:
+      layout: part_index
+      sectionid: docs
+
+# Files/directories that Jekyll should not process or include in the built
+# site. Runnable code and tooling live outside the Jekyll build entirely.
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - vendor/
+  - node_modules/
+  - examples/        # ← important: trailing slash; runnable code, not site content
+  - scripts/
+  - demos/
+  - presentation/
+  - README.md
+  - LICENSE
+  - CLAUDE.md
+  - PRD.md
+  - _plans/archive/

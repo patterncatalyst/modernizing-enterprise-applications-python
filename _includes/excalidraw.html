@@ -1,0 +1,38 @@
+{%- comment -%}
+  Excalidraw diagram include.
+
+  Usage:
+      {% include excalidraw.html
+         file="15-strangler-seam"
+         alt="Diagram showing the FastAPI strangler proxy routing Review traffic"
+         caption="Figure 15.1 — The strangler seam" %}
+
+  Expects two files under assets/diagrams/:
+      <file>.excalidraw   ← editable source (Excalidraw v2 JSON)
+      <file>.svg          ← pre-rendered export
+
+  Required: file, alt
+  Optional: caption
+{%- endcomment -%}
+
+{%- assign diagram_base = "/assets/diagrams/" | append: include.file -%}
+{%- assign svg_path = diagram_base | append: ".svg" | relative_url -%}
+{%- assign source_path = diagram_base | append: ".excalidraw" | relative_url -%}
+
+<figure class="excalidraw-embed">
+  <object type="image/svg+xml"
+          data="{{ svg_path }}"
+          aria-label="{{ include.alt | escape }}">
+    {{ include.alt | escape }}
+  </object>
+
+  {%- if include.caption -%}
+    <figcaption class="excalidraw-embed__caption">{{ include.caption | escape }}</figcaption>
+  {%- endif -%}
+
+  <p class="excalidraw-embed__links">
+    <a href="{{ source_path }}" download>Download .excalidraw source</a>
+    <span aria-hidden="true">·</span>
+    <a href="https://excalidraw.com" target="_blank" rel="noopener">Edit on excalidraw.com</a>
+  </p>
+</figure>
