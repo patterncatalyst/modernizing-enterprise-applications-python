@@ -1836,3 +1836,198 @@ resolved at attempt `3/20` this time (vs. `2/20` in Run 1), `3c` at `4/20`,
 `4c` at `3/20` — still comfortably inside the `20`-attempt budget. The script
 tore down its own containers and processes on exit; verified clean afterward
 (`docker ps`, `ss -ltnp` for every port this lane used — none left bound).
+
+---
+
+# The r06 NEWMAN-SHIP Phase-2 lane — Shipping Context Contract + SHIP-FAIL refund, baseline against the in-process monolith
+
+This section records the Phase-2 extension of the suite for r06's shipping
+extraction (`examples/06-shipping-service`), proven **GREEN against the
+current monolith with `SHIPPING_MODE=inprocess`** — the still-in-process
+path. The full orchestrated proof (`SHIPPING_MODE=orchestrated`, the standalone
+shipping-service, and the payment-service Refund RPC actually firing) lands in
+a later cutover lane, the same way r05's choreographed proof followed its own
+conversion lane. `mea.postman_collection.json` changed in three ways:
+
+1. **Scenario 1's bounded-wait poll (1c) got its own, wider budget.**
+   `happyPathPollMaxAttempts` x `happyPathPollDelayMs` = `40 x 750ms` (a ~30s
+   budget, double the previous shared `20 x 750ms` = 15s), to tolerate the
+   extra Kafka hops the orchestrated path adds downstream of today's single
+   synchronous round-trip (`order.placed` -> `payment.captured` -> shipping
+   saga -> `shipment.dispatched` -> `CONFIRMED`). This is a **dedicated**
+   variable, not a change to the shared `checkoutPollMaxAttempts` /
+   `checkoutPollDelayMs` that Scenarios 3/4 still use unchanged — widening it
+   was scoped to exactly the one poll that needs it. The terminal assertion
+   itself (`pm.expect(json.status).to.eql('CONFIRMED')`) was **not touched**.
+2. **Scenario 4 gained a new item, 4e**, an env-guarded (`shippingContractEnabled`)
+   bounded-wait poll of `GET /api/payments?orderId=<the shipping-failed
+   order's id>` until the payment's `status` reaches `REFUNDED` — the r06 win:
+   the orchestrated shipping saga's compensating action for a
+   `SHIPPING_FAILED` order is a refund of the payment captured earlier in the
+   saga, instead of today's whole-transaction rollback. 4e is inert in two
+   independent ways: the guard itself (same `pm.environment.get(...) !==
+   'true'` idiom as every other guarded folder), AND a structural skip — 4d's
+   test script now jumps straight past 4e to Review Context Contract's R1
+   whenever `shipFailOrderId` is empty (today's `422` sync path never
+   persists an order, the same reason 4c is already skipped in that branch),
+   so 4e never fires a malformed `orderId=<blank>` request against the live
+   endpoint. 4d's own strict `SHIPPING_FAILED` + net-zero-stock assertions
+   were **not touched**.
+3. **A new top-level folder, Shipping Context Contract (S1–S3)**, placed
+   between Payment Context Contract and Notification Context Contract (same
+   non-terminal, test-script-level-only guard idiom as Inventory/Payment — no
+   `setNextRequest` anywhere in this folder, so it can never strand
+   Notification). S1 lists shipments for the Scenario 1 happy-path order
+   (`GET /api/shipments?orderId={{happyPathOrderId}}` -> `200`, camelCase
+   array `id, orderId, address, status, createdAt`, scoped to that order) and
+   captures a shipment id; S2 looks that shipment up by id (`200`, same
+   camelCase shape, `status: "DISPATCHED"` — the in-process monolith's
+   `shipping.services.dispatch()` default); S3 looks up an unknown id
+   (`404`, uniform `{error,message,timestamp}` body, `error: "NOT_FOUND"`).
+
+New collection variables: `happyPathPollMaxAttempts` (`40`),
+`happyPathPollDelayMs` (`750`), `shipFailRefundPollAttempt` (`0`),
+`shipFailRefundPollMaxAttempts` (`20`), `shipFailRefundPollDelayMs` (`750`),
+`shipmentId` (``). New file: `shipping-service.postman_environment.json`, a
+forward-ref to the shipping-service's own address (`http://localhost:8087`)
+for the later cutover lane to re-point at, matching the pattern every prior
+extracted-service environment file follows.
+
+## What was running
+
+| Component | Address | Mode |
+|---|---|---|
+| Postgres | `localhost:5432` (`monolith`/`monolith`/`monolith`) | throwaway `postgres:18.6-alpine`, migrated + seeded fresh |
+| `examples/00-monolith` | `:8000` | `uv run python manage.py runserver 0.0.0.0:8000`, **default config** — `SHIPPING_MODE` unset (`inprocess`), `PAYMENT_MODE` unset (`synchronous`), `INVENTORY_MODE` unset (`local`) — checkout is fully synchronous, `201`/terminal in the same round-trip, same as every prior baseline run in this file |
+
+newman 6.2.2.
+
+## Baseline run — no `--env-var` at all (guard OFF), the required proof
+
+This is the acceptance-criterion run: the identical command every existing
+caller of this collection already uses, completely unmodified, to prove the
+new assertions/folder are true no-ops for everyone who hasn't opted in yet:
+
+```bash
+newman run tooling/newman/mea.postman_collection.json \
+    -e tooling/newman/local.postman_environment.json
+```
+
+```
+┌─────────────────────────┬───────────────────┬───────────────────┐
+│                         │          executed │            failed │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│              iterations │                 1 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│                requests │                29 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│            test-scripts │                58 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│      prerequest-scripts │                33 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│              assertions │                59 │                 0 │
+├─────────────────────────┴───────────────────┴───────────────────┤
+│ total run duration: 2.3s                                        │
+├─────────────────────────────────────────────────────────────────┤
+│ total data received: 11.53kB (approx)                           │
+├─────────────────────────────────────────────────────────────────┤
+│ average response time: 61ms [min: 35ms, max: 171ms, s.d.: 29ms] │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Fully green, 0 failed, newman exit code 0.** Repeated back-to-back against
+the same process (no database reset in between): identical shape, `29`
+requests / `58` test-scripts / `33` prerequest-scripts / `59` assertions, `0`
+failed (`2.2s` duration, `11.7kB` received) — confirming the result isn't an
+artifact of a clean database, same non-vacuity standard every prior lane in
+this file holds itself to.
+
+**`29` requests, not `30`:** the new Shipping Context Contract folder's three
+requests (S1–S3) all fire unconditionally (the same cheap, side-effect-free
+`GET`s Inventory/Payment already prove safe to fire every run) — that
+accounts for `+3`. The new 4e does **not** fire in this run: `shipFailOrderId`
+is empty on today's synchronous `422` path, so 4d's structural skip (point 2
+above) jumps straight past it to Review's R1 — `+0`, by design, not a gap.
+Net vs. the r05 baseline's `26`-request no-flags shape: `+3` (Shipping
+Context Contract) `-0` (4e skipped) = `29`.
+
+1c resolved on **attempt 1/40** — zero retries, the same non-vacuity proof
+every prior bounded-wait poll in this file establishes: today's still-
+synchronous monolith is already `CONFIRMED` by the time the poll fires, so
+the widened budget adds no latency, only headroom for the future orchestrated
+path.
+
+## Exploratory run — guard ON, same in-process monolith (not the acceptance proof, recorded for completeness)
+
+`--env-var shippingContractEnabled=true` was also run against this same
+unmodified monolith, purely to confirm the new assertions are *correct*, not
+just *inert*:
+
+```
+┌─────────────────────────┬───────────────────┬───────────────────┐
+│                         │          executed │            failed │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│              iterations │                 1 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│                requests │                29 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│            test-scripts │                58 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│      prerequest-scripts │                33 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│              assertions │                70 │                 0 │
+├─────────────────────────┴───────────────────┴───────────────────┤
+│ total run duration: 2.4s                                        │
+└───────────────────────────────────────────────────────────────── ┘
+```
+
+**Still fully green — `+11` assertions, `0` failed.** The `+11` are exactly
+S1 (4 assertions) + S2 (4) + S3 (3), all genuinely exercised and passing
+against the monolith's already-existing `/api/shipments` endpoints (they
+predate this lane — `shipping/views.py`/`shipping/serializers.py` already
+expose them for the in-process `SHIPPING_MODE`). **4e still does not fire its
+assertions even with the flag on** — `shipFailOrderId` is still empty on this
+config regardless of the flag (today's monolith always takes the sync `422`
+path for a `SHIP-FAIL` address; nothing makes it choreographed here), so 4d's
+structural skip still applies. This is the expected, honest result:
+`order/services.py`'s own docstrings mark the in-process
+`handle_payment_captured`'s `ShippingFailed` branch as a **KNOWN DEFERRAL —
+not refunded yet**, payment-service exposes no Refund RPC/event yet either.
+4e staying structurally unreachable here — rather than being weakened to
+pass — is exactly what keeps this lane honest about what it has and hasn't
+proven; the real refund proof is the later cutover lane's job, once
+`SHIPPING_MODE=orchestrated` and a Refund path actually exist end to end.
+
+## A robustness fix made while capturing this (not a regression, found before any number above was recorded)
+
+The first draft of 4e fired unconditionally in sequence after 4d, gated only
+by its own `shippingContractEnabled` guard (the same idiom as Inventory/
+Payment). That caused a real `500 Internal Server Error` from the monolith
+(`GET /api/payments?orderId=` with a **blank** `orderId`, since
+`shipFailOrderId` is empty on the sync path — Postgres rejects the empty
+string against an integer column) on every single run, flag on or off — it
+never failed a newman assertion (the guard's own `if (!shippingContractEnabled)
+return;` skips straight past asserting anything), but it was a noisy,
+dishonest violation of this collection's own "cheap, side-effect-free GET,
+safe to fire unconditionally" standard. Fixed by having 4d's test script
+jump straight past 4e (point 2 above) whenever there's no order id to query,
+the same mechanism 3b/4b already use to skip 3c/4c on the sync branch. All
+numbers in this section reflect the fixed collection (confirmed before the
+fix: `30` requests, `172kB`+ received, a `500` on 4e; after: `29` requests,
+`11.5kB` received, no `500` anywhere).
+
+## Summary
+
+| # | Guard | Served by | Result |
+|---|---|---|---|
+| Baseline (required) | off (no `--env-var`) | monolith, `SHIPPING_MODE=inprocess` | **GREEN** — 59/59 assertions, 0 failed; new folder/4e true no-ops |
+| Exploratory | `shippingContractEnabled=true` | same monolith | **GREEN** — 70/70 assertions, 0 failed; S1–S3 genuinely exercised; 4e still structurally inert (no order id on the sync path) |
+
+Acceptance criteria met: the converted collection is GREEN against the
+in-process/synchronous monolith with the shipping guard off; Scenario 1's
+terminal `CONFIRMED` assertion was only given a wider budget, never relaxed;
+Scenario 4 keeps its strict `SHIPPING_FAILED` + net-zero-stock assertions
+untouched; the new refund assertion and the Shipping Context Contract folder
+are env-guarded and inert when off; every pre-existing folder is unaffected.
+The throwaway Postgres container and the monolith process started for this
+lane were torn down afterward; the host was left clean.

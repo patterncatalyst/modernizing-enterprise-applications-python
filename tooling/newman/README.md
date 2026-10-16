@@ -23,10 +23,11 @@ context is only "done" once it passes unchanged.
 
 | File | Purpose |
 |---|---|
-| `mea.postman_collection.json` | The collection itself: Smoke + four checkout scenarios (the four checkout scenarios' terminal states/201→202-tolerant conversion and bounded-wait polls landed at r05, see below) + the r02 **Review Context Contract** folder + the r04 **Inventory Context Contract** folder + the r05 **Payment Context Contract** folder + the r03 **Notification Context Contract** folder (the suite's first bounded-wait/async folder). Every request is parameterized by `{{baseUrl}}`. |
+| `mea.postman_collection.json` | The collection itself: Smoke + four checkout scenarios (the four checkout scenarios' terminal states/201→202-tolerant conversion and bounded-wait polls landed at r05, see below; Scenario 1's own poll got a wider, dedicated budget and Scenario 4 gained a new env-guarded refund poll at r06) + the r02 **Review Context Contract** folder + the r04 **Inventory Context Contract** folder + the r05 **Payment Context Contract** folder + the r06 **Shipping Context Contract** folder + the r03 **Notification Context Contract** folder (the suite's first bounded-wait/async folder). Every request is parameterized by `{{baseUrl}}`. |
 | `local.postman_environment.json` | Points `{{baseUrl}}` at the monolith, `http://localhost:8000`. |
 | `proxy.postman_environment.json` | Points `{{baseUrl}}` at the strangler proxy (`examples/01-strangler-proxy`), `http://localhost:8888` — the re-pointing target for the cutover evidence below. |
-| `GOLDEN-BASELINE.md` | The frozen record of the r01 baseline run, PLUS the r02 NEWMAN-CUTOVER lane's evidence trail (the exact `newman` summaries for the proxy flag-off/flag-on/flip-back/negative-check sequence, and the chunked-body defect discovered while proving it), PLUS the r02 PHASE-2 repair lane's evidence trail (the fix, the regression test, and the corrected re-run — fully green through the proxy in both flag states), PLUS the r03 NEWMAN-ASYNC lane's evidence trail (the Notification Context Contract's bounded-wait poll, live against a real Kafka broker, in both proxy flag states, plus its own negative check), PLUS the r05 NEWMAN-ASYNC CONVERSION lane's evidence trail (converting the four checkout scenarios to tolerate the upcoming 201→202 async flip, with every new bounded-wait poll resolving on attempt 1/0 retries against today's still-synchronous monolith). |
+| `shipping-service.postman_environment.json` | Forward-ref: points `{{baseUrl}}` at the standalone shipping-service's own address, `http://localhost:8087` — not yet exercised (the shipping-service hasn't landed live), added at r06 for the later cutover lane to re-point at, same as every other extracted-service environment file in this directory. |
+| `GOLDEN-BASELINE.md` | The frozen record of the r01 baseline run, PLUS the r02 NEWMAN-CUTOVER lane's evidence trail (the exact `newman` summaries for the proxy flag-off/flag-on/flip-back/negative-check sequence, and the chunked-body defect discovered while proving it), PLUS the r02 PHASE-2 repair lane's evidence trail (the fix, the regression test, and the corrected re-run — fully green through the proxy in both flag states), PLUS the r03 NEWMAN-ASYNC lane's evidence trail (the Notification Context Contract's bounded-wait poll, live against a real Kafka broker, in both proxy flag states, plus its own negative check), PLUS the r05 NEWMAN-ASYNC CONVERSION lane's evidence trail (converting the four checkout scenarios to tolerate the upcoming 201→202 async flip, with every new bounded-wait poll resolving on attempt 1/0 retries against today's still-synchronous monolith), PLUS the r06 NEWMAN-SHIP Phase-2 lane's evidence trail (Scenario 1's widened poll budget, Scenario 4's new env-guarded refund poll, and the Shipping Context Contract folder, proven GREEN against the in-process monolith with the shipping guard off). |
 
 ## Scenarios asserted
 
@@ -41,7 +42,14 @@ context is only "done" once it passes unchanged.
    `CONFIRMED` (never a naked `2xx`, never able to pass on a stuck `PENDING`)
    plus the correct total/line items; `GET /api/inventory/{sku}` confirms
    `quantityOnHand` dropped by exactly the ordered quantity. Against today's
-   synchronous monolith the poll resolves on attempt 1 with 0 retries.
+   synchronous monolith the poll resolves on attempt 1 with 0 retries. This
+   poll's budget (`happyPathPollMaxAttempts` x `happyPathPollDelayMs` = `40 x
+   750ms`, a ~30s budget) was widened at r06 — its own, dedicated variable,
+   not the shared `checkoutPollMaxAttempts`/`checkoutPollDelayMs` Scenarios
+   3/4 still use — to tolerate the orchestrated shipping saga's extra Kafka
+   hops downstream of `CONFIRMED` (`order.placed` -> `payment.captured` ->
+   shipping saga -> `shipment.dispatched` -> `CONFIRMED`); the terminal
+   `CONFIRMED` assertion itself was never relaxed, only given more retries.
 3. **Scenario 2 — Out-of-Stock** — ordering more than `quantityOnHand` (against
    the low-stock seeded `SKU-GIZMO-003`, quantity 5) returns
    `409 Conflict` with `{ "error": "OUT_OF_STOCK", "message": "...<sku>...",
@@ -71,6 +79,16 @@ context is only "done" once it passes unchanged.
    bounded-wait polls the order for terminal `SHIPPING_FAILED` first — see
    "Why Scenario 4's `SHIPPING_FAILED` poll never runs against today's
    monolith" in `GOLDEN-BASELINE.md` for why that's by design, not a gap.
+   **r06** added a fifth item, 4e: an env-guarded (`shippingContractEnabled`)
+   bounded-wait poll of `GET /api/payments?orderId=<the order>` until the
+   payment reaches `REFUNDED` — the orchestrated shipping saga's compensating
+   action once a payment has already been captured before the saga fails.
+   Inert both by its own guard and structurally: 4d's test script jumps
+   straight past 4e whenever `shipFailOrderId` is empty (today's sync `422`
+   path never persists an order, same reason 4c is already skipped on that
+   branch), so 4e never fires a malformed request. Against today's in-process
+   monolith 4e never actually asserts anything, guard on or off — see "The
+   r06 NEWMAN-SHIP Phase-2 lane" in `GOLDEN-BASELINE.md`.
 
 6. **Review Context Contract** (added at r02, see `examples/02-review-service`)
    — `GET /api/reviews?sku=...` returns `200` with a camelCase array
@@ -186,6 +204,23 @@ context is only "done" once it passes unchanged.
    (it sits in the same non-terminal position, between Inventory and
    Notification, so it can never strand Notification when its own flag is
    off).
+
+10. **Shipping Context Contract** (added at r06, see
+    `examples/06-shipping-service`) — `GET
+    /api/shipments?orderId={{happyPathOrderId}}` returns `200` with a
+    camelCase array (`id, orderId, address, status, createdAt`) scoped to the
+    Scenario 1 happy-path order, and captures the shipment id; `GET
+    /api/shipments/{id}` returns the same shape for that shipment with
+    `status: "DISPATCHED"` (the in-process monolith's
+    `shipping.services.dispatch()` default); `GET /api/shipments/999999999`
+    returns `404` with the uniform `{error,message,timestamp}` body and
+    `error: "NOT_FOUND"`. Env-guarded by `shippingContractEnabled === 'true'`,
+    enabled per run via `--env-var shippingContractEnabled=true` — see "The
+    r06 NEWMAN-SHIP Phase-2 lane" in `GOLDEN-BASELINE.md`. Uses the same
+    test-script-level, no-`setNextRequest` guard idiom as Inventory/Payment
+    (it sits in the same non-terminal position, between Payment and
+    Notification, so it can never strand Notification when its own flag is
+    off).
 
 All assertions target status codes, response-body fields, and `Content-Type`
 — the externally-observable contract — never internal DB rows directly, so
@@ -437,6 +472,46 @@ retries) against today's still-synchronous monolith, the Payment Context
 Contract folder's own evidence, the no-flags control run proving existing
 callers are unaffected, and why Scenario 4's `SHIPPING_FAILED` poll is gated
 behind the async branch rather than weakened to pass today.
+
+### Running the r06 shipping evidence against the bare monolith
+
+The Shipping Context Contract folder (and Scenario 4's new 4e refund poll)
+are env-guarded the same way as Payment — add `--env-var
+shippingContractEnabled=true`. No proxy, Kafka, or standalone shipping-
+service is needed for this lane either; it runs straight against the bare
+monolith, with `SHIPPING_MODE` left **unset** (`inprocess`, the zero-
+regression default this lane must not disturb):
+
+```bash
+docker run -d --name mea-mono-pg -p 5432:5432 \
+  -e POSTGRES_USER=monolith -e POSTGRES_PASSWORD=monolith -e POSTGRES_DB=monolith \
+  postgres:18.6-alpine
+
+cd examples/00-monolith
+uv run python manage.py migrate
+uv run python manage.py seed
+uv run python manage.py runserver 0.0.0.0:8000 &
+
+# Required acceptance proof -- guard OFF, no --env-var at all:
+newman run tooling/newman/mea.postman_collection.json \
+    -e tooling/newman/local.postman_environment.json
+
+# Exploratory -- guard ON, same monolith (Shipping Context Contract genuinely
+# exercised; 4e's refund poll stays structurally inert -- no order id exists
+# on today's synchronous SHIP-FAIL path regardless of the flag):
+newman run tooling/newman/mea.postman_collection.json \
+    -e tooling/newman/local.postman_environment.json \
+    --env-var shippingContractEnabled=true
+```
+
+See "The r06 NEWMAN-SHIP Phase-2 lane" in `GOLDEN-BASELINE.md` for the full
+evidence trail: Scenario 1's widened, dedicated bounded-wait budget (`40 x
+750ms`) resolving on attempt 1 (0 retries) against today's still-synchronous
+monolith, the Shipping Context Contract folder's own evidence (genuinely
+green with the guard on), why 4e's refund poll stays inert against this
+monolith either way, the no-flags control run proving existing callers are
+unaffected, and a robustness fix made while capturing this (4d now skips 4e
+entirely rather than firing a malformed request on the sync branch).
 
 ## How this collection will be used going forward
 
