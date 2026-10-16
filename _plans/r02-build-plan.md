@@ -9,7 +9,15 @@
 - **Schema posture** = **keep Review on the SHARED schema** in r02; defer DB ownership to ch.18/19 (as the Java sibling did). The shared schema is also what makes the cutover's false-positive routing bug teachable.
 - **Ports:** monolith :8000, proxy :8888, review-service :8001.
 
-## DECISION REQUIRED AT GATE — Review auth contract
+## DECISION RESOLVED (user, 2026-10-15) — **Option B**: realize the auth smell
+The user chose **Option B**. The review **write** endpoint requires HTTP Basic auth (`401` unauthenticated / `201` authenticated) in BOTH the monolith and the review service; reads stay open. This realizes smell #6 and matches the Java contract. Deltas vs the Option-A plan below:
+- **Monolith:** add DRF `BasicAuthentication` + `IsAuthenticated` to the review POST endpoint only (`review/views.py`); reads unaffected; no global permission classes. Seed a known auth user (e.g. `reviewer` / a fixed password) via the seed command so the `201` case has credentials. This supersedes the review-write part of DRQ-025 (record as a new DRQ).
+- **Review service Phase A:** reuse DRF/Django `BasicAuthentication` + `IsAuthenticated` (trivial — it already reuses the Django stack) against the shared `auth_user` table.
+- **Review service Phase B (no Django):** verify HTTP Basic credentials against the shared `auth_user` table using Django's password-hash format (`pbkdf2_sha256$...`). Use `passlib` with the `django_pbkdf2_sha256` scheme (pin `passlib[bcrypt]`/`passlib` exactly) — do NOT hand-roll PBKDF2. Document this in MIGRATION.md as a Phase-B concern.
+- **Newman Review folder:** add `POST` without creds → `401`; `POST` with Basic creds → `201` + Location; plus the 200 reads and 400 invalid-rating. The r01 checkout scenarios don't touch reviews, so the existing baseline is unaffected — confirm this (no re-baseline of scenarios 1–4 expected, only additive Review folder).
+- **CI:** the `review-equivalence-gate` seeds the auth user and passes Basic creds for the 201 case.
+
+## (Original) decision framing — Review auth contract
 The Java contract asserts 401 unauthenticated / 201 authenticated writes (smell #6). The **actual Python r01 monolith review endpoint enforces NO auth** (DRQ-025 wired none). The equivalence suite must be green against both monolith (flag OFF) and service (flag ON), so it can only assert shared behavior.
 - **Option A (recommended):** match the monolith's current **unauthenticated** contract (200 reads / 201 writes / 400 validation). No monolith edit, no re-baseline; record the divergence from Java as a DRQ; ch.15 still teaches independence.
 - **Option B (faithful to Java):** add DRF BasicAuth + IsAuthenticated to the review write endpoint in **both** monolith and service, re-capture the r01 baseline, assert 401/201 (realizes smell #6). Higher touch (edits the monolith, re-baselines r01).
