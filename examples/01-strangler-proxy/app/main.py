@@ -74,6 +74,8 @@ def _select_backend(settings: Settings, path: str) -> str:
         return settings.review_base_url
     if settings.notification_enabled and path.startswith("/api/notifications"):
         return settings.notification_base_url
+    if settings.inventory_enabled and path.startswith("/api/inventory"):
+        return settings.inventory_base_url
     return settings.monolith_base_url
 
 

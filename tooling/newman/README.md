@@ -23,7 +23,7 @@ context is only "done" once it passes unchanged.
 
 | File | Purpose |
 |---|---|
-| `mea.postman_collection.json` | The collection itself: Smoke + four checkout scenarios + the r02 **Review Context Contract** folder + the r03 **Notification Context Contract** folder (the suite's first bounded-wait/async folder). Every request is parameterized by `{{baseUrl}}`. |
+| `mea.postman_collection.json` | The collection itself: Smoke + four checkout scenarios + the r02 **Review Context Contract** folder + the r04 **Inventory Context Contract** folder + the r03 **Notification Context Contract** folder (the suite's first bounded-wait/async folder). Every request is parameterized by `{{baseUrl}}`. |
 | `local.postman_environment.json` | Points `{{baseUrl}}` at the monolith, `http://localhost:8000`. |
 | `proxy.postman_environment.json` | Points `{{baseUrl}}` at the strangler proxy (`examples/01-strangler-proxy`), `http://localhost:8888` — the re-pointing target for the cutover evidence below. |
 | `GOLDEN-BASELINE.md` | The frozen record of the r01 baseline run, PLUS the r02 NEWMAN-CUTOVER lane's evidence trail (the exact `newman` summaries for the proxy flag-off/flag-on/flip-back/negative-check sequence, and the chunked-body defect discovered while proving it), PLUS the r02 PHASE-2 repair lane's evidence trail (the fix, the regression test, and the corrected re-run — fully green through the proxy in both flag states), PLUS the r03 NEWMAN-ASYNC lane's evidence trail (the Notification Context Contract's bounded-wait poll, live against a real Kafka broker, in both proxy flag states, plus its own negative check). |
@@ -109,6 +109,56 @@ context is only "done" once it passes unchanged.
    re-pointed, unedited, at the strangler proxy to prove the notification
    cutover, enabled per run via `--env-var notificationContractEnabled=true`
    — see "The r03 NEWMAN-ASYNC lane" in `GOLDEN-BASELINE.md`.
+
+8. **Inventory Context Contract** (added at r04, see
+   `examples/04-inventory-service`) — three plain, synchronous reads, no
+   bounded-wait needed (unlike Notification, the read path here has no
+   eventual-consistency boundary: `GET /api/inventory*` is served either by
+   the monolith directly or, once `STRANGLER_INVENTORY_ENABLED=true`, by
+   `examples/04-inventory-service`'s own `inventory` schema — both are a
+   single synchronous DB read). `GET /api/inventory` returns `200` with a
+   camelCase array (`sku, name, priceCents, quantityOnHand`) containing all
+   three seeded SKUs; `GET /api/inventory/SKU-WIDGET-001` returns the same
+   shape for one item; `GET /api/inventory/NOPE` returns `404` with the
+   uniform `{error,message,timestamp}` body and `error: "NOT_FOUND"` (the
+   same code both the monolith's `common/exceptions.py::ResourceNotFound`
+   and `examples/04-inventory-service/app/errors.py::ResourceNotFound`
+   produce). Env-guarded by `inventoryContractEnabled === 'true'`, enabled
+   per run via `--env-var inventoryContractEnabled=true` — see "The r04
+   NEWMAN-GRPC lane" in `GOLDEN-BASELINE.md`.
+
+   **Guard mechanism — a deliberate, documented departure from the
+   Notification folder's literal idiom.** The Notification folder's guard
+   (each item's pre-request script calling `postman.setNextRequest(null)`
+   when its flag is unset) only works safely because Notification is the
+   collection's *last* folder — ending the run there strands nothing, since
+   nothing comes after it. `postman.setNextRequest(null)` stops the entire
+   collection run, not just the current folder (confirmed empirically by the
+   r03 NEWMAN-ASYNC lane's own "inert-guard control run": the run ends
+   exactly at the Notification folder's first request). The Inventory
+   Context Contract folder is placed **between Review Context Contract and
+   Notification Context Contract** (so that `--env-var
+   inventoryContractEnabled=true` alone — with no `notificationContractEnabled`
+   — exercises Smoke, all four checkout scenarios, Review, and Inventory
+   before falling through into Notification's own, untouched guard exactly
+   as before). Reusing the literal `setNextRequest(null)` idiom from this
+   non-terminal position would strand the Notification folder every time
+   Inventory's flag is off — including the r03 lane's own previously-working,
+   documented `--env-var notificationContractEnabled=true`-only invocation,
+   which does not set `inventoryContractEnabled`. Instead, each Inventory
+   item's **test script** (not its pre-request script) checks
+   `pm.environment.get('inventoryContractEnabled') === 'true'` and returns
+   immediately, asserting nothing, when it isn't set — no
+   `postman.setNextRequest` call anywhere in this folder, so it can never end
+   the run early and can never strand anything placed before or after it, in
+   any flag combination. The three requests themselves still fire
+   unconditionally even when the guard is off (confirmed safe: they are the
+   same idempotent, side-effect-free `GET`s Smoke and the checkout scenarios'
+   own stock-capture steps already exercise on every single run, flag or no
+   flag). This is a stricter, simpler safety property than the Notification
+   folder's terminal-only idiom affords, not a weaker one — it was the
+   deliberate choice precisely because this folder does **not** occupy the
+   terminal position.
 
 All assertions target status codes, response-body fields, and `Content-Type`
 — the externally-observable contract — never internal DB rows directly, so
@@ -248,6 +298,87 @@ states (byte-identical collection, only the flag changed), the bounded-wait
 attempt counts actually observed, and the notification-service-down negative
 check (a real `502` from the proxy, the bounded-wait budget exhausting
 cleanly, and `newman` exiting non-zero) going RED then back to green.
+
+### Running the r04 NEWMAN-GRPC evidence through the strangler proxy
+
+The Inventory Context Contract folder is env-guarded the same way as
+Notification (see above for the mechanism) — every invocation below adds
+`--env-var inventoryContractEnabled=true`. This lane needs the inventory
+service's own gRPC server (`:9004`) in addition to its HTTP surface
+(`:8084`); no Kafka broker is needed for any of this (inventory's
+transition-only CDC consumer, `INVENTORY_CDC_ENABLED`, stays off by
+default).
+
+There are **two independent cutover dimensions** for inventory, not one:
+
+| Dimension | Lives in | Values |
+|---|---|---|
+| Where checkout-time **reserve/release** happens | the monolith's own `INVENTORY_MODE` | `local` (default — in-process, same `transaction.atomic()` as r01-r03) / `grpc` (remote, over `order.inventory_client.RemoteInventoryClient` to `INVENTORY_GRPC_TARGET`) |
+| Where `GET /api/inventory*` **reads** are served | the proxy's own `STRANGLER_INVENTORY_ENABLED` | unset/`false` (default — monolith) / `true` (routed to `examples/04-inventory-service`'s HTTP surface) |
+
+These two flags are independent and were proven in both the fully-local
+(`INVENTORY_MODE=local`, proxy flag unset) and fully-gRPC
+(`INVENTORY_MODE=grpc`, proxy flag `true`) combinations below — a mixed
+combination (reads from inventory-service, reserve/release still local) is
+possible but was not exercised here: it would split reads and writes onto
+two different databases with no replication between them, which is only
+sound during the brief, CDC-backfilled transition window
+`examples/04-inventory-service/app/cdc_consumer.py` exists for (see its
+docstring and `../CUTOVER.md`), not as a steady-state configuration.
+
+```bash
+# Postgres (no Kafka needed for this lane):
+docker run -d --name mea-mono-pg -p 5432:5432 \
+  -e POSTGRES_USER=monolith -e POSTGRES_PASSWORD=monolith -e POSTGRES_DB=monolith \
+  postgres:18.6-alpine
+
+# Monolith: migrate + seed (owns `public.inventory_items` as always)
+cd examples/00-monolith
+uv run python manage.py migrate && uv run python manage.py seed
+
+# inventory-service: its OWN `inventory` schema, same Postgres instance --
+# `alembic upgrade head` both creates the schema/table AND seeds the same
+# three demo SKUs (idempotent, ON CONFLICT DO NOTHING), so GET /api/inventory
+# returns an identical dataset whichever side currently serves the route.
+cd ../04-inventory-service
+uv run alembic upgrade head
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8084 &
+# wait for grpcServerListening=true before issuing any gRPC call against :9004:
+curl -s http://localhost:8084/health
+
+# FULLY-gRPC: monolith reserves/releases over gRPC, proxy routes reads to
+# inventory-service:
+cd ../00-monolith
+INVENTORY_MODE=grpc INVENTORY_GRPC_TARGET=localhost:9004 \
+  uv run gunicorn config.wsgi:application --bind 0.0.0.0:8000 &
+cd ../01-strangler-proxy
+STRANGLER_INVENTORY_ENABLED=true uv run uvicorn app.main:app --port 8888 &
+
+newman run tooling/newman/mea.postman_collection.json \
+    -e tooling/newman/proxy.postman_environment.json \
+    --env-var inventoryContractEnabled=true
+
+# FULLY-LOCAL (reversibility): restart the monolith with INVENTORY_MODE=local
+# (or unset) and the proxy with STRANGLER_INVENTORY_ENABLED unset -- same
+# command, same collection, same environment file:
+INVENTORY_MODE=local uv run gunicorn config.wsgi:application --bind 0.0.0.0:8000 &
+uv run uvicorn app.main:app --port 8888 &   # no STRANGLER_INVENTORY_ENABLED
+newman run tooling/newman/mea.postman_collection.json \
+    -e tooling/newman/proxy.postman_environment.json \
+    --env-var inventoryContractEnabled=true
+```
+
+See "The r04 NEWMAN-GRPC lane" in `GOLDEN-BASELINE.md` for the full, real
+evidence trail: the full suite fully green through the proxy in both
+reserve/release-mode x read-routing combinations (byte-identical collection,
+23 requests / 71 assertions, 0 failed in both), direct proof that Scenario
+3 (payment-declined) and Scenario 4 (shipping-failed) net stock back to zero
+in gRPC mode via the compensating `Release` RPC (not just that the suite's
+own "before"/"after" assertions happened to match), and the inventory-
+service-down negative check (a real proxy `502` on every read, and the
+checkout's remote `Reserve` call failing with gRPC `UNAVAILABLE` mapped to a
+real `503 INVENTORY_UNAVAILABLE` — never a masked success) going RED then
+back to green.
 
 ## How this collection will be used going forward
 

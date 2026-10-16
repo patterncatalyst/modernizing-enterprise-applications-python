@@ -27,7 +27,12 @@ class OrderCreateSerializer(serializers.Serializer):
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
-    sku = serializers.CharField(source="inventory_item.sku")
+    """r04/ch.19: `sku` now reads straight off OrderItem's own denormalized
+    snapshot column (no more `inventory_item.sku` cross-app join; DRF treats
+    an explicit `source="sku"` matching the field name as redundant and
+    raises on it) -- the wire shape is byte-for-byte unchanged."""
+
+    sku = serializers.CharField()
     unitPriceCents = serializers.IntegerField(source="unit_price_cents")
 
     class Meta:

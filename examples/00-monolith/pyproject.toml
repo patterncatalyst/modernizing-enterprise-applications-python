@@ -10,6 +10,8 @@ dependencies = [
     "psycopg[binary]==3.3.6",
     "gunicorn==26.2.0",
     "aiokafka==0.14.0",
+    "grpcio==1.84.0",
+    "protobuf==7.36.2",
 ]
 
 [dependency-groups]
@@ -17,6 +19,7 @@ dev = [
     "pytest==9.1.1",
     "pytest-django==4.14.0",
     "ruff==0.17.1",
+    "grpcio-tools==1.84.0",
 ]
 
 [tool.pytest.ini_options]
@@ -27,7 +30,10 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py314"
-extend-exclude = ["*/migrations/*"]
+# order/grpc_gen/ is generated protoc/grpc_tools output (DO NOT EDIT, owned by
+# the PROTO lane's scripts/gen-proto.sh) -- excluded from lint the same way
+# Django's own generated migrations are, below.
+extend-exclude = ["*/migrations/*", "order/grpc_gen/*"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "DJ"]

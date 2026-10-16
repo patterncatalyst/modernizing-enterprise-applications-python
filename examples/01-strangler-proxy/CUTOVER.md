@@ -88,3 +88,32 @@ returns a real `502` rather than a masked `200`. The full Newman evidence
 trail for this seam (the four-run table and negative-check output) lands in
 `tooling/newman/GOLDEN-BASELINE.md` from a separate lane; this file only
 records that the same discipline applies.
+
+## Inventory seam (r04) — two cutover dimensions
+
+Inventory is the first seam with **two independent cutover switches**,
+because it has two distinct call paths into the monolith:
+
+1. **REST reads** (`GET /api/inventory*`, browsing/display traffic) — go
+   through *this* proxy, gated by `STRANGLER_INVENTORY_ENABLED` exactly like
+   `STRANGLER_REVIEW_ENABLED`/`STRANGLER_NOTIFICATION_ENABLED` gate their
+   seams: `app/config.py` reads the flag and base URL, `_select_backend()`
+   in `app/main.py` matches the full path against `/api/inventory` and
+   routes to `examples/04-inventory-service` once cut over.
+2. **gRPC reserve/release** (stock decrement/increment during order
+   placement/cancellation) — called directly by the monolith over gRPC, and
+   gated by the monolith's own `INVENTORY_MODE` setting. This path never
+   goes through the strangler proxy at all — it is internal
+   monolith-to-service traffic, not browser/client-facing HTTP, so there is
+   nothing for `_select_backend()` to intercept.
+
+Both switches follow the identical OFF → ON → reversible → negative-check
+discipline documented above for Review and Notification: baseline with the
+flag off, cut over, flip back to prove reversibility, then kill the
+inventory service and confirm the affected path fails loudly (a real `502`
+from this proxy for REST reads; the monolith-side equivalent for gRPC
+reserve/release) rather than silently degrading. The two dimensions are
+verified independently — flipping `STRANGLER_INVENTORY_ENABLED` has no
+effect on `INVENTORY_MODE` or vice versa — because a design that requires
+flipping both in lockstep to stay correct is not actually two independent
+seams, it is one seam with an extra step.

@@ -19,6 +19,12 @@ This file is the catalogue — one row per diagram, append-only.
 | `outbox-write-in-transaction` | ch.17 | SMELL #5/#6 before/after inside `place_order()`'s single `@transaction.atomic()`: the before panel ends with a synchronous out-of-process notification send (the dual-write hazard); the after panel ends with one ordinary `OutboxEvent` row, atomic with everything else for free. Source: `outbox-write-in-transaction.py`. |
 | `event-driven-notification-topology` | ch.17 | The full pipeline end to end: checkout's outbox row -> `outbox_relay`'s at-least-once Kafka publish -> the `order.placed` topic -> two independent, permanently-running consumer groups (`monolith-notification` and `notification-service`) -> the strangler proxy's `STRANGLER_NOTIFICATION_ENABLED` flag choosing which read path answers `GET /api/notifications`. Source: `event-driven-notification-topology.py`. |
 | `idempotent-consumer-dedupe` | ch.17 | What happens when the at-least-once outbox relay redelivers the identical `order.placed` event: application-level check-then-insert handles the common case, a database-level partial unique index on `order_id` backstops the narrow concurrent-race window, and exactly one `Notification` row survives either way. Source: `idempotent-consumer-dedupe.py`. |
+| `shared-data-vs-owned-data` | ch.18 | The three data-ownership postures this book builds, stacked: Review stays on the monolith's shared schema (a named deferral), Notification owns its schema from day one (async seam), and Inventory (ch.19) owns its schema too but needs a one-time transaction-log backfill from the still-live monolith table during the cutover window. Source: `shared-data-vs-owned-data.py`. |
+| `orderitem-fk-to-snapshot` | ch.18 | The FK-to-snapshot move on `order.OrderItem`: before/after panels contrasting the live `inventory_item` FK against the denormalized `sku`/`item_name`/`unit_price_cents` snapshot, plus the three-step migration sequence (add, backfill, drop FK) that cuts over safely. Source: `orderitem-fk-to-snapshot.py`. |
+| `inventory-grpc-proto-acl` | ch.19 | The gRPC proto as the anti-corruption layer for the synchronous order&lt;-&gt;inventory seam: the monolith's domain vocab, `inventory.proto`'s deliberately distinct wire vocab, and inventory-service's own domain vocab, each translated by a client-side and server-side ACL. Source: `inventory-grpc-proto-acl.py`. |
+| `cdc-backfill-then-retire` | ch.19 | Transaction-log tailing end to end: Postgres WAL -> replication slot -> Debezium Postgres connector -> Kafka topic -> `InventoryCdcConsumer`'s upsert into the owned schema, with the retire runbook (drain, delete connector, drop slot/publication, disable the flag) ghosted as the step that follows cutover. Source: `cdc-backfill-then-retire.py`. |
+| `reserve-release-saga-lite` | ch.19 | Where the free rollback went: before/after panels contrasting the single local `transaction.atomic()` (free rollback, SMELL[ch.22]) against the gRPC `Reserve` committing outside any local transaction, with the compensating `Release` wired explicitly to `PaymentDeclined`/`ShippingFailed`. Source: `reserve-release-saga-lite.py`. |
+| `two-cutover-dimensions` | ch.19 | The two independent cutover flags (`INVENTORY_MODE` for reserve/release, `STRANGLER_INVENTORY_ENABLED` for reads) as a 2x2 grid, marking the two exercised, locked-together corners (Run A fully-gRPC, Run B fully-local) against the two split corners that are sound only during the CDC-backfilled transition window. Source: `two-cutover-dimensions.py`. |
 
 ## Regenerating
 
@@ -33,6 +39,12 @@ python3 -I acl-contract-seam.py
 python3 -I outbox-write-in-transaction.py
 python3 -I event-driven-notification-topology.py
 python3 -I idempotent-consumer-dedupe.py
+python3 -I shared-data-vs-owned-data.py
+python3 -I orderitem-fk-to-snapshot.py
+python3 -I inventory-grpc-proto-acl.py
+python3 -I cdc-backfill-then-retire.py
+python3 -I reserve-release-saga-lite.py
+python3 -I two-cutover-dimensions.py
 ```
 
 Each spec validates its own output on the way out (`generate_diagram.emit()`

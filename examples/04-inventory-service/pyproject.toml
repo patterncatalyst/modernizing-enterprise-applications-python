@@ -1,0 +1,57 @@
+[project]
+name = "mea-inventory-service"
+version = "0.1.0"
+description = "Modernizing Enterprise Applications (Python) -- r04/ch.19: the inventory bounded context, extracted onto a standalone FastAPI service with a NET-NEW gRPC server (CheckStock/Reserve/Release/GetStock) that is the anti-corruption-layer contract for the synchronous order<->inventory seam (DRQ-039/DRQ-041/DRQ-042/DRQ-044). Reserve/Release are single atomic conditional UPDATEs, not read-then-write -- concurrency-safe on the database's own row lock. This service owns its `inventory` Postgres schema from day one, migrated with Alembic (same posture as notification-service, DRQ-028 contrast with review-service's shared-schema posture). A transition-only, flag-gated aiokafka CDC consumer is included for the cutover window but is not part of the end-state."
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi==0.143.2",
+    "uvicorn[standard]==0.54.0",
+    "sqlalchemy[asyncio]==2.1.4",
+    "asyncpg==0.32.0",
+    "pydantic==2.14.1",
+    "alembic==1.20.0",
+    "grpcio==1.84.0",
+    "protobuf==7.36.2",
+    "aiokafka==0.14.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "httpx==0.28.1",
+    "ruff==0.17.1",
+    "testcontainers==4.15.0",
+    "grpcio-tools==1.84.0",
+]
+
+[tool.pytest.ini_options]
+python_files = ["test_*.py"]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# B008 (function call in argument default) is a false positive for FastAPI's
+# `Depends(...)`/`Query(...)` pattern -- that IS the idiomatic way to declare
+# a dependency, per FastAPI's own docs. Same suppression as review-service
+# and notification-service.
+ignore = ["B008"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.lint.per-file-ignores]
+# Generated protobuf/gRPC stubs -- not ours to lint (committed by the PROTO
+# lane); excluded from formatting/import-order rules rather than edited.
+"app/grpc_gen/*.py" = ["E", "F", "I", "UP", "B"]
+
+[tool.uv]
+# A standalone FastAPI + gRPC service, not a distributable library -- don't
+# build/install it as a package into its own virtualenv.
+package = false

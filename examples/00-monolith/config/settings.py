@@ -114,6 +114,19 @@ KAFKA_BOOTSTRAP_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9
 ORDER_PLACED_TOPIC = "order.placed"
 OUTBOX_RELAY_POLL_MS = int(os.environ.get("OUTBOX_RELAY_POLL_MS", "1000"))
 
+# ---------------------------------------------------------------------------
+# Inventory collaborator -- r04/ch.19. INVENTORY_MODE selects whether
+# order.services.place_order() reserves/releases stock by calling straight
+# into inventory.services (the SMELL[ch.26] in-process call, "local" -- the
+# default, so r01-r03 behavior is unchanged) or over the gRPC anti-corruption
+# layer in order.inventory_client (the "grpc" cutover target for a future
+# extraction, exercised by the grpc-mode unit tests in tests/). Mirrors the
+# Java monolith's INVENTORY_MODE feature flag byte-for-byte.
+# ---------------------------------------------------------------------------
+
+INVENTORY_MODE = os.environ.get("INVENTORY_MODE", "local")
+INVENTORY_GRPC_TARGET = os.environ.get("INVENTORY_GRPC_TARGET", "localhost:9004")
+
 # This API's contract (and the ported Newman collection) uses paths with NO
 # trailing slash (`/api/inventory/{sku}`, not `/api/inventory/{sku}/`), so
 # each app's urls.py intentionally starts its detail route with "/" against

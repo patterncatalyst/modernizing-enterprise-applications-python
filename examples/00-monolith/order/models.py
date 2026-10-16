@@ -39,23 +39,23 @@ class Order(models.Model):
 
 
 class OrderItem(models.Model):
-    """SMELL[ch.18]: OrderItem holds a direct FK/join onto
-    inventory.InventoryItem -- an order-context table referencing an
-    inventory-context table in the one shared schema. Once inventory owns its
-    own database, this join would be replaced by a denormalized copy of the
-    fields the order context actually needs (sku, name, price-at-time-of-order),
-    kept current via CDC."""
+    """r04/ch.19: SMELL[ch.18]'s cross-context FK onto
+    inventory.InventoryItem is CURED here -- `sku`/`item_name` are now a
+    denormalized SNAPSHOT captured once at checkout time (from
+    inventory.services.reserve()'s row in `local` mode, or the gRPC
+    GetStock reply in `grpc` mode; see order.services.place_order() and
+    order.inventory_client), a plain soft string reference with no database
+    FK and no cross-app join. Because the price is captured at order time, a
+    later price change in inventory never retroactively rewrites a
+    historical order line -- the correct semantics for a read model
+    regardless of which mode wrote it. See order/migrations/0002_*.py for the
+    backfill-then-drop migration that cut the live FK."""
 
     order = models.ForeignKey(
         Order, on_delete=models.CASCADE, related_name="items", db_column="order_id"
     )
-    # SMELL[ch.18]: cross-context FK, see class docstring above.
-    inventory_item = models.ForeignKey(
-        "inventory.InventoryItem",
-        on_delete=models.PROTECT,
-        related_name="order_items",
-        db_column="inventory_item_id",
-    )
+    sku = models.CharField(max_length=64)
+    item_name = models.CharField(max_length=255)
     quantity = models.IntegerField()
     unit_price_cents = models.BigIntegerField()
 

@@ -34,10 +34,24 @@
 #                infra/otelcol/config.yaml). NOT needed by the r01 monolith
 #                either — present now so instrumentation added in later
 #                iterations has a backend to send to immediately.
+#   - connect  : Kafka Connect running the Debezium Postgres connector
+#                (r04, inventory extraction — DRQ-040 sibling). This is
+#                TRANSITION-ONLY infrastructure: a one-time CDC backfill
+#                that streams the monolith's shared public.inventory_items
+#                table into examples/04-inventory-service's OWN schema
+#                during the extraction window, then is RETIRED
+#                (scripts/retire-debezium.sh) once cutover completes — see
+#                infra/debezium/README.md. NOT part of the CI equivalence
+#                gate; the running system does not depend on it after
+#                cutover. REST API on host port
+#                ${CONNECT_HOST_PORT:-8086}, NOT 8083.
 #
-# No Debezium/Kafka Connect, no Apicurio — out of scope for r01 (CDC and
-# schema-registry iterations arrive later; the Java repo's compose.yaml adds
-# them at r05/ch.19 and ch.28 respectively).
+# postgres also gained a logical-replication `command:` at r04 (below) so
+# Debezium can tail its WAL via pgoutput — requires a container restart to
+# take effect; existing data in the postgres-data volume survives.
+#
+# No Apicurio — out of scope so far (the Java repo's compose.yaml adds it at
+# ch.28, schema-registry).
 #
 # Image tags are pinned once in .env (gitignored) / .env.example (tracked).
 # Re-verify tags with `skopeo list-tags` before bumping — see .env.example's
@@ -55,6 +69,14 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale=C
+    # LOGICAL replication (r04, CDC backfill — see infra/debezium/README.md)
+    # — required for the Debezium Postgres connector to tail the WAL via
+    # pgoutput. Enabling this needs a container RESTART to take effect
+    # (handled automatically by `docker compose up -d`); the postgres-data
+    # named volume persists across it, so existing data is not lost.
+    # max_replication_slots/max_wal_senders=4 leaves headroom beyond the
+    # single `meap_inventory_slot` this stack currently uses.
+    command: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=4", "-c", "max_wal_senders=4"]
     volumes:
       - postgres-data:/var/lib/postgresql:Z
       - ./infra/db/init:/docker-entrypoint-initdb.d:Z
@@ -105,6 +127,48 @@ services:
       timeout: 5s
       retries: 12
       start_period: 30s
+    restart: unless-stopped
+
+  # ─── Kafka Connect (Debezium Postgres connector) — CDC, r04, DRQ-040 ────
+  # Standalone Kafka Connect distributed-mode worker running the Debezium
+  # Postgres connector image. Registration (idempotent create-or-update) is
+  # a separate step — see scripts/register-debezium.sh — not baked into
+  # this compose file, so the connector config
+  # (infra/debezium/inventory-connector.json) can evolve without a
+  # container rebuild. Image lives on quay.io: Debezium does not publish to
+  # Docker Hub.
+  connect:
+    image: quay.io/debezium/connect:${CONNECT_IMAGE_TAG}
+    container_name: meap-connect
+    ports:
+      - "${CONNECT_HOST_PORT:-8086}:8083"   # host 8086 (NOT 8083 — notification-service binds :8083 locally); container always binds 8083
+    environment:
+      - BOOTSTRAP_SERVERS=kafka:9094
+      - GROUP_ID=meap-connect-cluster
+      - CONFIG_STORAGE_TOPIC=meap-connect-configs
+      - OFFSET_STORAGE_TOPIC=meap-connect-offsets
+      - STATUS_STORAGE_TOPIC=meap-connect-status
+      - CONFIG_STORAGE_REPLICATION_FACTOR=1
+      - OFFSET_STORAGE_REPLICATION_FACTOR=1
+      - STATUS_STORAGE_REPLICATION_FACTOR=1
+      # Bound the heap. Without HEAP_OPTS, connect-distributed.sh defaults
+      # to -Xmx2G inside this container's memory limit; 3.7.0.Final scans
+      # many connector plugins at boot, the heap grows past the cgroup
+      # limit, and the kernel OOM-kills the worker in a restart loop.
+      - HEAP_OPTS=-Xms256m -Xmx768m
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    # 768m heap + metaspace/threads/direct buffers.
+    mem_limit: 1536m
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8083/connectors"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
     restart: unless-stopped
 
   # ─── Observability backend — present for later iterations ───────────────

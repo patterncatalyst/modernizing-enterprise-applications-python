@@ -992,3 +992,283 @@ record. The throwaway Postgres and Kafka containers, and every process
 started for this lane (monolith, outbox relay, self-consumer,
 notification-service, proxy), were torn down afterward; the host was left
 clean.
+
+---
+
+# The r04 NEWMAN-GRPC lane — the Inventory Context Contract, live gRPC reserve/release
+
+This section records the suite's first proof that checkout-time inventory
+**reservation and compensation** (not just a read) survives crossing a real
+network boundary: `mea.postman_collection.json` gained one new folder,
+**Inventory Context Contract** (3 requests, I1–I3, placed between Review
+Context Contract and Notification Context Contract — see `README.md` for
+exactly what each request asserts and, importantly, for why this folder's
+guard mechanism deliberately departs from the Notification folder's literal
+`setNextRequest(null)` idiom). The five pre-existing folders (Smoke, the four
+checkout scenarios, Review Context Contract, Notification Context Contract)
+were **not edited**.
+
+Unlike every prior lane, there are **two independent cutover dimensions** in
+play here, not one:
+
+| Dimension | Flag | Lives in |
+|---|---|---|
+| Checkout-time reserve/release | `INVENTORY_MODE=local` \| `grpc` | the monolith (`config/settings.py`) |
+| `GET /api/inventory*` reads | `STRANGLER_INVENTORY_ENABLED` unset \| `true` | the strangler proxy (`examples/01-strangler-proxy/app/config.py`) |
+
+Both combinations exercised below use them **locked together**
+(fully-local / fully-gRPC) — see `README.md`'s note on why a split
+combination (gRPC reserve, monolith-served reads, or vice versa) is only
+sound during the CDC-backfilled transition window, not as a steady-state
+configuration, and was not exercised here.
+
+## What was running
+
+| Component | Address | Mode |
+|---|---|---|
+| Postgres | `localhost:5432` (`monolith`/`monolith`/`monolith`) | throwaway `postgres:18.6-alpine`, migrated + seeded fresh (monolith's `manage.py migrate && seed`) |
+| `examples/00-monolith` | `:8000` | `uv run gunicorn config.wsgi:application --bind 0.0.0.0:8000`, `INVENTORY_MODE` toggled per run below |
+| `examples/04-inventory-service` | HTTP `:8084` / gRPC `:9004` | `uv run alembic upgrade head` once (own `inventory` schema, self-seeds the 3 demo SKUs), then `uv run uvicorn app.main:app --host 0.0.0.0 --port 8084` (the gRPC server starts from the same process's lifespan — `/health` confirms `grpcServerListening: true`); same Postgres instance as the monolith, separate schema |
+| `examples/01-strangler-proxy` | `:8888` | `uv run uvicorn app.main:app --port 8888`, `STRANGLER_INVENTORY_ENABLED` toggled per run below |
+
+No Kafka broker was needed or started for this lane. newman 6.2.2 for every
+run below.
+
+## Run A — FULLY-gRPC (`INVENTORY_MODE=grpc`, `STRANGLER_INVENTORY_ENABLED=true`)
+
+`newman run tooling/newman/mea.postman_collection.json -e tooling/newman/proxy.postman_environment.json --env-var inventoryContractEnabled=true`:
+
+```
+❏ Smoke
+❏ Scenario 1 — Happy-Path Checkout      (all green)
+❏ Scenario 2 — Out-of-Stock             (all green)
+❏ Scenario 3 — Payment-Declined         (all green)
+❏ Scenario 4 — Shipping-Failure         (all green)
+❏ Review Context Contract               (all green)
+❏ Inventory Context Contract            (all green)
+❏ Notification Context Contract         (N1 only -- guard off, run ends there)
+
+┌─────────────────────────┬───────────────────┬──────────────────┐
+│                         │          executed │           failed │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              iterations │                 1 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│                requests │                23 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│            test-scripts │                46 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│      prerequest-scripts │                24 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              assertions │                71 │                0 │
+├─────────────────────────┴───────────────────┴──────────────────┤
+│ total run duration: 1014ms                                     │
+├────────────────────────────────────────────────────────────────┤
+│ total data received: 3.06kB (approx)                           │
+├────────────────────────────────────────────────────────────────┤
+│ average response time: 27ms [min: 4ms, max: 136ms, s.d.: 37ms] │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Fully green, 0 failed, newman exit code 0.** Critically: Scenario 2's
+over-order on the low-stock `SKU-GIZMO-003` returned `409 OUT_OF_STOCK`
+through a real remote `Reserve` RPC whose `reservation_ok=false` the
+monolith's `order.inventory_client.RemoteInventoryClient.reserve()` maps
+onto the identical `InsufficientStock` exception the `local`-mode in-process
+path raises — the checkout's external contract (409/402/422, same error
+bodies) is byte-identical to `local` mode even though the reservation now
+happens over the network against a different process's database.
+
+**Direct proof of net-zero stock on Scenarios 3 and 4 (not just that the
+suite's own before/after assertions matched):** querying
+`GET /api/inventory/SKU-WIDGET-001` directly around the suite run confirms
+`quantityOnHand` held at the same value (96) across both the Scenario 3
+(payment-declined) and Scenario 4 (shipping-failed) checkouts:
+
+```
+Before:           {"quantityOnHand": 96}
+After decline:     {"quantityOnHand": 96}   (PAYMENT_DECLINED, 402)
+After ship-fail:   {"quantityOnHand": 96}   (SHIPPING_FAILED, 422)
+```
+
+This is the compensating-saga proof `order/services.py::_place_order_remote`
+exists for: a remote `Reserve` is NOT inside the monolith's local
+`transaction.atomic()` and cannot be rolled back by Postgres for free once
+it commits in the inventory service's own database (SMELL[ch.22]'s "free
+rollback" is gone the moment reservation crosses this network boundary); the
+observed net-zero stock is a genuine, explicit compensating `Release` RPC
+firing on both the payment-declined and shipping-failed paths (`
+_place_order_remote`'s `except Exception: _release_reserved(...)`), not an
+artifact of one shared in-process transaction undoing everything for free.
+
+## Run B — FULLY-LOCAL, reversibility (`INVENTORY_MODE=local`, `STRANGLER_INVENTORY_ENABLED` unset)
+
+Monolith and proxy restarted with the flags flipped back; same unedited
+collection, same environment file, same `--env-var`:
+
+```
+┌─────────────────────────┬───────────────────┬──────────────────┐
+│                         │          executed │           failed │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              iterations │                 1 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│                requests │                23 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│            test-scripts │                46 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│      prerequest-scripts │                24 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              assertions │                71 │                0 │
+├─────────────────────────┴───────────────────┴──────────────────┤
+│ total run duration: 1010ms                                     │
+├────────────────────────────────────────────────────────────────┤
+│ total data received: 3.39kB (approx)                           │
+├────────────────────────────────────────────────────────────────┤
+│ average response time: 27ms [min: 4ms, max: 141ms, s.d.: 34ms] │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Fully green, 0 failed, newman exit code 0 — byte-identical shape to Run A**
+(same 23 requests / 46 test-scripts / 24 prerequest-scripts / 71 assertions,
+0 failed in both). Checkout reserves/releases back against the monolith's
+own in-process path (the pre-extraction r01-r03 baseline, SMELL[ch.22]'s free
+rollback intact) and reads are served by the monolith directly; the flag is
+a genuine, reversible config switch across BOTH dimensions at once, with no
+restart-order dependency and no leftover state from Run A (the two
+`inventory_items` tables — monolith `public` schema and inventory-service's
+own `inventory` schema — are independent, so Run A's remote reservations
+never touched the row Run B reads from).
+
+## The no-flags control run — existing folders provably unaffected
+
+Before relying on the proof above, the plain default invocation (no
+`--env-var` at all) was run to confirm the new Inventory folder is a true
+no-op for every existing caller, exactly the same bar the r03 NEWMAN-ASYNC
+lane set for the Notification folder:
+
+```
+❏ Inventory Context Contract
+↳ I1. List inventory -> 200, camelCase array (3 SKUs)
+  GET http://localhost:8888/api/inventory [200 OK, 444B, 7ms]
+↳ I2. Get SKU-WIDGET-001 by sku -> 200, camelCase object
+  GET http://localhost:8888/api/inventory/SKU-WIDGET-001 [200 OK, 274B, 5ms]
+↳ I3. Get unknown sku -> 404, uniform error body
+  GET http://localhost:8888/api/inventory/NOPE [404 Not Found, 306B, 5ms]
+
+❏ Notification Context Contract
+↳ N1. Checkout for the notification contract -> 201 Created, CONFIRMED
+  POST http://localhost:8888/api/orders [201 Created, 545B, 35ms]
+  ✓  Order created returns 201
+  ✓  Order status is CONFIRMED (...)
+
+┌─────────────────────────┬───────────────────┬──────────────────┐
+│              iterations │                 1 │                0 │
+│                requests │                23 │                0 │
+│            test-scripts │                46 │                0 │
+│      prerequest-scripts │                24 │                0 │
+│              assertions │                60 │                0 │
+└─────────────────────────┴───────────────────┴──────────────────┘
+```
+
+**All three Inventory requests fire (harmless, idempotent reads) but assert
+nothing (guard off), and critically do NOT strand the Notification folder:**
+`N1` still fires unconditionally and still halts the run right where it
+always has, exactly matching the r03 lane's own documented "inert-guard
+control run" precedent (same 60 assertions as that lane's own baseline — the
+3 new Inventory requests contribute 0 extra assertions when their guard is
+off, by design; see `README.md` for why this folder's guard uses a
+test-script-level check rather than `setNextRequest`, specifically so it can
+never strand anything placed before or after it).
+
+## Negative check — inventory-service down, fully-gRPC: BOTH the read contract AND the reserve path MUST go RED
+
+With `INVENTORY_MODE=grpc` / `STRANGLER_INVENTORY_ENABLED=true` still active
+and `examples/04-inventory-service` killed:
+
+**(a) Inventory Context Contract folder (`--folder "Inventory Context Contract"`):**
+
+```
+┌─────────────────────────┬─────────────────┬─────────────────┐
+│              iterations │               1 │               0 │
+│                requests │               3 │               0 │
+│            test-scripts │               6 │               3 │
+│              assertions │               4 │               4 │
+│ total run duration: 100ms                                   │
+└─────────────────────────┴─────────────────┴─────────────────┘
+```
+
+**newman exited non-zero (exit code 1), 4/4 assertions failed.** Every
+request got a real `502 Bad Gateway` from the proxy, e.g.:
+
+```
+01. AssertionError  Inventory list returns 200
+                    expected response to have status code 200 but got 502
+                    inside "Inventory Context Contract / I1. List inventory -> 200, camelCase array (3 SKUs)"
+03. JSONError
+                    Unexpected token 's' at 1:1
+                    strangler-proxy: upstream unavailable (ConnectError)
+                    inside "Inventory Context Contract / I1. List inventory -> 200, camelCase array (3 SKUs)"
+```
+
+— the same fail-safe `examples/01-strangler-proxy`'s README documents: a
+dead upstream is a real 5xx, never a masked `200`.
+
+**(b) A checkout scenario (`--folder "Scenario 1 — Happy-Path Checkout"`):**
+
+```
+┌─────────────────────────┬──────────────────┬─────────────────┐
+│              iterations │                1 │               0 │
+│                requests │                4 │               0 │
+│            test-scripts │                8 │               3 │
+│              assertions │               10 │               9 │
+│ total run duration: 146ms                                    │
+└─────────────────────────┴──────────────────┴─────────────────┘
+```
+
+**newman exited non-zero (exit code 1), 9/10 assertions failed.** `1a`'s own
+stock-capture `GET` also hit the dead inventory-service through the proxy
+(`502`, same as above); `1b`'s `POST /api/orders` got a real `503 Service
+Unavailable` instead of `201`, with this exact body (captured directly, not
+just via the newman assertion):
+
+```json
+{"error":"INVENTORY_UNAVAILABLE","message":"Inventory service unavailable: StatusCode.UNAVAILABLE failed to connect to all addresses; last error: UNKNOWN: ipv4:127.0.0.1:9004: Failed to connect to remote host: Connection refused","timestamp":"2026-10-16T14:08:22.850691+00:00"}
+```
+
+This is `order.inventory_client.RemoteInventoryClient._unary()`'s
+`grpc.RpcError` → `InventoryServiceUnavailable` (503) mapping working
+exactly as designed: a dead inventory service fails checkout cleanly with a
+503, never silently confirming an order whose remote reservation status is
+actually unknown, and never getting confused with a logical 409
+`OUT_OF_STOCK` (a materially different failure mode `common/exceptions.py`'s
+docstring explicitly calls out). `1c`/`1d` then cascade (no order was ever
+created to look up; the stock-capture `GET` also 502s) — both expected,
+non-misleading consequences of the same root cause, not independent bugs.
+
+**Recovery:** `examples/04-inventory-service` restarted; both folders
+re-run and return to fully green:
+
+```
+Inventory Context Contract:  3 requests, 11/11 assertions, 0 failed
+Scenario 1 — Happy-Path:     4 requests, 14/14 assertions, 0 failed
+```
+
+## Summary
+
+| # | `INVENTORY_MODE` | `STRANGLER_INVENTORY_ENABLED` | inventory-service | Result |
+|---|---|---|---|---|
+| A | `grpc` | `true` | up | **GREEN** — 71/71 assertions, 0 failed; Scenarios 2/3/4 proven correct across the gRPC boundary, net-zero stock confirmed directly on 3 & 4 |
+| B (reversibility) | `local` | unset | up (unused by this config) | **GREEN** — 71/71 assertions, 0 failed, byte-identical shape to A |
+| No-flags control | `grpc` | `true` | up | **GREEN** — 60/60 assertions, 0 failed; Inventory folder inert (fires, asserts nothing), Notification folder NOT stranded |
+| Negative, reads | `grpc` | `true` | **down** | **RED** — 4/4 assertions failed, real `502`s, newman exit code 1 |
+| Negative, checkout | `grpc` | `true` | **down** | **RED** — 9/10 assertions failed, real `503 INVENTORY_UNAVAILABLE`, newman exit code 1 |
+| Recovery | `grpc` | `true` | up (restarted) | **GREEN** — both folders fully green again |
+
+No unmet acceptance criterion and no integration bug surfaced in this lane:
+reserve/release round-trips correctly across the gRPC boundary in both
+directions (success and compensation), the two cutover dimensions are
+independently reversible, the new folder cannot strand any other folder in
+any flag combination, and a dead inventory-service fails both the read path
+(proxy `502`) and the write path (checkout `503 INVENTORY_UNAVAILABLE`)
+cleanly and loudly rather than silently. The throwaway Postgres container
+and every process started for this lane (monolith, inventory-service,
+proxy) were torn down afterward; the host was left clean.

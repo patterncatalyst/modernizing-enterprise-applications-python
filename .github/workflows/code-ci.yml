@@ -50,7 +50,7 @@ jobs:
           fi
           if ! files="$(git diff --name-only "$base" "${{ github.sha }}" 2>/dev/null)"; then
             echo "run=true" >> "$GITHUB_OUTPUT"   # cannot diff: run everything
-          elif grep -qE '^(examples/00-monolith/|examples/01-strangler-proxy/|examples/02-review-service/|examples/03-notification-service/|tooling/newman/|infra/|compose\.yaml$|\.env\.example$|\.github/workflows/code-ci\.yml$)' <<<"$files"; then
+          elif grep -qE '^(examples/00-monolith/|examples/01-strangler-proxy/|examples/02-review-service/|examples/03-notification-service/|examples/04-inventory-service/|tooling/newman/|infra/|compose\.yaml$|\.env\.example$|\.github/workflows/code-ci\.yml$)' <<<"$files"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -707,12 +707,373 @@ jobs:
             fi
           done
 
+  # r04's extraction gate: the Inventory bounded context (ch.19/DRQ-039/
+  # DRQ-041/DRQ-042/DRQ-044), extracted onto examples/04-inventory-service --
+  # a standalone FastAPI service with its OWN `inventory` Postgres schema
+  # PLUS a net-new gRPC server (:9004) that is the synchronous
+  # order<->inventory anti-corruption-layer contract
+  # (CheckStock/Reserve/Release/GetStock). No Kafka/Debezium here: the
+  # transition-only CDC consumer (INVENTORY_CDC_ENABLED) is flag-gated off
+  # and is not part of the end-state this gate proves -- see
+  # examples/04-inventory-service/CUTOVER.md. Postgres-only, matching
+  # monolith-equivalence-gate and review-equivalence-gate.
+  #
+  # Two independent cutover dimensions (see tooling/newman/README.md's "The
+  # r04 NEWMAN-GRPC lane"): the monolith's own INVENTORY_MODE
+  # (local/grpc, where checkout-time reserve/release happens) and the
+  # proxy's STRANGLER_INVENTORY_ENABLED (where GET /api/inventory* reads are
+  # served). This gate proves BOTH proven combinations -- fully-gRPC and
+  # fully-local (reversibility) -- plus a negative check (inventory-service
+  # killed while fully-gRPC) that must go RED, proving the cutover is real
+  # rather than a dead code path.
+  inventory-equivalence-gate:
+    name: inventory-equivalence-gate
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-latest
+
+    # Same Postgres pin/creds as monolith-equivalence-gate/
+    # review-equivalence-gate -- NO Kafka service container, this gate's
+    # runtime never touches a broker.
+    services:
+      postgres:
+        image: docker.io/library/postgres:18.6-alpine
+        env:
+          POSTGRES_DB: monolith
+          POSTGRES_USER: monolith
+          POSTGRES_PASSWORD: monolith
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U monolith -d monolith"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+
+    env:
+      DATABASE_URL: postgresql://monolith:monolith@localhost:5432/monolith
+      LOG_DIR: logs
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v7
+
+      - name: Proto drift guard -- vendored inventory ACL proto must match the canonical one
+        # Fails fast, before any dependency install, if
+        # examples/00-monolith/order/proto's vendored copy of the inventory
+        # ACL proto has drifted from examples/04-inventory-service/proto's
+        # canonical source (scripts/check-proto-drift.sh: byte-identical
+        # sha256 check, exits non-zero on drift or a missing file).
+        run: bash scripts/check-proto-drift.sh
+
+      - name: Install uv (pinned) + Python 3.14
+        uses: astral-sh/setup-uv@v10.3.0   # no floating v10 tag; pin exact
+        with:
+          version: "0.13.1"            # decisions.md version matrix: uv 0.13.1
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: |
+            examples/00-monolith/uv.lock
+            examples/01-strangler-proxy/uv.lock
+            examples/04-inventory-service/uv.lock
+
+      - name: uv sync (monolith)
+        working-directory: examples/00-monolith
+        run: uv sync --locked --group dev
+
+      - name: uv sync (strangler proxy)
+        working-directory: examples/01-strangler-proxy
+        run: uv sync --locked --group dev
+
+      - name: uv sync (inventory service)
+        working-directory: examples/04-inventory-service
+        run: uv sync --locked --group dev
+
+      - name: Migrate + seed the monolith's database
+        # Owns `public.inventory_items` as always (SMELL[ch.18] -- unchanged
+        # until the monolith module itself is decommissioned).
+        working-directory: examples/00-monolith
+        run: |
+          set -euo pipefail
+          uv run python manage.py migrate
+          uv run python manage.py seed
+
+      - name: Migrate + seed inventory-service's own `inventory` schema
+        # alembic upgrade head both creates the schema/table AND seeds the
+        # same three demo SKUs (idempotent ON CONFLICT DO NOTHING), so
+        # GET /api/inventory returns an identical dataset whichever side
+        # currently serves the route.
+        working-directory: examples/04-inventory-service
+        run: uv run alembic upgrade head
+
+      - name: Start the inventory-service (uvicorn) on :8084 -- gRPC on :9004
+        working-directory: examples/04-inventory-service
+        run: |
+          mkdir -p logs
+          nohup uv run uvicorn app.main:app --host 0.0.0.0 --port 8084 > uvicorn.out.log 2>&1 &
+          echo $! > uvicorn.pid
+
+      - name: Wait for the inventory-service's gRPC server to be listening on :9004
+        # /health reports grpcServerListening, not just HTTP process
+        # liveness -- same CI-readiness contract as notification-service's
+        # consumerPartitionsAssigned check above.
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:8084/health" | grep -q '"grpcServerListening":true'; then
+              echo "inventory-service's gRPC server is listening."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "inventory-service's gRPC server never came up." >&2
+          curl -sf "http://localhost:8084/health" || true
+          exit 1
+
+      - name: Start the monolith (gunicorn) on :8000 -- INVENTORY_MODE=grpc
+        working-directory: examples/00-monolith
+        env:
+          INVENTORY_MODE: grpc
+          INVENTORY_GRPC_TARGET: localhost:9004
+        run: |
+          mkdir -p logs
+          nohup uv run gunicorn config.wsgi -b 0.0.0.0:8000 > gunicorn.out.log 2>&1 &
+          echo $! > gunicorn.pid
+
+      - name: Wait for the monolith to be ready on :8000
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:8000/api/orders" > /dev/null; then
+              echo "Monolith is up."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Monolith did not become ready in time." >&2
+          exit 1
+
+      - name: Start the strangler proxy (uvicorn) on :8888 -- inventory cutover flag ON
+        working-directory: examples/01-strangler-proxy
+        env:
+          STRANGLER_INVENTORY_ENABLED: 'true'
+          STRANGLER_MONOLITH_BASE_URL: http://localhost:8000
+          STRANGLER_INVENTORY_BASE_URL: http://localhost:8084
+        run: |
+          nohup uv run uvicorn app.main:app --host 0.0.0.0 --port 8888 > uvicorn-flag-on.out.log 2>&1 &
+          echo $! > uvicorn.pid
+
+      - name: Wait for the strangler proxy to be ready on :8888
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:8888/api/orders" > /dev/null; then
+              echo "Proxy is up."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Proxy did not become ready in time." >&2
+          exit 1
+
+      - name: Set up Node (for newman)
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Install newman
+        run: npm install -g newman@6.2.2   # pin: decisions.md version matrix
+
+      - name: Run the behavior-equivalence suite through the proxy -- fully-gRPC
+        # THE GATE (1 of 2): checkout-time reserve/release over gRPC
+        # (INVENTORY_MODE=grpc) AND GET /api/inventory* reads routed to
+        # inventory-service (STRANGLER_INVENTORY_ENABLED=true).
+        run: |
+          newman run tooling/newman/mea.postman_collection.json \
+            -e tooling/newman/proxy.postman_environment.json \
+            --env-var inventoryContractEnabled=true
+
+      - name: Flip the monolith to INVENTORY_MODE=local (reversibility)
+        working-directory: examples/00-monolith
+        env:
+          INVENTORY_MODE: local
+        run: |
+          if [ -f gunicorn.pid ]; then kill "$(cat gunicorn.pid)" || true; fi
+          sleep 1
+          nohup uv run gunicorn config.wsgi -b 0.0.0.0:8000 > gunicorn-local.out.log 2>&1 &
+          echo $! > gunicorn.pid
+
+      - name: Wait for the monolith to be ready on :8000 (INVENTORY_MODE=local)
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:8000/api/orders" > /dev/null; then
+              echo "Monolith is up."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Monolith did not become ready in time." >&2
+          exit 1
+
+      - name: Flip the strangler proxy to inventory flag OFF (reversibility)
+        # Same proxy contract as the other gates' cutover tests: only the
+        # flag changes, same collection, same environment file.
+        working-directory: examples/01-strangler-proxy
+        env:
+          STRANGLER_MONOLITH_BASE_URL: http://localhost:8000
+          STRANGLER_INVENTORY_BASE_URL: http://localhost:8084
+        run: |
+          if [ -f uvicorn.pid ]; then kill "$(cat uvicorn.pid)" || true; fi
+          sleep 1
+          nohup uv run uvicorn app.main:app --host 0.0.0.0 --port 8888 > uvicorn-flag-off.out.log 2>&1 &
+          echo $! > uvicorn.pid
+
+      - name: Wait for the strangler proxy to be ready on :8888 (flag OFF)
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:8888/api/orders" > /dev/null; then
+              echo "Proxy is up."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Proxy did not become ready in time." >&2
+          exit 1
+
+      - name: Run the behavior-equivalence suite through the proxy -- fully-local (reversibility)
+        # THE GATE (2 of 2): checkout-time reserve/release back in-process
+        # (INVENTORY_MODE=local) AND GET /api/inventory* reads served by the
+        # monolith again (STRANGLER_INVENTORY_ENABLED unset) -- proves the
+        # cutover is reversible, not a one-way door.
+        run: |
+          newman run tooling/newman/mea.postman_collection.json \
+            -e tooling/newman/proxy.postman_environment.json \
+            --env-var inventoryContractEnabled=true
+
+      - name: Flip the monolith back to INVENTORY_MODE=grpc (for the negative check)
+        working-directory: examples/00-monolith
+        env:
+          INVENTORY_MODE: grpc
+          INVENTORY_GRPC_TARGET: localhost:9004
+        run: |
+          if [ -f gunicorn.pid ]; then kill "$(cat gunicorn.pid)" || true; fi
+          sleep 1
+          nohup uv run gunicorn config.wsgi -b 0.0.0.0:8000 > gunicorn-grpc-2.out.log 2>&1 &
+          echo $! > gunicorn.pid
+
+      - name: Wait for the monolith to be ready on :8000 (INVENTORY_MODE=grpc, negative check)
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:8000/api/orders" > /dev/null; then
+              echo "Monolith is up."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Monolith did not become ready in time." >&2
+          exit 1
+
+      - name: Flip the strangler proxy back to inventory flag ON (for the negative check)
+        working-directory: examples/01-strangler-proxy
+        env:
+          STRANGLER_INVENTORY_ENABLED: 'true'
+          STRANGLER_MONOLITH_BASE_URL: http://localhost:8000
+          STRANGLER_INVENTORY_BASE_URL: http://localhost:8084
+        run: |
+          if [ -f uvicorn.pid ]; then kill "$(cat uvicorn.pid)" || true; fi
+          sleep 1
+          nohup uv run uvicorn app.main:app --host 0.0.0.0 --port 8888 > uvicorn-flag-on-2.out.log 2>&1 &
+          echo $! > uvicorn.pid
+
+      - name: Wait for the strangler proxy to be ready on :8888 (flag ON, negative check)
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:8888/api/orders" > /dev/null; then
+              echo "Proxy is up."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Proxy did not become ready in time." >&2
+          exit 1
+
+      - name: Kill the inventory-service (for the negative check)
+        working-directory: examples/04-inventory-service
+        run: |
+          if [ -f uvicorn.pid ]; then kill "$(cat uvicorn.pid)" || true; fi
+
+      - name: Negative check -- inventory-service down with fully-gRPC must go RED
+        # Inverted: the STEP passes only when newman FAILS (non-zero exit).
+        # Covers both halves of the ACL contract: the Inventory Context
+        # Contract folder's reads (proxy's gRPC-mode route now has nothing to
+        # read from) AND Scenario 1's happy-path checkout (the monolith's
+        # remote Reserve call now fails with gRPC UNAVAILABLE, mapped to a
+        # real 503 INVENTORY_UNAVAILABLE) -- proving the cutover is real on
+        # both the read and the write path, not a masked success on either.
+        run: |
+          if newman run tooling/newman/mea.postman_collection.json \
+              -e tooling/newman/proxy.postman_environment.json \
+              --folder "Inventory Context Contract" \
+              --folder "Scenario 1 — Happy-Path Checkout" \
+              --env-var inventoryContractEnabled=true; then
+            echo "::error::Negative check failed: newman passed (exit 0) with inventory-service down; expected a RED run." >&2
+            exit 1
+          fi
+          echo "Negative check OK: newman correctly exited non-zero with inventory-service down."
+
+      - name: Dump service logs on failure
+        if: failure()
+        run: |
+          echo "::group::examples/00-monolith/logs/monolith.log"
+          cat examples/00-monolith/logs/monolith.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/00-monolith/gunicorn.out.log"
+          cat examples/00-monolith/gunicorn.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/00-monolith/gunicorn-local.out.log"
+          cat examples/00-monolith/gunicorn-local.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/00-monolith/gunicorn-grpc-2.out.log"
+          cat examples/00-monolith/gunicorn-grpc-2.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/04-inventory-service/logs/inventory-service.log"
+          cat examples/04-inventory-service/logs/inventory-service.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/04-inventory-service/uvicorn.out.log"
+          cat examples/04-inventory-service/uvicorn.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/01-strangler-proxy/uvicorn-flag-on.out.log"
+          cat examples/01-strangler-proxy/uvicorn-flag-on.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/01-strangler-proxy/uvicorn-flag-off.out.log"
+          cat examples/01-strangler-proxy/uvicorn-flag-off.out.log 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::examples/01-strangler-proxy/uvicorn-flag-on-2.out.log"
+          cat examples/01-strangler-proxy/uvicorn-flag-on-2.out.log 2>/dev/null || true
+          echo "::endgroup::"
+
+      - name: Stop the monolith, inventory-service, and proxy
+        if: always()
+        run: |
+          for pidfile in \
+            examples/00-monolith/gunicorn.pid \
+            examples/04-inventory-service/uvicorn.pid \
+            examples/01-strangler-proxy/uvicorn.pid; do
+            if [ -f "$pidfile" ]; then
+              kill "$(cat "$pidfile")" || true
+            fi
+          done
+
   # The one check the ruleset requires. Passes when every needed job
   # succeeded or was skipped by `changes`.
   code-ci-ok:
     name: code-ci-ok
     if: always()
-    needs: [changes, monolith-equivalence-gate, review-equivalence-gate, notification-equivalence-gate]
+    needs: [changes, monolith-equivalence-gate, review-equivalence-gate, notification-equivalence-gate, inventory-equivalence-gate]
     runs-on: ubuntu-latest
     steps:
       - env:

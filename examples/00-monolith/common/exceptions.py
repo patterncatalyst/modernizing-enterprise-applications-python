@@ -58,6 +58,18 @@ class ShippingFailed(ApiError):
     error_code = "SHIPPING_FAILED"
 
 
+class InventoryServiceUnavailable(ApiError):
+    """r04/ch.19: raised by order.inventory_client.RemoteInventoryClient when
+    a grpc-mode call to the inventory service fails or times out
+    (grpc.RpcError, e.g. UNAVAILABLE). This is NOT a logical "insufficient
+    stock" outcome -- it must never be mapped to InsufficientStock's 409.
+    Checkout fails cleanly with a 503 rather than silently confirming an
+    order whose remote reservation status nobody actually knows."""
+
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    error_code = "INVENTORY_UNAVAILABLE"
+
+
 def _now_iso() -> str:
     return datetime.now(tz=UTC).isoformat()
 
