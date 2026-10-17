@@ -17,19 +17,41 @@
 # Severities, most-to-least severe: Critical, High, Medium, Low, Negligible.
 fail-on: High          # fail the GATING target(s) on any High or Critical finding
 
+# gate-on: fixable -- a High/Critical finding only counts toward the
+# fail-on threshold above when it has a fix state other than `not-fixed`
+# (i.e. `fixed`, `wont-fix`, or `unknown` -- see .grype.yaml, which carries
+# the actual grype `ignore: [{fix-state: not-fixed}]` rule enforced by
+# demo.sh and supply-chain.yml). The reasoning: a CI gate should block on
+# what the team can actually remediate. A finding with no published upstream
+# fix cannot be resolved by any change available inside this repository --
+# re-pinning the base image tag, bumping a dependency, or anything else --
+# so blocking merges on it does not reduce risk, it just leaves the pipeline
+# permanently red until an upstream maintainer ships a patch. Findings that
+# DO have a fix path still gate the build at `fail-on: High`.
+#
+# This does not hide not-fixed findings: grype files them in a separate
+# `ignoredMatches` array rather than dropping them, so they remain in the
+# scan's JSON output and in the evidence/ snapshot demo.sh writes -- the
+# gate just doesn't block the pipeline on them. See README.md for the
+# current snapshot this was written against.
+gate-on: fixable
+
 # Artifacts the gate builds and scans. Each `gate` value decides whether a
 # breach blocks the pipeline:
 #
-#   gate: required -- hard-gated. A High/Critical finding here fails demo.sh
-#                      (exit 1) and fails the supply-chain.yml CI job.
+#   gate: required -- hard-gated. A fixable High/Critical finding here (see
+#                      gate-on above) fails demo.sh (exit 1) and fails the
+#                      supply-chain.yml CI job.
 #   gate: reported  -- non-gating. Still built, scanned, and reported (and its
 #                      findings are written to evidence/ like any other
 #                      target), but a breach here is never allowed to block
-#                      the pipeline. It exists to produce the "before"
-#                      evidence, not to be fixed before every merge -- the
-#                      monolith is frozen (see examples/00-monolith) and is
-#                      *expected* to fail; that failure is the chapter's
-#                      point, not a defect to chase down.
+#                      the pipeline. It reports the FULL raw finding count
+#                      (every severity, including not-fixed) so readers see
+#                      total exposure on the frozen "before" image -- unlike
+#                      the gating decision on order-service, this report is
+#                      not filtered to fixable-only. The monolith is frozen
+#                      (see examples/00-monolith); this evidence is
+#                      comparative, not a defect to chase down.
 #
 # [A/B-4 = B, DRQ-088]: order-service (the "after") is the one artifact this
 # gate actually protects; the frozen 00-monolith (the "before") is scanned

@@ -28,6 +28,15 @@
 # or fail -- can never affect the required check. The monolith is expected
 # to fail this scan (that's the point being demonstrated); it must never
 # block merges on account of a frozen, no-longer-shipped image.
+#
+# Gating basis (gate-on: fixable, examples/10-supply-chain/policy.yaml): the
+# `sbom-scan` job below only fails on High/Critical findings that have a
+# published fix (`fix-state` other than `not-fixed`) -- a finding with no
+# upstream patch can't be remediated by any change available in this repo,
+# so blocking merges on it doesn't reduce risk. See
+# examples/10-supply-chain/.grype.yaml for the committed ignore rule this
+# job's `config:` input loads, which is the exact same file demo.sh uses
+# locally.
 
 name: Supply Chain
 
@@ -96,13 +105,23 @@ jobs:
           upload-artifact: true
           artifact-name: order-service-sbom.cdx.json
 
-      - name: Scan SBOM (grype, fail on High)
+      # gate-on: fixable (examples/10-supply-chain/policy.yaml,
+      # examples/10-supply-chain/.grype.yaml): `config` loads the same
+      # grype ignore rule (`fix-state: not-fixed`) demo.sh applies locally,
+      # so `fail-build`/`severity-cutoff: high` below effectively means
+      # "fail on fixable High-or-above" here too -- local and CI enforce
+      # the identical rule from the identical committed file. Not-fixed
+      # findings aren't dropped: grype still lists them under
+      # `ignoredMatches` in its own JSON output, this config only keeps
+      # them out of the pass/fail decision.
+      - name: Scan SBOM (grype, fail on fixable High)
         uses: anchore/scan-action@v7
         with:
           sbom: order-service.cdx.json
           fail-build: true
           severity-cutoff: high
           output-format: table
+          config: examples/10-supply-chain/.grype.yaml
 
   # NON-GATING: scans the frozen examples/00-monolith "before" image for the
   # before/after supply-chain story. `continue-on-error: true` keeps a

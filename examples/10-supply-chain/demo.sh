@@ -7,9 +7,18 @@
 # For the GATING target (order-service, the "after") this script:
 #   1. builds the image from its Containerfile,
 #   2. generates a CycloneDX SBOM with syft,
-#   3. scans that SBOM with grype against the current vulnerability DB, and
-#   4. applies the policy-as-code threshold (fail-on) from policy.yaml --
-#      a breach here fails this script (exit 1), exactly like CI.
+#   3. scans that SBOM with grype against the current vulnerability DB,
+#      applying the fixable-only ignore rule in .grype.yaml (gate-on:
+#      fixable in policy.yaml), and
+#   4. applies the policy-as-code threshold (fail-on) from policy.yaml to
+#      the FIXABLE findings only -- a breach here fails this script (exit
+#      1), exactly like CI. Findings with no published fix (`fix-state:
+#      not-fixed`) are never dropped: grype moves them to a separate
+#      `ignoredMatches` array instead of `matches`, so they are still
+#      counted and printed (see the per-target "total" vs "fixable" tally
+#      below and evidence/*.grype.json) -- they just can't block the
+#      pipeline on a fix that doesn't exist yet. See .grype.yaml for the
+#      full rationale.
 #
 # The frozen examples/00-monolith "before" image is built and scanned the
 # same three steps, but NON-GATING (policy.yaml: gate: reported): its
@@ -57,7 +66,9 @@ echo "Builder: $BUILDER"
 
 # --- read policy.yaml without a YAML dependency (small, fixed shape) --------
 FAIL_ON="$(grep -E '^fail-on:' policy.yaml | awk '{print $2}')"
-echo "Policy: fail the GATING target(s) on >= ${FAIL_ON}   (source: policy.yaml)"
+GATE_ON="$(grep -E '^gate-on:' policy.yaml | awk '{print $2}')"
+GRYPE_CFG=".grype.yaml"
+echo "Policy: fail the GATING target(s) on >= ${FAIL_ON}, gated on '${GATE_ON}' findings only   (source: policy.yaml, ${GRYPE_CFG})"
 echo "grype DB: $(grype db status 2>/dev/null | awk -F': +' '/^Built/{print $2}')"
 echo
 
@@ -97,18 +108,46 @@ scan_target() {
   syft "${BUILDER}:${image}" -o "cyclonedx-json=$sbom" -q
 
   # 2. scan the SBOM (not the image again) -- the SBOM is the contract.
-  grype "sbom:$sbom" -o json -q > "$scan"
+  #    -c .grype.yaml applies the fixable-only ignore rule (gate-on:
+  #    fixable in policy.yaml): grype moves any match with
+  #    `fix-state: not-fixed` out of `matches` and into a separate
+  #    `ignoredMatches` array rather than dropping it, so not-fixed
+  #    findings are still present in $scan and still counted below -- just
+  #    not counted toward the gate.
+  grype "sbom:$sbom" -c "$GRYPE_CFG" -o json -q > "$scan"
 
-  # 3. tally by severity and apply the policy.
-  local crit high med components
-  crit="$(jq '[.matches[]|select(.vulnerability.severity=="Critical")]|length' "$scan")"
-  high="$(jq '[.matches[]|select(.vulnerability.severity=="High")]|length' "$scan")"
-  med="$(jq '[.matches[]|select(.vulnerability.severity=="Medium")]|length' "$scan")"
+  # 3. tally by severity -- FIXABLE (from `matches`, what the gate acts on)
+  #    and TOTAL (`matches` + `ignoredMatches`, every finding regardless of
+  #    fix state) -- then apply the policy to the basis each gate type
+  #    reports on: `required` targets gate on fixable findings only;
+  #    `reported` targets show the full raw count (all severities,
+  #    including not-fixed) so readers see total exposure.
+  local fx_crit fx_high fx_med ig_crit ig_high ig_med components
+  fx_crit="$(jq '[.matches[]|select(.vulnerability.severity=="Critical")]|length' "$scan")"
+  fx_high="$(jq '[.matches[]|select(.vulnerability.severity=="High")]|length' "$scan")"
+  fx_med="$(jq '[.matches[]|select(.vulnerability.severity=="Medium")]|length' "$scan")"
+  ig_crit="$(jq '[.ignoredMatches[]?|select(.vulnerability.severity=="Critical")]|length' "$scan")"
+  ig_high="$(jq '[.ignoredMatches[]?|select(.vulnerability.severity=="High")]|length' "$scan")"
+  ig_med="$(jq '[.ignoredMatches[]?|select(.vulnerability.severity=="Medium")]|length' "$scan")"
   components="$(jq '.components | length' "$sbom")"
 
+  local tot_crit=$((fx_crit + ig_crit))
+  local tot_high=$((fx_high + ig_high))
+  local tot_med=$((fx_med + ig_med))
+
+  # The basis a verdict is computed on: `required` targets gate on fixable
+  # findings only (gate-on: fixable); `reported` targets verdict against
+  # the full raw total, to demonstrate total exposure on the frozen image.
+  local basis_crit basis_high
+  if [ "$gate" = "required" ] && [ "$GATE_ON" = "fixable" ]; then
+    basis_crit="$fx_crit"; basis_high="$fx_high"
+  else
+    basis_crit="$tot_crit"; basis_high="$tot_high"
+  fi
+
   local breach=0
-  if { [ "$FAIL_ON" = "High" ] && { [ "$crit" -gt 0 ] || [ "$high" -gt 0 ]; }; } \
-     || { [ "$FAIL_ON" = "Critical" ] && [ "$crit" -gt 0 ]; }; then
+  if { [ "$FAIL_ON" = "High" ] && { [ "$basis_crit" -gt 0 ] || [ "$basis_high" -gt 0 ]; }; } \
+     || { [ "$FAIL_ON" = "Critical" ] && [ "$basis_crit" -gt 0 ]; }; then
     breach=1
   fi
 
@@ -120,13 +159,17 @@ scan_target() {
     fi
   fi
 
-  printf '  components=%s  Critical=%s  High=%s  Medium=%s  -> %s\n' \
-    "$components" "$crit" "$high" "$med" "$verdict"
+  printf '  components=%s\n' "$components"
+  printf '  total:    Critical=%s  High=%s  Medium=%s  (all severities, incl. not-fixed)\n' \
+    "$tot_crit" "$tot_high" "$tot_med"
+  printf '  fixable:  Critical=%s  High=%s  Medium=%s  (gating basis for required targets; not-fixed findings excluded, still reported in evidence/)\n' \
+    "$fx_crit" "$fx_high" "$fx_med"
+  printf '  -> %s\n' "$verdict"
   if [ "$breach" -eq 1 ] && [ "$gate" = "reported" ]; then
-    echo "  (this is the expected 'before' result demonstrating the gate firing -- non-gating, does not block the pipeline)"
+    echo "  (this is the expected 'before' result demonstrating the gate firing on the full raw count -- non-gating, does not block the pipeline)"
   fi
-  printf '%-14s [%-6s/%-8s] components=%-4s Critical=%-2s High=%-2s Medium=%-2s %s\n' \
-    "$name" "$kind" "$gate" "$components" "$crit" "$high" "$med" "$verdict" >> "$summary"
+  printf '%-14s [%-6s/%-8s] components=%-4s total(Critical=%-2s High=%-2s Medium=%-2s) fixable(Critical=%-2s High=%-2s Medium=%-2s) %s\n' \
+    "$name" "$kind" "$gate" "$components" "$tot_crit" "$tot_high" "$tot_med" "$fx_crit" "$fx_high" "$fx_med" "$verdict" >> "$summary"
   echo
 }
 
