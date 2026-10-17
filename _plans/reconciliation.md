@@ -1482,9 +1482,9 @@ pair exchanging Avro-encoded messages through Kafka, with the schema itself
 registered in and resolved from a live Apicurio v3 instance over its REST
 API (no confluent-kafka, no librdkafka). Because fastavro has no built-in
 Confluent-wire-format framing the way `confluent-kafka`'s `AvroSerializer`
-does, the demo **hand-rolls the wire envelope**: `[magic byte][4-byte
-big-endian global id][Avro binary payload]`, encode and decode both
-implemented in the example itself (DRQ-084) — a deliberate, named
+does, the demo **hand-rolls the wire envelope**: `[1-byte magic][8-byte
+big-endian global id][Avro binary payload]` (`struct ">BQ"`), encode and decode both
+implemented in the example itself (DRQ-084) — a named
 consequence of the pure-Python client choice, not an oversight.
 
 **Round-trip and compatibility, verified live, not asserted:** a
