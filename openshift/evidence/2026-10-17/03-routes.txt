@@ -1,0 +1,2 @@
+GET https://strangler-proxy-mea.apps-crc.testing/ -> 404
+GET https://graphql-gateway-mea.apps-crc.testing/ -> 404

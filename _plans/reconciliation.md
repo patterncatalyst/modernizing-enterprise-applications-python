@@ -1816,3 +1816,84 @@ maintainer's separate run.
 (not A/B gates): front-matter ch.00-13, the 3 decks (101/201/201-fastapi), and
 ch.33 (OpenShift/CRC appendix); plus landing ch.30's live evidence when the
 maintainer's run completes.
+
+## ch.33 — Appendix A: Deploying to OpenShift (r11, Part 11, appendix)
+
+**What shipped (headless, committed):** ch.33 (`_docs/33-appendix-openshift.md`)
++ the new `openshift/` tree — a Helm chart (`openshift/helm/mea`) re-homing the
+minikube topology for the 8 services via a data-driven `services:` map; Routes
+as the cluster edge on strangler-proxy + graphql-gateway (OSSM provisions no
+ingress gateway of its own — the Route is the edge); three SCC postures
+(restricted-v2 for the 8 app Deployments, nonroot-v2 for postgres/kafka under
+a dedicated `mea-infra` SA, anyuid + `runAsUser: 0`-only for
+`grafana/otel-lgtm`); podman build → internal-registry image delivery for all
+8 services plus the frozen monolith image, with a `--mirror-infra` path for
+the egress-less CRC VM; an opt-in platform tier (OSSM 3 via the Sail operator,
+`Istio` CR `spec.version: v1.30.5`, sidecar injection by the
+`istio.io/rev: default` pod-template label rather than the minikube path's
+annotation, namespace-wide STRICT mTLS with a PERMISSIVE carve-out for the two
+Route-facing services, Kiali pointed at the redeployed otel-lgtm, RHBOTel); and
+an in-cluster idempotent bootstrap Job seeding review-service's shared schema
+in place of the minikube path's host port-forward. `deploy/k8s`, app code,
+Containerfiles, and images are unchanged — the project's A.0 separation
+discipline keeps OpenShift/CRC/OSSM/Routes/SCC confined to `openshift/` and
+ch.33 alone, and the existing UBI10-1001 images already satisfy restricted-v2
+with no rebuild. A new headless, additive `openshift-chart.yml` gate validates
+the chart with `helm template | kubeconform -strict -ignore-missing-schemas`
+under both flag combinations.
+
+**Decisions:** DRQ-104 (the A/B CRC-verification gate mechanism — machine-
+checked pass/fail on a live run, outcome pending); DRQ-105 (Helm over a
+kustomize overlay); DRQ-106 (Routes-as-edge, no OSSM ingress gateway);
+DRQ-107 (the three SCC postures); DRQ-108 (podman→internal-registry delivery
++ the monolith image); DRQ-109 (Sail `Istio` v1.30.5, label injection, STRICT
++ PERMISSIVE); DRQ-110 (the `openshift-chart.yml` gate); DRQ-111 (the
+in-cluster bootstrap Job); r11 pins (CRC 2.64.0/OpenShift 4.22.14/k8s 1.35.6,
+OSSM3 v3.4.3/Istio v1.30.5, Kiali v2.27.5, RHBOTel v0.158.0-2, Helm v4.2.2 — a
+build-time correction of the plan's v4.3.1 survey).
+
+**Separation discipline, verified:** OpenShift/CRC/OSSM/Routes/SCC vocabulary
+appears nowhere outside `openshift/` and ch.33; `deploy/k8s`, the app code,
+and the 8 service images are byte-for-byte what ch.29/30 already shipped. The
+minikube path's `sidecar.istio.io/inject` annotation and the Sail path's
+`istio.io/rev` label are both named and contrasted in-text, so a reader
+moving between the two deployment targets sees the divergence rather than
+inferring it.
+
+**Verdict:** CLEAN on the headless scaffold — `helm lint` clean,
+`helm template | kubeconform -strict -ignore-missing-schemas` passes for both
+the mesh-off/observability-off default and the mesh-on/observability-on
+platform-tier flag set (Routes and PeerAuthentication skipped on missing
+schema, not invalid).
+
+**Live CRC run — DONE, verified (2026-10-17).** The headless run on OpenShift
+Local 2.64.0 (OpenShift 4.22.14) passed all six `capture-evidence.sh` checks:
+nine `:v1` ImageStream tags; every app pod Ready under restricted-v2, Postgres/
+Kafka under nonroot-v2, otel-lgtm under anyuid; both edge-TLS Routes; a
+happy-path checkout through the strangler-proxy Route reaching `CONFIRMED`;
+OSSM 3 (Istio v1.30.5) STRICT mTLS rejecting a plaintext caller (exit 56) +
+Kiali `MTLS_ENABLED`; OTLP traces for the instrumented services in Tempo. The
+scrubbed run is committed under `openshift/evidence/2026-10-17/`; ch.33's footer
+is `verified`. The run surfaced **six real portability defects in the
+`openshift/` scripts, each found-and-fixed on the live cluster** (the value of
+running it rather than asserting it): (1) `build-and-push.sh` was podman-only and
+rootless podman fails the non-root UBI builds (`uv` `.venv` permission) — added a
+`CONTAINER_ENGINE=docker` path (docker build + skopeo push); (2) it hardcoded
+`Containerfile`, skipping the monolith's `Dockerfile` — added a fallback; (3)
+`install_operator` waited for an InstallPlan for a pinned CSV that never comes
+when a newer one is already present (the grpc appendix's RHBOTel v0.158.0-3) —
+now accepts an already-installed newer CSV; (4) `install-observability.sh` never
+applied the `grafana-datasources` ConfigMap the lgtm pod mounts; (5) flipping
+`OTEL_SDK_DISABLED` via a ConfigMap did not restart the pods, so the 3 services
+kept exporting-disabled — added a rollout restart; (6) `capture-evidence.sh`'s
+SCC check rejected the legitimate nonroot-v2 infra pods, and its secret scrub
+false-positived on the `monolith` DB password colliding with the `mea/monolith`
+image name — both tightened. A shared CRC carrying the grpc appendix's OSSM/
+RHBOTel operators + namespaces was navigated by joining the existing compatible
+v1.30.5 control plane rather than installing a second one.
+
+**Forward reference:** ch.33 is the project's **final chapter** — no further
+back-matter or appendix chapters remain. What's left across the whole
+project: the front-matter chapters (ch.00–13), the three decks, and landing
+ch.30's live minikube/Istio/LGTM evidence (DRQ-095) once its own pending run
+completes.

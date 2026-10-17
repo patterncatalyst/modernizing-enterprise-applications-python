@@ -1,0 +1,48 @@
+{{- if .Values.mesh.enabled }}
+# Namespace-wide PeerAuthentication for the release namespace, named
+# `default` -- the name Istio requires for a namespace-scoped default
+# policy to take effect. STRICT: every meshed workload (the pods carrying
+# the `istio.io/rev: default` pod-template label, app-deployment.yaml)
+# rejects plaintext from another meshed sidecar. Ported from
+# deploy/k8s/istio/peer-authentication.yaml (DRQ-109).
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: default
+  labels:
+    {{- include "mea.labels" . | nindent 4 }}
+spec:
+  mtls:
+    mode: STRICT
+{{- $root := . }}
+{{- range $name, $svc := .Values.services }}
+{{- if $svc.route }}
+---
+# {{ $name }} is one of this topology's two Route-facing services: traffic
+# arrives from OUTSIDE the mesh (the OpenShift router is not a mesh member,
+# and OSSM 3 provisions no ingress gateway here -- the Route IS the edge, see
+# templates/route.yaml), so it has no sidecar on the client side to
+# originate mTLS. Under the namespace-wide STRICT policy above, {{ $name }}'s
+# own sidecar would reset that inbound plaintext and every Route request
+# would 502. This workload-scoped PERMISSIVE override lets {{ $name }}
+# accept plaintext on its inbound side while every service BEHIND it stays
+# STRICT -- {{ $name }}'s own outbound calls to the other services are still
+# mTLS, originated by its sidecar. Generalizes
+# deploy/k8s/istio/peer-authentication-edge.yaml (minikube has one
+# NodePort edge, strangler-proxy; OpenShift has two Routes).
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: {{ $name }}-edge
+  labels:
+    app.kubernetes.io/name: {{ $name }}
+    {{- include "mea.labels" $root | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+  mtls:
+    mode: PERMISSIVE
+{{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,28 @@
+Istio v1.30.5, revision default, Ready=True
+CSV                                 PHASE
+kiali-operator.v2.27.5              Succeeded
+servicemeshoperator3.v3.4.3         Succeeded
+
+-- pods: istio.io/rev label (native sidecars join by revision label, not the sidecar.istio.io/inject annotation)
+POD                                     REV       INIT
+graphql-gateway-5c66dc654-75mj9         default   istio-validation,istio-proxy
+inventory-service-779b86dcf9-f4jmb      default   istio-validation,istio-proxy
+kafka-0                                 <none>    <none>
+lgtm-ddd5c547c-6hqkn                    <none>    <none>
+notification-service-5cd984bd98-nsqb2   default   istio-validation,istio-proxy
+order-service-57dfbd664-pk5lg           default   istio-validation,istio-proxy
+payment-service-9b85b8cb6-s2fqk         default   istio-validation,istio-proxy
+postgres-0                              <none>    <none>
+review-service-74d7fc45c8-m4pwx         default   istio-validation,istio-proxy
+shipping-service-7bfb8f4466-65kw6       default   istio-validation,istio-proxy
+strangler-proxy-8d8fd567b-q5nqb         default   istio-validation,istio-proxy
+
+-- PeerAuthentication (STRICT default + PERMISSIVE carve-out for the 2 Route-facing services)
+NAME                   MODE
+default                STRICT
+graphql-gateway-edge   PERMISSIVE
+strangler-proxy-edge   PERMISSIVE
+
+-- plaintext from an unmeshed pod to review-service (STRICT, no carve-out): 000 exit=56
+
+-- Kiali: namespace TLS MTLS_ENABLED

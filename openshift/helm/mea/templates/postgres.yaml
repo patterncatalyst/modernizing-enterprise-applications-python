@@ -1,0 +1,108 @@
+# The ONE shared Postgres server every DB-backed service in this topology
+# connects to (db `monolith`), each owning its own schema except
+# review-service (shared `public` schema -- see templates/bootstrap-job.yaml
+# and app-deployment.yaml's header comment). Helm port of
+# deploy/k8s/base/infra/postgres-statefulset.yaml, preserving its ch.30
+# live-apply fixes: `args` (not `command`) so the entrypoint's initdb runs;
+# PGDATA in a subdir the postgres user owns; fsGroup 70 for PVC
+# writability; wal_level=logical for the CDC transition story. On OpenShift
+# it additionally runs under the mea-infra ServiceAccount (nonroot-v2 SCC)
+# so uid 70 is actually permitted -- restricted-v2 would otherwise assign a
+# random namespace UID and the image's data-dir ownership would break.
+#
+# Schema bootstrap: every Python service's own Alembic migration already
+# issues its own `CREATE SCHEMA IF NOT EXISTS` as part of `alembic upgrade
+# head`, which runs as each container's own startup command -- there is no
+# separate schema-bootstrap ConfigMap needed here (unlike the Java sibling,
+# where Flyway needs schemas pre-created). review-service's shared `public`
+# schema is the one exception: it is not created by any of the 8 running
+# services' own migrations -- see templates/bootstrap-job.yaml.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels:
+    app.kubernetes.io/name: postgres
+    {{- include "mea.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  labels:
+    app.kubernetes.io/name: postgres
+    {{- include "mea.labels" . | nindent 4 }}
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postgres
+        app.kubernetes.io/part-of: mea
+    spec:
+      serviceAccountName: {{ .Values.infra.serviceAccountName }}
+      securityContext:
+        fsGroup: 70
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image | quote }}
+          imagePullPolicy: IfNotPresent
+          args: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=4", "-c", "max_wal_senders=4"]
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: PGDATA
+              value: "/var/lib/postgresql/18/docker"
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.database | quote }}
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef: { name: mea-postgres-app, key: username }
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: mea-postgres-app, key: password }
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql
+          readinessProbe:
+            exec: { command: ["pg_isready", "-h", "127.0.0.1", "-U", "monolith", "-d", "monolith"] }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            exec: { command: ["pg_isready", "-h", "127.0.0.1", "-U", "monolith", "-d", "monolith"] }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 6
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits: { cpu: 1000m, memory: 1Gi }
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 70
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.postgres.storage | quote }}

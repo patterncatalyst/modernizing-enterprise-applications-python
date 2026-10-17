@@ -1,0 +1,35 @@
+{{- $root := . -}}
+{{- range $name, $svc := .Values.services }}
+{{- if $svc.route }}
+---
+# OpenShift Route -- the platform-native ingress, replacing the minikube
+# path's NodePort (deploy/k8s's strangler-proxy NodePort 30888) and
+# graphql-gateway's in-cluster-only reach (DRQ-106). The cluster's router
+# (the `ingress` cluster operator) gives this Service a real external
+# hostname, <name>-<namespace>.apps-crc.testing on CRC. Edge TLS terminates
+# at the router; plain HTTP is redirected to HTTPS.
+#
+# OSSM 3 provisions no ingress gateway of its own on OpenShift -- the Route
+# IS the edge; the mesh (when mesh.enabled) governs only sidecar-to-sidecar
+# traffic behind it. See templates/peerauthentication.yaml for the
+# PERMISSIVE carve-out this Route's plaintext-from-outside-the-mesh traffic
+# needs.
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ $name }}
+  labels:
+    app.kubernetes.io/name: {{ $name }}
+    {{- include "mea.labels" $root | nindent 4 }}
+spec:
+  to:
+    kind: Service
+    name: {{ $name }}
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+{{- end }}
+{{- end }}

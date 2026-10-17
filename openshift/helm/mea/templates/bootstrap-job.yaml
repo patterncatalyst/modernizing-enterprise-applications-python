@@ -1,0 +1,101 @@
+# bootstrap-job.yaml -- DRQ-111: seeds the shared `public` Postgres schema
+# (reviews/customers/inventory_items/auth_user) that review-service reads,
+# by running the frozen monolith's own `manage.py migrate`/`manage.py seed`
+# in-cluster. On minikube (deploy/k8s/scripts/deploy.sh) this same step runs
+# from the HOST through a port-forward; on OpenShift that depends on a local
+# `uv`/Python toolchain and a reachable port-forward tunnel, neither of
+# which this appendix assumes -- so here it is an in-cluster Job running the
+# monolith image build-and-push.sh pushed, with DATABASE_URL pointed at the
+# in-cluster postgres Service.
+#
+# Idempotent: the guard below checks `to_regclass('public.reviews')` before
+# doing anything, the same check deploy/k8s/scripts/deploy.sh uses, so
+# re-running `helm upgrade` (which re-applies this Job... see note below)
+# never re-seeds a database that already has the shared schema.
+#
+# Helm re-creates a Job on every upgrade (a Job's pod template is immutable
+# once created); the `helm.sh/hook` annotations make this a post-install/
+# post-upgrade hook that Helm runs (and waits on) as part of
+# `helm upgrade --install` itself, deleting and recreating it each release
+# rather than failing on an in-place update. `before-hook-creation` only
+# (no `hook-succeeded`): the completed Job is left in place after a
+# successful run so deploy.sh's own `oc wait --for=condition=complete`
+# check, and capture-evidence.sh, can still find it.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mea-bootstrap-public-schema
+  labels:
+    {{- include "mea.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "5"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mea-bootstrap
+        app.kubernetes.io/part-of: mea
+    spec:
+      restartPolicy: Never
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: bootstrap
+          image: {{ .Values.monolith.image | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: mea-postgres-app
+                  key: database-url
+            - name: DJANGO_SETTINGS_MODULE
+              value: "config.settings"
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -eu
+              echo "checking for an existing public.reviews table..."
+              # psycopg ships with the monolith image (Django's own ORM
+              # driver) -- reuse it instead of adding a psql client just for
+              # this check. Exit code 42 is the "already seeded, skip"
+              # signal; anything else from the python step is a real error.
+              set +e
+              python - <<'PY'
+              import os, sys
+              import psycopg
+              conn = psycopg.connect(os.environ["DATABASE_URL"])
+              cur = conn.cursor()
+              cur.execute("SELECT to_regclass('public.reviews')")
+              relation = cur.fetchone()[0]
+              conn.close()
+              sys.exit(42 if relation is not None else 0)
+              PY
+              rc=$?
+              set -e
+              if [ "$rc" -eq 42 ]; then
+                echo "public.reviews already present -- schema already seeded, nothing to do"
+                exit 0
+              elif [ "$rc" -ne 0 ]; then
+                echo "the to_regclass('public.reviews') check failed (exit $rc)" >&2
+                exit "$rc"
+              fi
+              echo "public schema not found -- running migrate + seed"
+              python manage.py migrate
+              python manage.py seed
+          # No runAsUser: same restricted-v2 posture as the 8 app pods --
+          # the monolith image (examples/00-monolith/Dockerfile) is also
+          # USER 1001:0.
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 500m, memory: 512Mi }

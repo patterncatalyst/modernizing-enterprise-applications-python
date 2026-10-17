@@ -1,0 +1,2 @@
+# Local CRC run logs (contain cluster credentials/tokens) -- never commit.
+.runlog/

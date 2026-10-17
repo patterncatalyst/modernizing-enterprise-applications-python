@@ -1,0 +1,34 @@
+# application.yaml -- an ILLUSTRATIVE Argo CD Application for the mea Helm
+# chart. This is NOT part of the verified deploy this appendix's evidence
+# covers (openshift/evidence/): no OpenShift GitOps (Argo CD) operator
+# install script ships in this tree, and capture-evidence.sh never applies
+# or checks this resource. It shows what adopting an already-installed Argo
+# CD instance would look like for a reader who has one, following the same
+# repoURL/path/targetRevision shape as the other patterncatalyst GitOps
+# appendices (lgtm-crc skill's install-gitops.sh recipe) -- not something
+# install-infra.sh, deploy.sh or teardown.sh create, manage or remove.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mea
+  namespace: openshift-gitops
+  labels:
+    app.kubernetes.io/part-of: mea
+spec:
+  project: default
+  source:
+    repoURL: "https://github.com/patterncatalyst/modernizing-enterprise-applications-python.git"
+    targetRevision: main
+    path: openshift/helm/mea
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: mea
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false

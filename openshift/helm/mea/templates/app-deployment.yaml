@@ -1,0 +1,142 @@
+{{- $root := . -}}
+{{- range $name, $svc := .Values.services }}
+---
+# {{ $name }} -- {{ if $svc.route }}externally exposed via Route; {{ end }}{{ if $svc.db }}reads/writes Postgres (schema: {{ $svc.schema }}); {{ end }}{{ if $svc.kafka }}Kafka consumer group {{ $svc.consumerGroup }} (graceful shutdown); {{ end }}{{ $svc.probe }} health probe{{ if eq $svc.probe "tcp" }} (no /health route in this service's app code){{ end }}.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    app.kubernetes.io/name: {{ $name }}
+    {{- include "mea.labels" $root | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ $name }}
+        app.kubernetes.io/part-of: mea
+        {{- if $root.Values.mesh.enabled }}
+        # OSSM 3 / Sail injects by a REVISIONED pod-template LABEL, not the
+        # classic sidecar.istio.io/inject annotation the minikube path uses
+        # (deploy/k8s/istio/) -- Sail's revisioned webhook ignores that
+        # annotation entirely, so reusing it here would silently produce no
+        # sidecar (DRQ-109).
+        istio.io/rev: default
+        {{- end }}
+    spec:
+      terminationGracePeriodSeconds: {{ $svc.gracePeriodSeconds }}
+      containers:
+        - name: {{ $name }}
+          image: "{{ $root.Values.image.registry }}/{{ $name }}:{{ $root.Values.image.tag }}"
+          imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ $svc.port }}
+            {{- if $svc.grpcPort }}
+            - name: grpc
+              containerPort: {{ $svc.grpcPort }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: mea-app-config
+          env:
+            {{- if $svc.portEnv }}
+            - name: {{ $svc.portEnv }}
+              value: {{ $svc.port | quote }}
+            {{- end }}
+            {{- if $svc.grpcPort }}
+            - name: GRPC_PORT
+              value: {{ $svc.grpcPort | quote }}
+            {{- end }}
+            {{- if $svc.kafka }}
+            - name: CONSUMER_GROUP
+              value: {{ $svc.consumerGroup | quote }}
+            {{- end }}
+            {{- if $svc.otel }}
+            # r10/ch.30 parity -- the one per-service OTEL key:
+            # OTEL_SDK_DISABLED/_ENDPOINT/_PROTOCOL come from mea-app-config
+            # (shared, gated by observability.otlp.enabled);
+            # OTEL_SERVICE_NAME can't live there since it needs a different
+            # value per Deployment.
+            - name: OTEL_SERVICE_NAME
+              value: {{ $name | quote }}
+            {{- end }}
+            {{- if $svc.db }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: mea-postgres-app
+                  key: database-url
+            {{- end }}
+          {{- if $svc.preStopSleep }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sh", "-c", "sleep {{ $svc.preStopSleep }}"]
+          {{- end }}
+          {{- if eq $svc.probe "http" }}
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          {{- else }}
+          # No /health route in this service's app code (confirmed in
+          # app/main.py) -> tcpSocket proves the HTTP listener is up, not
+          # that routing/business health is good.
+          startupProbe:
+            tcpSocket: { port: http }
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            failureThreshold: 12
+          readinessProbe:
+            tcpSocket: { port: http }
+            initialDelaySeconds: 2
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket: { port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          {{- end }}
+          resources:
+            requests:
+              cpu: {{ $svc.resources.requests.cpu }}
+              memory: {{ $svc.resources.requests.memory }}
+            limits:
+              cpu: {{ $svc.resources.limits.cpu }}
+              memory: {{ $svc.resources.limits.memory }}
+          # No runAsUser: OpenShift's restricted-v2 SCC assigns a UID from
+          # the namespace range, and the UBI10 python-314-minimal image
+          # already runs as USER 1001:0 -- an arbitrary assigned UID with
+          # group 0 is exactly what it expects. This is the one change from
+          # the deploy/k8s/base manifests, which pin runAsUser: 1001
+          # (DRQ-107).
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+{{- end }}

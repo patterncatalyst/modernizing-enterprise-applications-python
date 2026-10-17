@@ -1,0 +1,18 @@
+-- otel-lgtm pod (anyuid, runAsUser 0, no seccompProfile)
+POD                    SCC      UID   SECCOMP
+lgtm-ddd5c547c-6hqkn   anyuid   0     <none>
+
+-- OTEL_SERVICE_NAME on the 3 instrumented Deployments
+strangler-proxy: strangler-proxy
+inventory-service: inventory-service
+order-service: order-service
+
+-- recent traces (Tempo, via otel-lgtm)
+      1 inventory-service: GET /health
+      4 order-service: ;
+      4 order-service: BEGIN;
+      1 order-service: GET /health
+      6 order-service: ROLLBACK;
+      4 order-service: SELECT
+
+Grafana /api/health through its Route: 200

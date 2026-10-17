@@ -1,0 +1,29 @@
+# Kiali (kiali-ossm) for the mesh topology. __NAMESPACE__ is filled in at
+# apply time by install-mesh.sh (not a scaffold placeholder).
+#
+# auth.strategy anonymous suits a single-user local cluster only. No
+# Prometheus runs on OpenShift Local by default: install-observability.sh
+# points Kiali at otel-lgtm's Prometheus, which scrapes the sidecars once
+# the mesh is installed, so the traffic graph works once both scripts have
+# run.
+apiVersion: kiali.io/v1alpha1
+kind: Kiali
+metadata:
+  name: kiali
+  namespace: istio-system
+spec:
+  auth:
+    strategy: anonymous
+  deployment:
+    cluster_wide_access: false
+    discovery_selectors:
+      default:
+        - matchLabels:
+            kubernetes.io/metadata.name: __NAMESPACE__
+  external_services:
+    prometheus:
+      enabled: false
+    grafana:
+      enabled: false
+    tracing:
+      enabled: false
