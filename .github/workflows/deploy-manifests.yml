@@ -1,0 +1,120 @@
+# deploy-manifests.yml -- ch.29 (DRQ-091) kustomize render + offline schema
+# validation gate for deploy/k8s/.
+#
+# A SEPARATE, ADDITIVE workflow: never edits, depends on, or shares a job
+# with code-ci.yml / code-ci-ok / schema-registry.yml -- those gates stay
+# exactly as they were.
+#
+# Summary-job gate pattern (see
+# ~/.claude/skills/lgtm-github/references/branch-protection.md), same shape
+# as schema-registry.yml: a cheap `changes` job decides whether the heavy job
+# runs; `render` does the real work; `deploy-manifests-ok` is the single
+# required check, `if: always()`, and passes when every needed job is
+# success-or-skipped. No `paths:` filter on `on:` -- a path-filtered-out run
+# of a workflow with a required summary job reports nothing, which would
+# wedge a ruleset that requires this check.
+#
+# What "verified" means here, and what it deliberately does not mean: this
+# gate proves the kustomize tree renders and the rendered manifests are
+# schema-valid and structurally well-formed to the API server's own
+# validation logic (`--dry-run=client`). It does NOT prove the manifests
+# would be admitted by a live cluster (defaults, webhooks, RBAC, PVC
+# binding) -- that needs a server dry-run or a real apply, which this
+# offline gate cannot do. The live minikube path is user-runnable via
+# deploy/k8s/scripts/ and deferred to r10 ch.30; see deploy/k8s/README.md
+# and _docs/29-deployment-patterns.md for the same caveat.
+
+name: Deploy Manifests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # Decides whether the heavy job runs. The workflow always runs (no
+  # `paths:` filter on `on:` above), so the required summary job always
+  # reports.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.diff.outputs.run }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - id: diff
+        run: |
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          if ! files="$(git diff --name-only "$base" "${{ github.sha }}" 2>/dev/null)"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"   # cannot diff: run everything
+          elif grep -qE '^(deploy/k8s/|\.github/workflows/deploy-manifests\.yml$)' <<<"$files"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # THE GATE: render both the base and the minikube overlay with `kubectl
+  # kustomize` (no cluster needed), then validate the rendered output two
+  # ways -- `kubeconform -strict` for offline OpenAPI schema validation
+  # against the matching Kubernetes version, and `kubectl apply --dry-run=
+  # client -f -` for the API server's own client-side structural checks
+  # (no network/cluster contact in either case).
+  render:
+    name: render
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-latest
+
+    env:
+      KUBECTL_VERSION: "v1.37.1"
+      KUBECONFORM_VERSION: "0.8.0"
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v7
+
+      - name: Install kubectl (pinned)
+        run: |
+          curl -fsSLo kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/kubectl
+          kubectl version --client
+
+      - name: Install kubeconform (pinned)
+        run: |
+          curl -fsSLo kubeconform.tar.gz "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          tar -xzf kubeconform.tar.gz kubeconform
+          chmod +x kubeconform
+          sudo mv kubeconform /usr/local/bin/kubeconform
+          kubeconform -v
+
+      - name: Render + validate deploy/k8s/base
+        run: |
+          kubectl kustomize deploy/k8s/base > /tmp/base.yaml
+          kubeconform -strict -summary /tmp/base.yaml
+          kubectl apply --dry-run=client -f /tmp/base.yaml
+
+      - name: Render + validate deploy/k8s/overlays/minikube
+        run: |
+          kubectl kustomize deploy/k8s/overlays/minikube > /tmp/minikube.yaml
+          kubeconform -strict -summary /tmp/minikube.yaml
+          kubectl apply --dry-run=client -f /tmp/minikube.yaml
+
+  # The one check a ruleset would require for this workflow. Passes when
+  # every needed job succeeded or was skipped by `changes`.
+  deploy-manifests-ok:
+    name: deploy-manifests-ok
+    if: always()
+    needs: [changes, render]
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: jq -e 'to_entries | all(.value.result == "success" or .value.result == "skipped")' <<<"$NEEDS"
