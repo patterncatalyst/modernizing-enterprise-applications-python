@@ -1,0 +1,2 @@
+order-service  [after /required] components=5720 Critical=0  High=35 Medium=153 FAIL
+monolith       [before/reported] components=5690 Critical=0  High=35 Medium=153 FAIL

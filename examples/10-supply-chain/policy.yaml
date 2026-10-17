@@ -1,0 +1,50 @@
+# Supply-chain policy-as-code for the modernized system (ch.31).
+#
+# This is the single source of truth the demo and the CI workflow both read:
+# the gate fails the build when a scanned artifact carries a vulnerability at
+# or above `fail-on`. Keeping the threshold in a committed file -- rather than
+# buried in a shell flag or a CI YAML step -- is the "policy-as-code" point:
+# the rule is reviewed, versioned, and diffable like any other code, and the
+# same rule runs on a developer laptop and in GitHub Actions.
+#
+# Unlike the Java sibling (which scans a built jar / runtime-closure
+# directory), every service here ships as a container image -- that's the
+# real deployable artifact (see deploy/k8s), and it's the only artifact shape
+# that also catches UBI base-layer CVEs, not just Python dependency CVEs that
+# a `uv.lock`-only scan would see. So the SBOM format is CycloneDX JSON, but
+# the thing syft points at is an image, not a jar/dir.
+#
+# Severities, most-to-least severe: Critical, High, Medium, Low, Negligible.
+fail-on: High          # fail the GATING target(s) on any High or Critical finding
+
+# Artifacts the gate builds and scans. Each `gate` value decides whether a
+# breach blocks the pipeline:
+#
+#   gate: required -- hard-gated. A High/Critical finding here fails demo.sh
+#                      (exit 1) and fails the supply-chain.yml CI job.
+#   gate: reported  -- non-gating. Still built, scanned, and reported (and its
+#                      findings are written to evidence/ like any other
+#                      target), but a breach here is never allowed to block
+#                      the pipeline. It exists to produce the "before"
+#                      evidence, not to be fixed before every merge -- the
+#                      monolith is frozen (see examples/00-monolith) and is
+#                      *expected* to fail; that failure is the chapter's
+#                      point, not a defect to chase down.
+#
+# [A/B-4 = B, DRQ-088]: order-service (the "after") is the one artifact this
+# gate actually protects; the frozen 00-monolith (the "before") is scanned
+# and reported alongside it purely as comparative, non-blocking evidence.
+targets:
+  - name: order-service
+    kind: after
+    gate: required
+    buildfile: examples/07-order-service/Containerfile
+    context: examples/07-order-service
+    image: localhost/mea/order-service:supply-chain-demo
+
+  - name: monolith
+    kind: before
+    gate: reported
+    buildfile: examples/00-monolith/Dockerfile
+    context: examples/00-monolith
+    image: localhost/mea/monolith:supply-chain-demo
