@@ -194,7 +194,7 @@ content("FINDING THE SEAMS · EVENT STORMING", "Lay out the events, then cluster
   ["Lay out what actually happens in a checkout — order placed, stock reserved, payment captured, shipment dispatched, customer notified — before any code moves.",
    "The clusters that fall out are the bounded contexts this book extracts in rising order of difficulty: review, notification, inventory, payment, shipping, order.",
    "A seam drawn around a cluster of events is a seam a reader can explain in one sentence — a seam drawn around a file structure usually can't."],
-  "This is deliberately light on ceremony: event storming here isn't a multi-day workshop artifact, it's the discipline of naming what happened before naming what owns it. The six-context list isn't arbitrary — it's the same vocabulary (OrderDto/OrderStatus/StockDto/Topics) carried through from the monolith's own Django apps into every extracted service.");
+  "This is light on ceremony: event storming here isn't a multi-day workshop artifact, it's the discipline of naming what happened before naming what owns it. The six-context list isn't arbitrary — it's the same vocabulary (OrderDto/OrderStatus/StockDto/Topics) carried through from the monolith's own Django apps into every extracted service.");
 
 content("FINDING THE SEAMS · BOUNDED CONTEXTS", "A real seam has a clean boundary",
   ["A real seam has a boundary the domain already respects — the data crossing it is data the domain already exchanged, so the anti-corruption layer at that boundary has almost nothing left to translate.",
@@ -224,7 +224,7 @@ diagram("THE STRANGLER FIG · THE ACL", "An anti-corruption layer keeps the new 
 diagram("THE STRANGLER FIG · EVENT-DRIVEN NOTIFICATION", "The first extraction reacts to an event, not a call",
   "event-driven-notification-topology",
   "Figure 17.2 — One outbox row, two independent consumer groups, one flag choosing who answers the read — the first extraction with no synchronous dependency on the monolith at all.",
-  "Notification is also the project's first owned schema from day one — no shared-table entanglement to unwind later, unlike review (which stays on the shared schema, a named deferral) or inventory (which needs a one-time CDC bridge). This is the cheapest possible extraction shape, and it's deliberately sequenced second for exactly that reason.");
+  "Notification is also the project's first owned schema from day one — no shared-table entanglement to unwind later, unlike review (which stays on the shared schema, a named deferral) or inventory (which needs a one-time CDC bridge). This is the cheapest possible extraction shape, and it's sequenced second for exactly that reason.");
 
 // ===== SECTION 06 — DATA ACROSS THE SEAM ======================================
 divider("06", "Data Across the Seam", "From a shared schema to owned data — without losing an event.",
@@ -254,7 +254,7 @@ code("DATA · THE OUTBOX RELAY", "Relay the outbox row; the consumer dedupes ide
    "        session, event.id, published_at=datetime.now(UTC)",
    "    )"],
   "examples/07-order-service/app/relay.py — publish, then stamp published_at; the async mechanics behind this loop live in 201-FastAPI",
-  "Keep this to the shape, not the asyncio.Task plumbing — 201-FastAPI owns that depth. The one line worth pausing on is the comment: a crash between publish and stamp re-sends the same row. That's a deliberate at-least-once contract, and it's why every consumer of this event has to be idempotent on its own side — the next two slides show both ways this project made that true.");
+  "Keep this to the shape, not the asyncio.Task plumbing — 201-FastAPI owns that depth. The comment on this line names the failure mode directly: a crash between publish and stamp re-sends the same row. That's a deliberate at-least-once contract, and it's why every consumer of this event has to be idempotent on its own side — the next two slides show both ways this project made that true.");
 
 diagram("DATA · CDC AS A BRIDGE", "Change data capture backfills, then gets torn down",
   "cdc-backfill-then-retire",
@@ -264,7 +264,7 @@ diagram("DATA · CDC AS A BRIDGE", "Change data capture backfills, then gets tor
 diagram("DATA · CQRS", "Split the write model from the read model where shapes diverge",
   "order-cqrs-write-read-split",
   "Figure 21.1 — CQRS, concretely: one write aggregate, one order_view projection, upserted in the same local transaction as every write; every GET is served exclusively from the projection.",
-  "This is order-service's own read model, and it's the first load-bearing CQRS projection in the project — every write path upserts it in the same transaction as the mutation, so there's no second async step that could leave the read side stale under normal operation. Appendix B has the rebuildable-projection figure that proves it's a cache, not a second source of truth.");
+  "This is order-service's own read model, and it's the first CQRS projection the read path in this project depends on — every write path upserts it in the same transaction as the mutation, so there's no second async step that could leave the read side stale under normal operation. Appendix B has the rebuildable-projection figure that proves it's a cache, not a second source of truth.");
 
 diagram("DATA · ACID BECOMES ACD", "Across services, eventual consistency with compensation",
   "acid-to-acd-boundary",
@@ -355,8 +355,8 @@ code("CONTRACTS · THE gRPC CONTRACT", "Inventory's contract is a .proto file, n
    "  int32 on_hand_qty = 4;           // domain vocab: \"quantityOnHand\"",
    "  bool available = 5;",
    "}"],
-  "examples/04-inventory-service/proto/.../inventory.proto — a wire vocabulary deliberately distinct from the domain vocabulary on both sides of the seam",
-  "The field names are the whole lesson: stock_keeping_unit/display_name/unit_price_cents are deliberately NOT sku/name/priceCents — matching vocabularies on both sides would mean the ACL isn't earning its keep. A scripts/check-proto-drift.sh gate fails the build the moment the checked-in .proto and the generated stubs (vendored into three other services) disagree.");
+  "examples/04-inventory-service/proto/.../inventory.proto — a wire vocabulary kept distinct from the domain vocabulary on both sides of the seam",
+  "The field names are the whole lesson: stock_keeping_unit/display_name/unit_price_cents are not sku/name/priceCents — matching vocabularies on both sides would mean the ACL isn't earning its keep. A scripts/check-proto-drift.sh gate fails the build the moment the checked-in .proto and the generated stubs (vendored into three other services) disagree.");
 
 code("CONTRACTS · THE GRAPHQL GATEWAY", "One query, five sources, fanned out",
   "python · strawberry",
@@ -379,12 +379,12 @@ code("CONTRACTS · THE GRAPHQL GATEWAY", "One query, five sources, fanned out",
    "        data = await fetch_order(info.context[\"settings\"], str(id))",
    "        return _order_from_rest(data) if data is not None else None"],
   "examples/08-graphql-gateway/app/schema.py — one order(id) query, five federated sources, each field nullable so one downstream failure nulls a field, never the whole response",
-  "Every federated field — payments, shipments, stock, reviews — is declared nullable on purpose: that's what lets a downstream outage degrade to one null field plus an errors[] entry instead of a 500 for the whole query. This gateway has its own front door; it's never routed through the strangler proxy, and it owns no database of its own.");
+  "Every federated field — payments, shipments, stock, reviews — is declared nullable, because a downstream outage should degrade to one null field plus an errors[] entry instead of a 500 for the whole query. This gateway has its own front door; it's never routed through the strangler proxy, and it owns no database of its own.");
 
 diagram("CONTRACTS · THE SCHEMA REGISTRY", "Avro, wrapped in a registry-aware envelope",
   "avro-wire-envelope-registry-flow",
   "Figure 28.2 — A hand-rolled wire envelope plus a round trip against a live Apicurio registry: register-or-resolve, encode and publish, consume, fetch the writer schema by global id, decode.",
-  "This demo deliberately stays on pure-Python fastavro + aiokafka + Apicurio's v3 REST API rather than confluent-kafka[avro] — that rejection (no librdkafka dependency) means hand-rolling the wire envelope, named as a consequence of the choice, not an oversight. It's scoped to one demonstrator, not retrofitted onto the six live event contracts, which still ship as hand-authored JSON and have stayed forward-compatible by discipline rather than registry enforcement — which is itself the case for why a registry would help.");
+  "This demo stays on pure-Python fastavro + aiokafka + Apicurio's v3 REST API rather than confluent-kafka[avro] — that choice (no librdkafka dependency) means hand-rolling the wire envelope, named as a consequence of the choice, not an oversight. It's scoped to one demonstrator, not retrofitted onto the six live event contracts, which still ship as hand-authored JSON and have stayed forward-compatible by discipline rather than registry enforcement — which is itself the case for why a registry would help.");
 
 diagram("THE CHASSIS", "Config, health, logging, and tracing — as a convention",
   "fastapi-chassis-anatomy",
@@ -402,13 +402,13 @@ diagram("OPERATING · DEPLOY TOPOLOGY", "Six services, one Kubernetes namespace"
 
 diagram("OPERATING · THE MESH", "mTLS and traffic identity, from the platform",
   "mesh-mtls-topology",
-  "Figure 30.1 — The meshed mea namespace: mTLS STRICT on every sidecar-to-sidecar hop, one PERMISSIVE exception at the plaintext edge, two backends left unmeshed on purpose.",
-  "Postgres, Kafka, and the observability backend stay unmeshed deliberately — meshing every workload isn't the goal, meshing the application traffic that benefits from mTLS and a service graph is. The one PERMISSIVE carve-out exists because the NodePort edge receives plaintext traffic from outside the mesh entirely, with no sidecar on the client side to negotiate mTLS with.");
+  "Figure 30.1 — The meshed mea namespace: mTLS STRICT on every sidecar-to-sidecar hop, one PERMISSIVE exception at the plaintext edge, two backends left unmeshed by design.",
+  "Postgres, Kafka, and the observability backend stay unmeshed — meshing every workload isn't the goal, meshing the application traffic that benefits from mTLS and a service graph is. The one PERMISSIVE carve-out exists because the NodePort edge receives plaintext traffic from outside the mesh entirely, with no sidecar on the client side to negotiate mTLS with.");
 
 diagram("OPERATING · THE TRACE", "One request, traced end to end across services",
   "mesh-hero-trace-waterfall",
   "Figure 30.2 — The hero trace: mesh spans give every one of eight services breadth with zero application code changed; app-level OpenTelemetry on three of eight adds the in-process depth the mesh cannot see.",
-  "This is the property worth making explicit: the mesh and application-level OTel answer different questions. The mesh gives every hop a span, mTLS state, and a service graph for free; it can't see a specific SQL statement or a business-logic branch. Three services (proxy, order, inventory) get that depth, chosen because the synchronous checkout→reserve path crosses no outbox and needs no extra trace-context plumbing — the Kafka saga hops stay mesh-visible only, named as a scoped-out horizon, not a gap nobody noticed.");
+  "This is the property worth making explicit: the mesh and application-level OTel answer different questions. The mesh gives every hop a span, mTLS state, and a service graph automatically; it can't see a specific SQL statement or a business-logic branch. Three services (proxy, order, inventory) get that depth, chosen because the synchronous checkout→reserve path crosses no outbox and needs no extra trace-context plumbing — the Kafka saga hops stay mesh-visible only, named as a scoped-out horizon, not a gap nobody noticed.");
 
 code("DELIVERING · THE SUPPLY-CHAIN GATE", "SBOM, scan, and a policy threshold that fails the build",
   "bash · syft · grype",
@@ -448,7 +448,7 @@ diagram("THE PATTERN SCORECARD", "Used because it cured a pain we had; deferred 
   "A verdict needs three outcomes, not two — 'built vs. not built' can't represent a schema registry that works but covers one event out of a dozen, or a chassis that's real but copied by hand eight times. Full event sourcing, a circuit breaker, a GitOps operator, Loki log aggregation, and Kafka saga-hop tracing are each named with the specific trigger that would earn their place, not a vague gesture at future work.");
 
 content("WHERE TO STOP", "Over-decomposition is the seductive failure",
-  ["Over-decomposition is the seductive failure: a database split with no corresponding code split gives up the one thing a monolith has for free — atomic consistency — and gets independent deployability back for nothing.",
+  ["Over-decomposition is the seductive failure: a database split with no corresponding code split gives up the one thing a monolith provides automatically — atomic consistency — and gets independent deployability back for nothing.",
    "The tell is a coordinated release across services that were supposed to be independent; the cure is stopping at context-aligned services and splitting further only when a real seam demands it.",
    "Five named next horizons — a circuit breaker, full event sourcing, a GitOps operator, Loki log aggregation, tracing across a Kafka saga hop — are each a bounded increment with a stated trigger, not a rewrite."],
   "This is the slide to leave the audience on before the close: the finished system has eight services (six contexts plus the proxy plus the gateway) because that's where real smells ran out, not because twenty would have looked more impressive on an architecture diagram. A nanoservice-sprawl version of the same domain would have the same forty-five-pattern catalog to reach for, and would reach for most of it for the wrong reason.");
@@ -496,11 +496,11 @@ diagram("APPENDIX · SAGA CRASH-RESUME", "The saga's state machine survives a cr
 diagram("APPENDIX · THE CHASSIS SCORECARD", "Which chassis capabilities each service adopted",
   "chassis-scorecard",
   "Figure 27.2 — Used, partial, and deferred, across all eight services: config and logging at 7-8 of 8, health and error-mapping at 6 of 8 each for a named structural reason, tenacity at 1 of 8, OpenTelemetry and a shared chassis library both named and deferred.",
-  "The deferred row matters as much as the used row: a shared chassis library was deliberately not built — each service's config/logging/health code is copied and adapted by hand, a trade-off argued as correct for eight services that still redeploy independently of each other.");
+  "The deferred row matters as much as the used row: a shared chassis library was not built — each service's config/logging/health code is copied and adapted by hand, a trade-off argued as correct for eight services that still redeploy independently of each other.");
 diagram("APPENDIX · SHIPPING RESILIENCE", "Retries, timeouts, and the circuit breaker in the shipping chassis",
   "shipping-resilience-chassis",
   "Figure 25.1 — What already runs (a gRPC deadline, outbox at-least-once, the proxy's 502 fail-safe, the orchestrator's own crash-resume), what's new (a tenacity retry-with-timeout on one HTTP call), and what's named but not yet built.",
-  "The resilience this system actually has is distributed across existing mechanisms, not concentrated in one new named component — the only genuinely new mechanism this chapter added was the tenacity wrapper around shipping's one outbound enrich() call.");
+  "The resilience this system actually has is distributed across existing mechanisms, not concentrated in one new named component — the only new mechanism this chapter added was the tenacity wrapper around shipping's one outbound enrich() call.");
 diagram("APPENDIX · SCHEMA EVOLUTION", "A compatible Avro schema change, end to end",
   "avro-compatibility-evolution",
   "Figure 28.3 — Schema evolution against a live BACKWARD rule: an additive field with a default is accepted (200); a field retype is rejected (400) before a single message ships.",
@@ -516,7 +516,7 @@ diagram("APPENDIX · BEFORE THE REGISTRY", "Hand-duplicated schemas were the sta
 diagram("APPENDIX · THE gRPC CONTRACT, VISUALLY", "Inventory's protobuf ACL, as a diagram",
   "inventory-grpc-proto-acl",
   "Figure 19.1 — The proto IS the ACL: two separate domain vocabularies meet only at the wire.",
-  "Visual companion to section 08's gRPC code slide — useful when walking through why the wire vocabulary (stock_keeping_unit, display_name) is deliberately distinct from both the monolith's and inventory-service's own internal vocabulary.");
+  "Visual companion to section 08's gRPC code slide — useful when walking through why the wire vocabulary (stock_keeping_unit, display_name) is kept distinct from both the monolith's and inventory-service's own internal vocabulary.");
 diagram("APPENDIX · THE GRAPHQL FAN-OUT, VISUALLY", "One query, five sources, as a diagram",
   "graphql-gateway-five-source-fanout",
   "Figure 26.2 — One query, five sources, no data owned locally: a downstream failure nulls one field and appends one errors[] entry — never a crashed request.",
@@ -552,7 +552,7 @@ diagram("APPENDIX · ORDER LIFECYCLE (PENDING TO TERMINAL)", "The order state ma
 diagram("APPENDIX · THE REBUILDABLE READ MODEL", "The order view projection can be rebuilt from the log",
   "order-view-rebuildable-projection",
   "Figure 21.2 — A rebuildable read model: rebuild_order_view recomputes the projection from the aggregate at any time, and a projection-disabled negative test proves the read path never silently falls back to the write tables.",
-  "That negative test is the detail worth dwelling on: with the projection intentionally disabled, reads go stale instead of silently querying the write tables — proof the read side has a real, enforced boundary, not just a convention.");
+  "That negative test shows the enforcement directly: with the projection disabled, reads go stale instead of silently querying the write tables — proof the read side has a real, enforced boundary, not just a convention.");
 diagram("APPENDIX · THE OUTBOX RELAY, AT LEAST ONCE", "Delivery guarantees the relay actually makes",
   "outbox-relay-at-least-once",
   "Figure 20.1 — The bridge, the relay, and the counterpart that makes at-least-once survive contact with reality: an idempotent consumer on the other end, in whichever idiom fits the write.",
@@ -564,11 +564,11 @@ diagram("APPENDIX · A LIGHTER RESERVE/RELEASE SAGA", "A smaller saga shape for 
 diagram("APPENDIX · REVIEW, PHASE A VS. PHASE B", "The review service's two extraction phases",
   "review-phase-a-vs-phase-b",
   "Figure 15.1 — Phase A (a thin FastAPI shim over the Django ORM, documented but never shipped) versus Phase B (native async SQLAlchemy, no monolith import at all) — the same read contract either way.",
-  "Phase A was deliberately never committed as running code once two concrete problems surfaced while sketching it: bridging Django's synchronous ORM into FastAPI's async loop, and a backwards build-time dependency on the entire monolith just to reach one model. The real payoff is structural, not a startup-time number — Phase A/B import timing came back statistically indistinguishable.");
+  "Phase A was never committed as running code once two concrete problems surfaced while sketching it: bridging Django's synchronous ORM into FastAPI's async loop, and a backwards build-time dependency on the entire monolith just to reach one model. The real payoff is structural, not a startup-time number — Phase A/B import timing came back statistically indistinguishable.");
 diagram("APPENDIX · THE CUTOVER TIMELINE, VISUALLY", "Six seams, in dependency order, as a timeline",
   "strangler-cutover-timeline",
-  "Figure 14.3 — The cutover evidence trail: one unedited Newman suite, four runs — flag off, flag on, flag reverted, and a forced-down negative that fails loudly on purpose.",
-  "That fourth run is the one worth narrating: with the extracted service deliberately killed, the suite goes RED (6/6 assertions failed) rather than quietly passing — proof the equivalence gate actually gates, not just a green checkmark that never turns red.");
+  "Figure 14.3 — The cutover evidence trail: one unedited Newman suite, four runs — flag off, flag on, flag reverted, and a forced-down negative that fails loudly by design.",
+  "That fourth run is the one worth narrating: with the extracted service killed outright, the suite goes RED (6/6 assertions failed) rather than quietly passing — proof the equivalence gate actually gates, not just a green checkmark that never turns red.");
 diagram("APPENDIX · THE SUPPLY-CHAIN GATE, VISUALLY", "SBOM, scan, gate — as a pipeline diagram",
   "supply-chain-gate-pipeline",
   "Figure 31.1 — The syft-to-grype-to-policy pipeline for both the gating target and the frozen monolith, plus the four additive CI checks converging on one repository ruleset.",
@@ -586,7 +586,7 @@ content("APPENDIX · THE EXAMPLES", "Eleven runnable examples, one per seam",
   ["00-monolith (the frozen before), 01-strangler-proxy, 02-review through 07-order-service (the six extractions, in rising order of difficulty).",
    "08-graphql-gateway (the data-less aggregation gateway), 09-schema-registry-demo (the Apicurio round trip), 10-supply-chain (the SBOM/scan/policy gate).",
    "Every code slide in this deck draws from one of these directories — this is the index, not a summary; read the source for the rest."],
-  "If someone wants to run anything live after this talk, this is the slide to screenshot — every directory name here is a real, independently runnable example with its own AGENTS.md and README, not a snippet extracted for the deck.");
+  "If someone wants to run anything live after this talk, this is the slide to screenshot — every directory name here is a real, independently runnable example with its own AGENTS.md and README — a complete project, not an excerpt assembled for the deck.");
 
 content("APPENDIX · STACK & VERSIONS", "FastAPI, SQLAlchemy 2.0, aiokafka, Postgres, Kafka",
   ["FastAPI 0.143.2 + uvicorn, SQLAlchemy 2.1.4 (asyncio) + asyncpg, Pydantic 2.14.1, Alembic, aiokafka, grpcio + protobuf, Strawberry GraphQL, tenacity — Python 3.14, managed by uv.",
