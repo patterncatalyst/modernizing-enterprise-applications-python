@@ -14,13 +14,15 @@
 # of a workflow with a required summary job reports nothing, which would
 # wedge a ruleset that requires this check.
 #
-# What "verified" means here, and what it deliberately does not mean: this
-# gate proves the kustomize tree renders and the rendered manifests are
-# schema-valid and structurally well-formed to the API server's own
-# validation logic (`--dry-run=client`). It does NOT prove the manifests
-# would be admitted by a live cluster (defaults, webhooks, RBAC, PVC
-# binding) -- that needs a server dry-run or a real apply, which this
-# offline gate cannot do. The live minikube path is user-runnable via
+# What "verified" means here, and what it does not: this gate proves the
+# kustomize tree renders and the rendered manifests pass offline OpenAPI
+# schema validation (`kubeconform -strict`) against the matching Kubernetes
+# version -- no cluster contact. It does NOT prove the manifests would be
+# admitted by a live cluster (defaults, webhooks, RBAC, PVC binding), and it
+# does not run `kubectl apply --dry-run=client`: that step downloads the
+# API server's OpenAPI document and so needs a reachable cluster, which a
+# headless runner has none of. The live minikube path (including
+# `--dry-run=client` and a real apply) is user-runnable via
 # deploy/k8s/scripts/ and deferred to r10 ch.30; see deploy/k8s/README.md
 # and _docs/29-deployment-patterns.md for the same caveat.
 
@@ -61,11 +63,12 @@ jobs:
           fi
 
   # THE GATE: render both the base and the minikube overlay with `kubectl
-  # kustomize` (no cluster needed), then validate the rendered output two
-  # ways -- `kubeconform -strict` for offline OpenAPI schema validation
-  # against the matching Kubernetes version, and `kubectl apply --dry-run=
-  # client -f -` for the API server's own client-side structural checks
-  # (no network/cluster contact in either case).
+  # kustomize` (no cluster needed), then validate the rendered output with
+  # `kubeconform -strict` -- offline OpenAPI schema validation against the
+  # matching Kubernetes version, no network/cluster contact. (`kubectl apply
+  # --dry-run=client` is intentionally NOT run here: it fetches the API
+  # server's OpenAPI and needs a reachable cluster; it belongs on the live
+  # minikube path, not this headless gate.)
   render:
     name: render
     needs: changes
@@ -99,13 +102,11 @@ jobs:
         run: |
           kubectl kustomize deploy/k8s/base > /tmp/base.yaml
           kubeconform -strict -summary /tmp/base.yaml
-          kubectl apply --dry-run=client -f /tmp/base.yaml
 
       - name: Render + validate deploy/k8s/overlays/minikube
         run: |
           kubectl kustomize deploy/k8s/overlays/minikube > /tmp/minikube.yaml
           kubeconform -strict -summary /tmp/minikube.yaml
-          kubectl apply --dry-run=client -f /tmp/minikube.yaml
 
   # The one check a ruleset would require for this workflow. Passes when
   # every needed job succeeded or was skipped by `changes`.
