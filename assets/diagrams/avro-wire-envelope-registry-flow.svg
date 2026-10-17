@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 700" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="30" y="60" width="1260" height="160" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="42" y="80" font-size="12" font-weight="700" fill="#1d1d1d">The wire envelope -- app/envelope.py (NOT Confluent&#x27;s wire format; this demo&#x27;s own, documented framing)</text>
+<rect x="30" y="250" width="1260" height="420" rx="12" fill="#f1f5f9" stroke="#ddd"/>
+<text x="42" y="270" font-size="12" font-weight="700" fill="#1d1d1d">Produce / consume against a live Apicurio registry</text>
+<rect x="70" y="115" width="160" height="70" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="150.0" y="148.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">1 byte</text>
+<text x="150.0" y="165.0" font-size="11.5" fill="#555555" text-anchor="middle">magic = 0x00</text>
+<rect x="250" y="115" width="300" height="70" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="400.0" y="140.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">8 bytes, big-endian</text>
+<text x="400.0" y="157.5" font-size="11.5" fill="#555555" text-anchor="middle">Apicurio global schema id</text>
+<text x="400.0" y="172.5" font-size="11.5" fill="#555555" text-anchor="middle">struct &quot;&gt;BQ&quot;</text>
+<rect x="570" y="115" width="420" height="70" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="780.0" y="140.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">raw schemaless Avro bytes</text>
+<text x="780.0" y="157.5" font-size="11.5" fill="#555555" text-anchor="middle">fastavro.schemaless_writer()</text>
+<text x="780.0" y="172.5" font-size="11.5" fill="#555555" text-anchor="middle">no embedded schema, no header</text>
+<rect x="1030" y="115" width="260" height="70" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="1160.0" y="140.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Confluent wire format:</text>
+<text x="1160.0" y="157.5" font-size="11.5" fill="#555555" text-anchor="middle">magic byte + 4-byte int id</text>
+<text x="1160.0" y="172.5" font-size="11.5" fill="#555555" text-anchor="middle">(this demo&#x27;s own, not byte-compat)</text>
+<rect x="70" y="320" width="220" height="90" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="180.0" y="355.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">OrderAvroProducer</text>
+<text x="180.0" y="372.5" font-size="11.5" fill="#555555" text-anchor="middle">fastavro-encodes</text>
+<text x="180.0" y="387.5" font-size="11.5" fill="#555555" text-anchor="middle">DemoOrderPlaced</text>
+<rect x="380" y="270" width="300" height="90" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="530.0" y="298.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Apicurio v3 REST</text>
+<text x="530.0" y="315.0" font-size="11.5" fill="#555555" text-anchor="middle">/groups/default/artifacts</text>
+<text x="530.0" y="330.0" font-size="11.5" fill="#555555" text-anchor="middle">ifExists=FIND_OR_CREATE_VERSION</text>
+<text x="530.0" y="345.0" font-size="11.5" fill="#555555" text-anchor="middle">-&gt; 200, globalId</text>
+<rect x="780" y="320" width="220" height="90" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="890.0" y="355.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">order.events.avro.demo</text>
+<text x="890.0" y="372.5" font-size="11.5" fill="#555555" text-anchor="middle">key = orderId</text>
+<text x="890.0" y="387.5" font-size="11.5" fill="#555555" text-anchor="middle">value = envelope bytes</text>
+<rect x="1080" y="320" width="200" height="90" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="1180.0" y="355.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">OrderAvroConsumer</text>
+<text x="1180.0" y="372.5" font-size="11.5" fill="#555555" text-anchor="middle">decode_envelope()</text>
+<text x="1180.0" y="387.5" font-size="11.5" fill="#555555" text-anchor="middle">-&gt; (globalId, bytes)</text>
+<rect x="780" y="470" width="300" height="90" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="930.0" y="505.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">GET /ids/globalIds/{id}</text>
+<text x="930.0" y="522.5" font-size="11.5" fill="#555555" text-anchor="middle">-&gt; raw writer schema JSON</text>
+<text x="930.0" y="537.5" font-size="11.5" fill="#555555" text-anchor="middle">cached by global id</text>
+<rect x="1080" y="470" width="200" height="90" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="1180.0" y="498.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">fastavro.schemaless_reader()</text>
+<text x="1180.0" y="515.0" font-size="11.5" fill="#555555" text-anchor="middle">decode using the</text>
+<text x="1180.0" y="530.0" font-size="11.5" fill="#555555" text-anchor="middle">WRITER schema, not</text>
+<text x="1180.0" y="545.0" font-size="11.5" fill="#555555" text-anchor="middle">the consumer&#x27;s own copy</text>
+<path d="M290.0,349.2857142857143 L380.0,336.42857142857144" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="341.0" y="336.8571428571429" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">1. register_or_resolve</text>
+<text x="341.0" y="336.8571428571429" font-size="11" fill="#555" text-anchor="middle">1. register_or_resolve</text>
+<path d="M380.0,336.42857142857144 L290.0,349.2857142857143" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="341.0" y="336.8571428571429" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">globalId</text>
+<text x="341.0" y="336.8571428571429" font-size="11" fill="#555" text-anchor="middle">globalId</text>
+<path d="M290.0,365.0 L780.0,365.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="541.0" y="359.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">2. encode_envelope + send</text>
+<text x="541.0" y="359.0" font-size="11" fill="#2f5f3d" text-anchor="middle">2. encode_envelope + send</text>
+<path d="M1000.0,365.0 L1080.0,365.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="1046.0" y="359.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">3. getone()</text>
+<text x="1046.0" y="359.0" font-size="11" fill="#555" text-anchor="middle">3. getone()</text>
+<path d="M1105.0,410.0 L1005.0,470.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="1061.0" y="434.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">4. get_schema_by_global_id</text>
+<text x="1061.0" y="434.0" font-size="11" fill="#555" text-anchor="middle">4. get_schema_by_global_id</text>
+<path d="M1080.0,515.0 L1080.0,515.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="1086.0" y="509.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">5. parse_schema</text>
+<text x="1086.0" y="509.0" font-size="11" fill="#2f5f3d" text-anchor="middle">5. parse_schema</text>
+<text x="660.0" y="32" font-size="18" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.28 -- the hand-rolled envelope and the register/resolve round trip, pure-Python (fastavro + aiokafka + httpx, DRQ-033)</text>
+<text x="50" y="678" font-size="11" fill="#555555" text-anchor="start">The consumer always fetches the writer schema by global id -- it never trusts its own locally parsed .avsc matches what produced the bytes.</text>
+</svg>

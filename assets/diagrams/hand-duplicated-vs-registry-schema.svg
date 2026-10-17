@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 620" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="30" y="60" width="610" height="480" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="42" y="80" font-size="12" font-weight="700" fill="#1d1d1d">Today -- two hand-authored copies of the same contract</text>
+<rect x="680" y="60" width="610" height="480" rx="12" fill="#f1f5f9" stroke="#ddd"/>
+<text x="692" y="80" font-size="12" font-weight="700" fill="#1d1d1d">ch.28&#x27;s demonstrator -- one schema, registered once</text>
+<rect x="70" y="110" width="530" height="70" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="335.0" y="135.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">07-order-service -- EVENTS.md</text>
+<text x="335.0" y="152.5" font-size="11.5" fill="#555555" text-anchor="middle">&quot;order.placed&quot;: orderId, customerId, customerEmail,</text>
+<text x="335.0" y="167.5" font-size="11.5" fill="#555555" text-anchor="middle">totalCents, confirmationMessage, placedAt, paymentMethod</text>
+<rect x="70" y="230" width="250" height="110" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="195.0" y="260.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">05-payment-service</text>
+<text x="195.0" y="277.5" font-size="11.5" fill="#555555" text-anchor="middle">app/schemas.py::OrderPlacedEvent</text>
+<text x="195.0" y="292.5" font-size="11.5" fill="#555555" text-anchor="middle">7 fields -- paymentMethod</text>
+<text x="195.0" y="307.5" font-size="11.5" fill="#555555" text-anchor="middle">present (choreographed</text>
+<text x="195.0" y="322.5" font-size="11.5" fill="#555555" text-anchor="middle">decline rule needs it)</text>
+<rect x="350" y="230" width="250" height="110" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="475.0" y="260.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">03-notification-service</text>
+<text x="475.0" y="277.5" font-size="11.5" fill="#555555" text-anchor="middle">app/schemas.py::OrderPlacedEvent</text>
+<text x="475.0" y="292.5" font-size="11.5" fill="#555555" text-anchor="middle">6 fields -- NO paymentMethod</text>
+<text x="475.0" y="307.5" font-size="11.5" fill="#555555" text-anchor="middle">(never needed, so never</text>
+<text x="475.0" y="322.5" font-size="11.5" fill="#555555" text-anchor="middle">added to this copy)</text>
+<rect x="70" y="400" width="530" height="90" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="335.0" y="435.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Two independent authors, two independent understandings,</text>
+<text x="335.0" y="452.5" font-size="11.5" fill="#555555" text-anchor="middle">no mechanism checking they still agree -- a hand-maintained</text>
+<text x="335.0" y="467.5" font-size="11.5" fill="#555555" text-anchor="middle">JSON contract re-declared per consumer (DRQ-036)</text>
+<rect x="720" y="110" width="530" height="80" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="985.0" y="140.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">schemas/order-placed-v1.avsc</text>
+<text x="985.0" y="157.5" font-size="11.5" fill="#555555" text-anchor="middle">one Avro record, field-for-field mirror</text>
+<text x="985.0" y="172.5" font-size="11.5" fill="#555555" text-anchor="middle">of the real order.placed JSON shape</text>
+<rect x="800" y="230" width="370" height="80" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="985.0" y="260.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Apicurio registry</text>
+<text x="985.0" y="277.5" font-size="11.5" fill="#555555" text-anchor="middle">artifact: order-placed-value</text>
+<text x="985.0" y="292.5" font-size="11.5" fill="#555555" text-anchor="middle">BACKWARD compatibility rule attached</text>
+<rect x="720" y="350" width="240" height="90" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="840.0" y="378.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">OrderAvroProducer</text>
+<text x="840.0" y="395.0" font-size="11.5" fill="#555555" text-anchor="middle">registers/resolves the</text>
+<text x="840.0" y="410.0" font-size="11.5" fill="#555555" text-anchor="middle">artifact, stamps the</text>
+<text x="840.0" y="425.0" font-size="11.5" fill="#555555" text-anchor="middle">global id on the wire</text>
+<rect x="1010" y="350" width="240" height="90" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="1130.0" y="378.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">OrderAvroConsumer</text>
+<text x="1130.0" y="395.0" font-size="11.5" fill="#555555" text-anchor="middle">fetches the EXACT writer</text>
+<text x="1130.0" y="410.0" font-size="11.5" fill="#555555" text-anchor="middle">schema by global id,</text>
+<text x="1130.0" y="425.0" font-size="11.5" fill="#555555" text-anchor="middle">never assumes its own copy</text>
+<path d="M300.0,180.0 L250.0,230.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="281.0" y="199.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">publishes, payment reads</text>
+<text x="281.0" y="199.0" font-size="11" fill="#555" text-anchor="middle">publishes, payment reads</text>
+<path d="M370.0,180.0 L420.0,230.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="401.0" y="199.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">publishes, notification reads</text>
+<text x="401.0" y="199.0" font-size="11" fill="#555" text-anchor="middle">publishes, notification reads</text>
+<path d="M243.125,340.0 L295.625,400.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M426.875,340.0 L374.375,400.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M985.0,190.0 L985.0,230.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="991.0" y="204.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">register once</text>
+<text x="991.0" y="204.0" font-size="11" fill="#2f5f3d" text-anchor="middle">register once</text>
+<path d="M892.2,350.0 L938.6,310.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="921.4000000000001" y="324.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">register_or_resolve</text>
+<text x="921.4000000000001" y="324.0" font-size="11" fill="#555" text-anchor="middle">register_or_resolve</text>
+<path d="M1077.8,350.0 L1031.4,310.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="1060.6" y="324.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">get_schema_by_global_id</text>
+<text x="1060.6" y="324.0" font-size="11" fill="#555" text-anchor="middle">get_schema_by_global_id</text>
+<text x="660.0" y="32" font-size="18" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.28 -- the hand-maintained JSON contract&#x27;s drift, and the registry-governed alternative demonstrated alongside it</text>
+<text x="50" y="598" font-size="11" fill="#555555" text-anchor="start">The registry is additive: order.placed stays plain JSON. The demonstrator publishes an Avro mirror to its own topic, order.events.avro.demo.</text>
+</svg>
