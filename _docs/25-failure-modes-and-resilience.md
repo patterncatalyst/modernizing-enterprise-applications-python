@@ -165,7 +165,7 @@ interruption" in this chapter's taxonomy calls for.
 ## The one new mechanism: tenacity retry-with-timeout on `enrich`
 
 Every mechanism above predates this chapter. The one new piece
-r06 introduces is also the smallest, and it exists because ch.24's saga made
+Chapter 24 introduces is also the smallest, and it exists because ch.24's saga made
 a kind of call this project had not made before: `enrich_client.py` is the
 first outbound HTTP call any service in this book makes to another service —
 every other cross-service call so far has been gRPC (ch.19) or Kafka (every
@@ -346,7 +346,7 @@ written, by a different chapter's extraction. A poll landing in that
 retry loop gave up) nor the expected terminal value (so the assertion
 failed) — a reproducible **false RED** on a saga that was, in fact, healthy
 and about to resolve correctly a fraction of a second later. This was first
-caught on `4c` during the r06 cutover run, `AWAITING_SHIPMENT` observed
+caught on `4c` during the cutover run, `AWAITING_SHIPMENT` observed
 against an expected `SHIPPING_FAILED` on attempt 3/20, with the order
 confirmed by direct query to have reached `SHIPPING_FAILED` just
 **273ms** after the poll had already given up — and independently reproduced
@@ -398,14 +398,14 @@ the fix actually closes the race window, not just the one instance that
 happened to be caught.
 
 > **ADLC in Action** — The poll-script gap was discovered live, during the
-> r06 cutover run, not anticipated at the planning gate — the plan correctly
+> cutover run, not anticipated at the planning gate — the plan correctly
 > scoped `AWAITING_SHIPMENT` as a new order status but did not anticipate
 > that an existing test script elsewhere in the project had hardcoded an
 > assumption about which statuses count as "still in flight." The repair
 > was scoped as its own lane (`tooling/newman/` only, no application code
 > touched) specifically so a test-infrastructure fix stays visibly separate
 > from a saga-logic fix in this project's own history — a reader auditing
-> what changed to make r06 pass should be able to tell, from the ledger
+> what changed to make the cutover pass should be able to tell, from the ledger
 > alone, that the system under test never had the bug; the harness did.
 
 ## What you learned

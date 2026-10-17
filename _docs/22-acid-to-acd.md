@@ -13,10 +13,10 @@ named a cost of a different kind — the free rollback a single shared
 transaction used to give checkout for nothing — and rebuilt it by hand with
 an explicit compensating `Release`. This chapter names the cost underneath
 that one: the actual consistency *model* checkout runs under has changed,
-not just the mechanism that implements it, and r05's payment extraction is
+not just the mechanism that implements it, and the payment extraction is
 the first place in this book where that change is unavoidable rather than
 deferrable. `PAYMENT_MODE=synchronous` still runs on full ACID, byte for
-byte, unchanged since r01. `PAYMENT_MODE=choreographed` runs on something
+byte, unchanged from the start. `PAYMENT_MODE=choreographed` runs on something
 weaker and more accurate about what a distributed system can actually
 promise, and this chapter is about naming exactly what was traded, not
 pretending the trade didn't happen.
@@ -25,11 +25,11 @@ The code is in `examples/00-monolith/order/services.py` (`_place_order_local`
 versus `_place_order_choreographed`) and `examples/00-monolith/order/models.py`
 (`Order.Status`). There is no new run script for this chapter — the two
 dispatch paths it compares already exist and are already exercised by
-`tooling/newman/GOLDEN-BASELINE.md`'s r05 lanes, described below.
+`tooling/newman/GOLDEN-BASELINE.md`'s cutover lanes, described below.
 
 ## SMELL #3, revisited: one transaction, four contexts, one rollback
 
-`examples/00-monolith/SMELLS.md`'s smell #3 has been true since r01 and
+`examples/00-monolith/SMELLS.md`'s smell #3 has been true from the start and
 stayed true, unedited, all the way through ch.19: `place_order()`'s
 synchronous path wraps the order row, the inventory reservation, the payment
 charge, the shipping dispatch, and the outbox write inside one
@@ -61,7 +61,7 @@ ch.19 already measured this directly rather than asserting it: with
 `INVENTORY_MODE=local`, a declined payment or a failed shipping dispatch
 anywhere inside the atomic block rolls back the inventory decrement along
 with the order row, and `GET /api/inventory/SKU-WIDGET-001` confirms
-`quantityOnHand` never moved. That same direct-query discipline is what r05
+`quantityOnHand` never moved. That same direct-query discipline is what this chapter
 reuses to prove the *opposite* claim for the choreographed path below — the
 point of both measurements is the same: don't trust what a transaction
 boundary promises until you've queried the actual state it's supposed to be
@@ -199,7 +199,7 @@ It is worth being precise about which well-known theorem this chapter is and
 isn't invoking. CAP is a statement about a single replicated data store
 under a network partition — it does not directly describe two *different*
 services, each with its own database, coordinating a business process over
-an asynchronous message broker. What r05's payment extraction actually
+an asynchronous message broker. What the payment extraction actually
 demonstrates is closer to the practical generalization PACELC makes
 explicit: even *without* a partition, a system has to choose between
 Latency and Consistency for every operation that could otherwise wait for a
@@ -238,14 +238,14 @@ reacting to a Kafka event it hasn't received yet — doesn't exist in this
 process's call stack. That structural fact, not a preference for weaker
 guarantees, is what forces the move from ACID to ACD.
 
-## The real cost: the window, and the gap r05 does not close
+## The real cost: the window, and the gap the choreographed path does not close
 
 Two costs deserve naming directly rather than folded into the general
 argument above, because both are measured facts about this iteration, not
 hypothetical risks.
 
 **The PENDING window itself** is real, observable latency, not a rounding
-error. `tooling/newman/GOLDEN-BASELINE.md`'s r05 CUTOVER lane measured
+error. `tooling/newman/GOLDEN-BASELINE.md`'s cutover lane measured
 Scenario 1's happy-path order resolving to `CONFIRMED` on the bounded-wait
 poll's **attempt 2/20** — a real multi-hundred-millisecond round trip
 through Kafka, payment-service, and back through the saga listener, not an
@@ -261,11 +261,11 @@ compensating gRPC `Release` for the reserved inventory and marks the order
 refunded**, because payment-service exposes no Refund RPC or event yet.
 The function's own docstring states this without hedging: "a payment that
 captured and then hits `ShippingFailed` here is NOT refunded... That is
-r06's orchestrated saga's job, once shipping itself is extracted." This is
+the orchestrated saga's job, once shipping itself is extracted." This is
 precisely the kind of gap this book's scope discipline argues *for* naming
 rather than quietly engineering around with speculative Refund
 infrastructure a week before the chapter that would actually use it — and it
-is also the motivating example r06 needs: an orchestrated saga, with a
+is also the motivating example ch.24 needs: an orchestrated saga, with a
 central coordinator that can issue a second compensation hop, is the shape
 that closes this exact gap. ACD's real cost here is not just "isolation
 is gone" — it's "a captured payment can, for now, outlive the order it paid
@@ -273,10 +273,10 @@ for," and the next part of this book exists to fix that.
 
 > **ADLC in Action** — The decision to accept this gap rather than build a
 > Refund mechanism ahead of schedule was made at the planning gate, not
-> discovered mid-implementation: `_plans/r05-build-plan.md`'s user-gate
+> discovered mid-implementation: the build plan's user-gate
 > named both options explicitly (ship a stranded payment and defer the fix,
 > or keep shipping synchronous and dodge the problem for one more
-> iteration) and the approved decision — Option A, recorded as DRQ-054 — is
+> iteration) and the approved decision — Option A — is
 > the one this chapter describes. Naming the deferral as a *decision*,
 > with a reason and a target chapter, rather than letting it surface later
 > as an unexplained TODO, is what the standing decisions ledger is for.
@@ -299,7 +299,7 @@ for," and the next part of this book exists to fix that.
   redelivered event is the saga's version of a lost update; a status that
   legitimately changes between two polls is the saga's version of a
   non-repeatable read, and the equivalence suite is built to expect it.
-- PACELC, not CAP, is the right lens for what r05 actually traded: without
+- PACELC, not CAP, is the right lens for what the choreographed path actually traded: without
   any network partition, `PAYMENT_MODE=synchronous` chose consistency's
   stronger form at the cost of blocking the whole request; `choreographed`
   chose latency, at the cost of an explicitly-contracted eventual-consistency
@@ -309,8 +309,8 @@ for," and the next part of this book exists to fix that.
   kept the synchronous contract by compensating inline, and Payment is the
   first extraction where the deciding party doesn't exist yet in
   the request's own call stack.
-- The stranded-payment-on-ship-fail gap is a named, ledgered deferral
-  (DRQ-054), not a silent defect — and it is the exact motivating problem
+- The stranded-payment-on-ship-fail gap is a named, ledgered deferral,
+  not a silent defect — and it is the exact motivating problem
   ch.24's orchestrated shipping saga exists to close.
 
 Next: ch.23 builds the mechanism that lives inside the window this chapter
@@ -320,10 +320,4 @@ sound across a contract it can no longer verify in a single round trip.
 
 ---
 
-*Verification status: <span class="status status--verified">verified</span>.
-The synchronous-mode free-rollback claim is the same direct-query proof
-ch.19 already recorded. The ACD-mode claims — the PENDING window's real
-latency, the reachable stranded-payment deferral, and the isolation-anomaly
-analogs — are quoted from `tooling/newman/GOLDEN-BASELINE.md`'s r05
-CUTOVER lane and the order service's own docstring, not re-derived here;
-the PACELC framing is analysis of that already-verified behavior.*
+*Verification status: <span class="status status--verified">verified</span>. The synchronous-mode free-rollback claim is the same direct-query proof ch.19 already recorded. The ACD-mode claims — the PENDING window's real latency, the reachable stranded-payment deferral, and the isolation-anomaly analogs — are quoted from the live cutover run in `tooling/newman/` and the order service's own docstring, not re-derived here; the PACELC framing is analysis of that already-verified behavior.*

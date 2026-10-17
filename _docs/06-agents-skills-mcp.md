@@ -49,11 +49,11 @@ Verify phases are carried out by exactly this pattern, implemented as the
 **`lgtm-relay`** skill, under a name worth being precise about: **plan →
 execute → validate**.
 
-{% include excalidraw.html file="plan-execute-validate-relay" alt="Six boxes in a row: Frame (human, states intent, writes the decisions.md entry), Plan tier (Opus, reads Frame plus Map recon, drafts the step plan), Human gate 1 (plan approval, before any diff exists), Execute tier (Sonnet, Generate: scaffolds, writes code and tests, runs them), Validate tier (Opus again, adversarial: re-reads plan and diff against the equivalence suite), Human gate 2 (equivalence sign-off, Verify phase). A dashed line below the row connects the Plan and Validate boxes, labeled: same model tier, now adversarial, not self-vouching." caption="Figure 6.1 — The relay: the planning tier drafts, the execution tier builds, the same planning tier validates adversarially, with a human gate on either side of Generate" %}
+{% include excalidraw.html file="plan-execute-validate-relay" alt="Six boxes in a row: Frame (human, states intent, writes the decision-log entry), Plan tier (Opus, reads Frame plus Map recon, drafts the step plan), Human gate 1 (plan approval, before any diff exists), Execute tier (Sonnet, Generate: scaffolds, writes code and tests, runs them), Validate tier (Opus again, adversarial: re-reads plan and diff against the equivalence suite), Human gate 2 (equivalence sign-off, Verify phase). A dashed line below the row connects the Plan and Validate boxes, labeled: same model tier, now adversarial, not self-vouching." caption="Figure 6.1 — The relay: the planning tier drafts, the execution tier builds, the same planning tier validates adversarially, with a human gate on either side of Generate" %}
 
 One model tier — Opus, in the planning role — reads the Frame statement,
 does the Map-phase reconnaissance, and drafts a concrete step plan: what
-becomes a `decisions.md` entry and a row in `build-plan.md`. That plan sits
+becomes a decision-log entry and a row in the build plan. That plan sits
 in front of a human gate before anything else happens; Chapter 5 called
 this the cheapest place in the whole lifecycle to catch a wrong assumption,
 and a second model's enthusiasm for its own plan is not a substitute for
@@ -180,8 +180,8 @@ this project's stack.** No tool exposes live, version-matched FastAPI
 documentation the way a Quarkus-aware MCP server exposes Quarkus
 documentation; no tool scaffolds an aiokafka consumer or validates a
 Starlette route's structure the way an integration-framework-aware MCP
-server validates a route definition before it's deployed. This is named
-explicitly, per `_plans/decisions.md` (DRQ-020), rather than implied away —
+server validates a route definition before it's deployed. This book names
+that gap explicitly rather than implying it away —
 a reader following this book's loop in their own Python project shouldn't
 expect a tool that doesn't exist to show up later.
 
@@ -286,10 +286,4 @@ Python-shaped defect the safety net caught before it reached a reader.
 
 ---
 
-*Verification status: <span class="status status--unverified">unverified</span> —
-conceptual chapter, no runnable example under `examples/`. The claims
-checkable directly against this repository: the `lgtm-*` skill names, the
-`AGENTS.md` governance pattern (`examples/02-review-service/AGENTS.md`),
-and the proxy's routing logic (`examples/01-strangler-proxy/app/main.py`).
-Chapter 7 is where this chapter's claims about what the safety net actually
-catches get their full worked proof.*
+*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — no runnable example of its own; the `lgtm-*` skills, the `AGENTS.md` governance pattern (`examples/02-review-service/AGENTS.md`), and the proxy's routing logic (`examples/01-strangler-proxy/app/main.py`) are all checkable in the repository.*

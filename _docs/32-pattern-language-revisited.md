@@ -16,10 +16,9 @@ whole does with the cross-cutting concerns (chassis, contracts, deployment,
 mesh, delivery) that no bounded context owns alone. This chapter is the
 book's final project: not a new extraction, not a new runnable example, but
 a walk back through the entire pattern catalog this project started from —
-the same ~45-row matrix in `_plans/build-plan.md` section C that was filled
-in one claim at a time, chapter by chapter, across ten iterations — now that
-every claim in it can be checked against a finished system instead of a
-plan.
+the same ~45-row matrix it set out to cover, filled in one claim at a time,
+chapter by chapter — now that every claim in it can be checked against a
+finished system instead of a plan.
 
 The walk uses three verdicts, and only three, because three is what the
 matrix actually supports once you read the Note column chapter by chapter
@@ -163,8 +162,8 @@ this system actually has is concrete and distributed across existing
 mechanisms rather than a new named component: a gRPC deadline, the outbox's
 at-least-once delivery plus two-layer idempotency, the strangler proxy's
 502 fail-safe when a backend is unreachable, the orchestrator's own crash-
-resume. The one actually new mechanism r06 added was a `tenacity`
-retry-with-timeout wrapping the shipping saga's one outbound HTTP call
+resume. The one actually new mechanism the orchestrated shipping saga added
+was a `tenacity` retry-with-timeout wrapping the shipping saga's one outbound HTTP call
 (`enrich`). A circuit breaker (`pybreaker`) and a bulkhead were named in
 planning prose and never built. **Verdict: adapted** — the mechanisms that
 exist are real and load real traffic paths; the two that do not exist are
@@ -335,7 +334,7 @@ scorecard already modeled: three services instrumented for one connected
 hero trace, not eight services instrumented because a complete-looking
 column reads better than a true partial one.
 
-{% include excalidraw.html file="book-pattern-scorecard" alt="Three stacked bands matching build-plan.md section C. EARNED (8 cards): Strangler Fig, Content-Based Routing plus ACL, Shared to Owned Data plus sync gRPC, Transactional Outbox plus event-driven, CQRS plus ACID to ACD, Saga Choreographed plus Orchestrated, Deployment via kustomize, CI/CD plus Supply Chain. ADAPTED (5 cards): Microservices Chassis, Contracts and Schema Registry, Service Mesh plus Observability (mesh earned, OTel on 3 of 8), CDC and Transaction Log Tailing (transition-only, retired), Event Sourcing (light, outbox-as-log framing). NAMED, DEFERRED (6 ghost cards): full event sourcing, pybreaker and bulkhead, a GitOps operator plus canary, Loki log aggregation, Kafka saga-hop tracing, and Caching (demoted to Appendix H)." caption="Figure 32.2 — The book-wide pattern scorecard, matching build-plan.md section C" %}
+{% include excalidraw.html file="book-pattern-scorecard" alt="Three stacked bands of the book-wide pattern scorecard. EARNED (8 cards): Strangler Fig, Content-Based Routing plus ACL, Shared to Owned Data plus sync gRPC, Transactional Outbox plus event-driven, CQRS plus ACID to ACD, Saga Choreographed plus Orchestrated, Deployment via kustomize, CI/CD plus Supply Chain. ADAPTED (5 cards): Microservices Chassis, Contracts and Schema Registry, Service Mesh plus Observability (mesh earned, OTel on 3 of 8), CDC and Transaction Log Tailing (transition-only, retired), Event Sourcing (light, outbox-as-log framing). NAMED, DEFERRED (6 ghost cards): full event sourcing, pybreaker and bulkhead, a GitOps operator plus canary, Loki log aggregation, Kafka saga-hop tracing, and Caching (demoted to Appendix H)." caption="Figure 32.2 — The book-wide pattern scorecard" %}
 
 The decision not to collapse eight copies of a fifteen-line
 `_configure_logging()` function into one shared internal package was made
@@ -359,26 +358,26 @@ now that it has run for ten iterations: a planner drafts an approach and
 names every open design question as an explicit, numbered decision before
 a line of code exists; a builder implements against that plan, one
 iteration at a time; a validator checks the result against the plan's own
-acceptance criteria and writes down what it found, correct or not, in
-`_plans/reconciliation.md`. The relay's value was never that the plan was
+acceptance criteria and writes down what it found, correct or not. The
+relay's value was never that the plan was
 always right the first time — it rarely was, in the way that matters — it
 was that every place the plan and the as-built code disagreed got written
 down in the same pass that found it, instead of surfacing later as an
 unexplained inconsistency a reader would have to track down alone.
 
 Three corrections carried across the ten iterations make the pattern
-concrete. At r08, the plan's own build-plan table claimed every service's
+concrete. In one case, the plan's table claimed every service's
 configuration ran on `pydantic-settings` — a reasonable guess, written
 before a single service existed — and ch.27's own research phase, which
 meant grepping all eight `app/config.py` files directly rather than taking
 the plan's wording at face value, found a plain `dataclasses.dataclass` in
 every one of them and no `pydantic_settings` import anywhere in the tree.
-At r09, the plan described the deployment ConfigMap as carrying one
+In another, the plan described the deployment ConfigMap as carrying one
 database connection string per service; building `app-config.yaml` against
 the real `config.py` modules showed the actual shape is one shared
 `DATABASE_URL` with schema selection happening in each service's own code
 — a different claim, caught and corrected in the shipped manifest rather
-than shipped wrong and fixed later. At r09 again, the supply-chain gate's
+than shipped wrong and fixed later. In a third, the supply-chain gate's
 own risk section expected a transient CVE that a base-image re-pin could
 clear; the real scan found 35 unfixable Highs in a base layer with no newer
 patched tag to re-pin onto, confirmed with `skopeo`, and the gate shipped
@@ -389,7 +388,7 @@ be — they are evidence the validation phase did the one job it exists to
 do: read the actual files, not the plan's description of what the files
 should contain.
 
-`_plans/reconciliation.md`'s per-iteration record is the artifact that
+The per-iteration reconciliation record is the artifact that
 makes this retrospective possible at all. Each entry states what shipped,
 names any divergence from the plan that preceded it, and renders a
 CLEAN-or-DRIFT verdict with the reasoning attached — the same discipline
@@ -486,10 +485,4 @@ chapter's scorecard already accounts for.
 
 ---
 
-*Verification status: <span class="status status--unverified">unverified</span>.
-This is a conceptual, docs-only chapter with no new runnable example; its
-job is reconciling `_plans/build-plan.md` section C against chapters
-already shipped, not producing new evidence. Every verdict cites the
-chapter that proved it (ch.14 through ch.31), and this iteration's
-reconciliation was re-confirmed against each cited chapter rather than
-assumed carried-forward.*
+*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — a docs-only reconciliation with no new runnable example; every verdict cites the chapter that proved it (Chapters 14 through 31), re-confirmed against each rather than assumed.*

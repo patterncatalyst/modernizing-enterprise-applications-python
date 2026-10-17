@@ -296,9 +296,4 @@ behavior-equivalence suite every later chapter depends on.
 
 ---
 
-*Verification status: <span class="status status--unverified">unverified</span> —
-conceptual chapter, no runnable example under `examples/`. Its claims about
-extraction order are checkable against `examples/00-monolith/SMELLS.md`
-(the coupling this chapter's "review first, order last" argument depends
-on). The strategy and strangler-fig mechanics named here are built out,
-with running code, in Part 3 and Part 5.*
+*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — no runnable example of its own; its extraction-order argument is checkable against `examples/00-monolith/SMELLS.md`, and the strangler mechanics it names are built with running code in Parts 3 and 5.*

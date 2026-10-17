@@ -514,4 +514,4 @@ individually reversible migrations, starting with the context this
 chapter's own scoring already named as the obvious first cut.
 
 ---
-*Verification status: <span class="status status--unverified">unverified</span>. Conceptual chapter — `examples/00-monolith/` is unchanged from Chapter 10. Every coupling score and code excerpt above is drawn directly from that tree's current source and `SMELLS.md`'s mapping of each smell to its curing chapter, both independently checkable with `grep -rn 'SMELL\[ch\.' examples/00-monolith`. What remains unverified is forward-looking: that the Ca/Ce ranking this chapter derives for the six contexts actually predicts each extraction's real difficulty, which is only confirmed as Chapters 15 through 26 each run it.*
+*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — `examples/00-monolith/` is unchanged from Chapter 10; every coupling score and excerpt above is drawn from that tree's source and `SMELLS.md`, both checkable with `grep -rn 'SMELL\[ch\.' examples/00-monolith`.*

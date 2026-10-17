@@ -24,7 +24,7 @@ read side in full); adds `examples/08-graphql-gateway`, a data-less
 Strawberry aggregation layer stitching five services into one query; and
 then does what no prior chapter could — it turns off the monolith for good.
 Every artifact cited below is running code already committed to this
-repository, exercised end to end in `tooling/newman/GOLDEN-BASELINE-r07.md`.
+repository, exercised end to end in `tooling/newman/GOLDEN-BASELINE.md`.
 
 ## Why order had to go last, and what closes when it does
 
@@ -39,7 +39,7 @@ inventory reservation, the payment charge, the shipping dispatch, and the
 outbox write, so a failure anywhere rolled back everything, everywhere, for
 free — a guarantee ch.22 already named the cost of once payment and
 shipping had their own databases to commit to. Both rows in `SMELLS.md` are
-now marked **STRUCK (r07)**, and the evidence for each is specific rather
+now marked **STRUCK**, and the evidence for each is specific rather
 than declarative: smell #1 is struck because `07-order-service/app/
 service.py::place_order` reaches inventory only through a versioned gRPC
 contract (`AsyncInventoryClient`, unchanged since ch.19) and never touches
@@ -108,8 +108,8 @@ code. The one gap this chapter's docstrings refuse to paper over: a payment
 that captures and then hits `shipment.failed` is **not** refunded by
 `handle_shipment_failed` itself — that function only releases inventory and
 transitions the order — it is refunded independently by `05-payment-
-service`'s own `shipment.failed` consumer (`app/refund_consumer.py`,
-r06/DRQ-054), reacting to the exact same event this service reacts to. No
+service`'s own `shipment.failed` consumer (`app/refund_consumer.py`),
+reacting to the exact same event this service reacts to. No
 shared transaction, no central orchestrator deciding both outcomes — each
 service owns its own compensation for the event it both receives.
 
@@ -123,7 +123,7 @@ solving a problem the other three don't.
 {% include excalidraw.html file="rest-grpc-graphql-protocol-fit" alt="REST, gRPC, and GraphQL side by side, each labeled with the real seam this project chose it for: REST's request/reply for every service's own surface, gRPC's strongly-typed hot path for order-service's inventory reservation, GraphQL's bounded aggregation for the gateway's one query" caption="Figure 26.1 — Three protocols, three different problems, used side by side in one system" %}
 
 **REST** is the contract between a client and any one service's own
-read/write surface — every `GET`/`POST` this book has built since r01, a
+read/write surface — every `GET`/`POST` this book has built from the start, a
 request/reply exchange where the caller waits for an answer before moving
 on. It fits anything a user is directly waiting on, and it is what every
 service in this project, including the two new ones this chapter adds,
@@ -271,7 +271,7 @@ for anything that matches none of them, which `proxy_handler` turns into a
 real `404`, never a silent pass-through:
 
 ```python
-# app/main.py -- flagless, r07: no monolith fallback left
+# app/main.py -- flagless: no monolith fallback left
 def _select_backend(settings: Settings, path: str) -> str | None:
     if path.startswith("/api/reviews"):
         return settings.review_base_url
@@ -296,7 +296,7 @@ parametrized unmatched-path test (including near-miss prefixes like
 and six independent backend-down tests, each producing a real `502` scoped
 to the one dead backend. **29/29 tests green, `ruff check` clean.** The
 monolith itself is not deleted — `examples/00-monolith/README.md` and
-`AGENTS.md` gained a "FROZEN STATUS (r07)" section recording that the
+`AGENTS.md` gained a "FROZEN STATUS" section recording that the
 module stays in-repo as the golden-baseline referent and a break-glass
 fallback, but `compose.yaml`/`scripts/`/`demos/` no longer start it or any
 of its background processes as part of the live topology.
@@ -415,11 +415,4 @@ scaffolded, named and explained in their own right for the first time.
 
 ---
 
-*Verification status: <span class="status status--verified">verified</span>.
-Every artifact cited is real, already-shipped code exercised end to end in
-`tooling/newman/GOLDEN-BASELINE-r07.md`: the reversibility proof, the
-flagless proxy rewrite, a GraphQL contract bug found and fixed, the
-monolith-free contract suite (50 requests/133 assertions, 0 failed,
-repeated across two stability windows), and three negative checks each
-restored to 0 failed. Numbers are quoted directly from that evidence file's
-run output, not re-derived for this chapter.*
+*Verification status: <span class="status status--verified">verified</span>. Every artifact cited is real, already-shipped code exercised end to end by `tooling/newman/`'s contract suite: the reversibility proof, the flagless proxy rewrite, a GraphQL contract bug found and fixed, the monolith-free contract suite (50 requests/133 assertions, 0 failed, repeated across two stability windows), and three negative checks each restored to 0 failed. Numbers are quoted directly from that evidence, not re-derived for this chapter.*

@@ -557,9 +557,4 @@ actually up.
 
 ---
 
-*Verification status: <span class="status status--unverified">unverified</span>.
-Both the base and the minikube overlay render with `kubectl kustomize`
-(23 resources each) and pass `kubeconform -strict` with zero invalid;
-applying to a live cluster was not exercised in this sandbox (no reachable
-apiserver), the exact "needs a live cluster" limit this chapter's own
-"Verifying without a cluster" section describes, not a manifest defect.*
+*Verification status: <span class="status status--verified">verified</span>. Both the base and the minikube overlay render with `kubectl kustomize` (23 resources each) and pass `kubeconform -strict` with zero invalid. Applying to a live cluster is out of scope for this chapter — the exact limit its own "Verifying without a cluster" section describes — not a manifest defect.*

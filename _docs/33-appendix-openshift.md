@@ -32,8 +32,8 @@ and none of it gets rebuilt for OpenShift. `openshift/README.md` states
 this directly: everything about the application is identical; OpenShift
 changes five things about how it is *deployed*. This chapter walks through
 each of those five changes, in the same order the README names them, with
-the reasoning the build plan's DRQ-104 through DRQ-111 range captured
-behind each one, and closes with the live-cluster claims a headless CI
+the reasoning captured behind each one, and closes with the live-cluster
+claims a headless CI
 gate cannot make on its own.
 
 ## What stays identical, and what changes
@@ -46,12 +46,12 @@ gate cannot make on its own.
 | Edge | `strangler-proxy` is the one REST edge | **identical semantics** — still the one REST edge, now behind a Route |
 | OTel trace | strangler-proxy / inventory-service / order-service instrumented | **identical** three services, same `opentelemetry-instrument` wrapper |
 | mTLS concept | STRICT mesh-wide, one PERMISSIVE carve-out | **identical concept**, re-expressed for OpenShift's own mesh operator |
-| Ingress | NodePort `30888` | **Route** (edge TLS, HTTP→HTTPS redirect) — DRQ-106 |
-| Packaging | kustomize `base` + `overlays/minikube` | **Helm chart**, data-driven `services:` map — DRQ-105 |
-| Image delivery | `minikube image load` | **podman build → integrated registry push** — DRQ-108 |
-| Mesh injection | `istioctl` `IstioOperator`, `sidecar.istio.io/inject` annotation | **Sail `Istio` CR**, `istio.io/rev` pod-template **label** — DRQ-109 |
-| Pod identity | no SCC, pinned `runAsUser: 1001` | **three SCC postures**: `restricted-v2` / `nonroot-v2` / `anyuid` — DRQ-107 |
-| Shared-schema seed | host port-forward + `manage.py migrate` | **in-cluster bootstrap Job**, idempotent — DRQ-111 |
+| Ingress | NodePort `30888` | **Route** (edge TLS, HTTP→HTTPS redirect) |
+| Packaging | kustomize `base` + `overlays/minikube` | **Helm chart**, data-driven `services:` map |
+| Image delivery | `minikube image load` | **podman build → integrated registry push** |
+| Mesh injection | `istioctl` `IstioOperator`, `sidecar.istio.io/inject` annotation | **Sail `Istio` CR**, `istio.io/rev` pod-template **label** |
+| Pod identity | no SCC, pinned `runAsUser: 1001` | **three SCC postures**: `restricted-v2` / `nonroot-v2` / `anyuid` |
+| Shared-schema seed | host port-forward + `manage.py migrate` | **in-cluster bootstrap Job**, idempotent |
 
 ## Building images for a cluster you don't run a daemon against
 

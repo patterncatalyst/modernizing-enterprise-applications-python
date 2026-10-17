@@ -22,7 +22,7 @@ codebase had to make to get there.
 
 ## Why shared-database coupling is the hardest coupling to break
 
-`examples/00-monolith/SMELLS.md` planted this smell in r01 and has carried it
+`examples/00-monolith/SMELLS.md` planted this smell and has carried it
 open ever since:
 
 > **#3 — Shared single schema/DB for all six apps** — one Postgres schema,
@@ -142,15 +142,15 @@ around indefinitely as a permanent, parallel read path nobody owns.
 
 The clearest instance of this tradeoff in this project's own codebase is
 `order.OrderItem.inventory_item` — smell #4's own example — and ch.19's
-Inventory extraction is exactly what forces it to move. Before this
-project's r04 build, `order/models.py::OrderItem` carried a live foreign
+Inventory extraction is exactly what forces it to move. Before the inventory
+extraction, `order/models.py::OrderItem` carried a live foreign
 key into `inventory.InventoryItem`:
 
 {% include codetabs.html langs="Before — live FK (SMELL[ch.18])|After — denormalized snapshot" %}
 
 ```python
 # order/models.py -- BEFORE (the cross-context FK this project planted
-# deliberately in r01, SMELL #4)
+# deliberately, SMELL #4)
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
     inventory_item = models.ForeignKey("inventory.InventoryItem", on_delete=models.PROTECT)
@@ -159,7 +159,7 @@ class OrderItem(models.Model):
 ```
 
 ```python
-# order/models.py -- AFTER (r04/ch.19, this project's shipped code)
+# order/models.py -- AFTER (ch.19, this project's shipped code)
 class OrderItem(models.Model):
     """SMELL[ch.18] CURED here -- sku/item_name are now a denormalized
     SNAPSHOT captured once at checkout time, a plain soft string reference
@@ -316,7 +316,7 @@ so. Notification's clean start was correct because nothing pre-existed to
 migrate: `OrderPlacedConsumer` had no monolith original to lift, so there
 was no live data to move, only a new schema to create. Inventory is neither
 of those: `inventory_items` is a table the monolith has been writing to
-since r01, with real rows, real foreign keys pointing at it, and a checkout
+from the start, with real rows, real foreign keys pointing at it, and a checkout
 path that needs a correct answer to "is this in stock" on every single
 order. ch.19 is the chapter that has to reconcile "own the data" with "don't
 lose a single committed reservation during the transition."
@@ -328,8 +328,7 @@ to be both correct and safely reversible, and naming them now is this
 chapter's last job before ch.19 builds the answer to each:
 
 1. **Give Inventory its own schema and its own seed.** Same posture
-   Notification already established (DRQ-035/DRQ-044 in this project's
-   build plan) — an Alembic-migrated `inventory` schema, created and
+   Notification already established — an Alembic-migrated `inventory` schema, created and
    independently seeded, with no foreign key reaching back into the
    monolith's tables.
 2. **Move the checkout-time `reserve`/`release` concern across a real

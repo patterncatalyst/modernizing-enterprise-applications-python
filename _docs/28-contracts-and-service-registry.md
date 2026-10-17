@@ -50,10 +50,10 @@ say the same thing about why this duplication exists at all: there is no
 shared module between the monolith and either service — each is an
 independently deployable project — so the duplication above is the real
 cost of a hand-maintained JSON wire contract, carried with no schema
-registry until this chapter (DRQ-036).
+registry until this chapter.
 
-That reasoning has been sitting in two services' docstrings since r03 and
-r05, each with a forward reference to a chapter that didn't exist yet. This
+That reasoning has been sitting in two services' docstrings since they were
+extracted, each with a forward reference to a chapter that didn't exist yet. This
 chapter is where that reference resolves — not by making the hand-authored
 duplication disappear (it doesn't; both schemas above are exactly the code
 they were before this chapter), but by building, against live
@@ -144,8 +144,8 @@ pure-Python, no native extension, matching the asyncio event loop every
 FastAPI service already runs on. The obvious tool for "Avro plus a schema
 registry" in most Kafka tutorials is `confluent-kafka[avro]`, which wraps
 `librdkafka` (a C library) and ships a ready-made Avro serializer that
-talks to Confluent Schema Registry's wire format out of the box. DRQ-033
-rejected that path for this project, explicitly, and the reason is the same
+talks to Confluent Schema Registry's wire format out of the box. This project
+rejected that path explicitly, and the reason is the same
 consistency argument this book has made before about picking one idiom and
 holding it: pulling in a second Kafka client, with its own native
 dependency and its own serialization conventions, for exactly one
@@ -153,7 +153,7 @@ demonstrator module would mean this project no longer has one Kafka story —
 it would have `aiokafka` everywhere except the one place a registry got
 involved. `examples/09-schema-registry-demo`'s own `AGENTS.md` records the
 decision as directly as the code enforces it: "**No confluent-kafka, no
-Java/Quarkus Avro serde** — DRQ-033's decision."
+Java/Quarkus Avro serde** — the project's decision."
 
 Staying pure-Python has a real cost, and this chapter doesn't minimize it:
 there is no Confluent or Apicurio Python serde to lean on, no drop-in
@@ -586,8 +586,8 @@ before.
   runtime currently checks that the two independently-authored copies of
   the same frozen contract still agree.
 - **Pure-Python means hand-rolling what a serde would otherwise supply** —
-  DRQ-033 rejected `confluent-kafka` to keep one Kafka client idiom across
-  this project; the cost is that the wire envelope (`[magic][global
+  this project rejected `confluent-kafka` to keep one Kafka client idiom
+  throughout; the cost is that the wire envelope (`[magic][global
   id][Avro bytes]`) and the registry REST client are this project's own,
   verified by hand against a live `3.3.3` Apicurio image rather than
   inherited from an existing serde.

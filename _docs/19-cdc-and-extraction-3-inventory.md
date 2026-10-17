@@ -22,7 +22,7 @@ The code is in `examples/04-inventory-service/` (the new FastAPI + gRPC
 service) and `examples/00-monolith/order/` (the client-side ACL and the
 `grpc`-mode checkout path). `MIGRATION.md` and `CUTOVER.md` in the service
 directory record what it does, how it cuts over, and the measured numbers
-cited below; `tooling/newman/GOLDEN-BASELINE.md`'s r04 NEWMAN-GRPC lane is
+cited below; `tooling/newman/GOLDEN-BASELINE.md`'s gRPC lane is
 this chapter's end-to-end proof.
 
 ## Why Inventory leaves third, and why it's the hardest cut yet
@@ -48,12 +48,12 @@ different from the two before it, along three axes at once:
 2. **The data has to move out from under a live writer.** Review's and
    Notification's data postures (ch.18) were each a clean case — shared by
    design, or owned from a blank slate. Inventory's `inventory_items` table
-   has real rows the monolith has been writing to since r01, and a one-time
+   has real rows the monolith has been writing to from the start, and a one-time
    transaction-log backfill has to bridge the gap during cutover without
    losing a reservation.
 3. **The free rollback disappears.** `examples/00-monolith/SMELLS.md`'s
    smell #2 — one `transaction.atomic()` spanning all five contexts checkout
-   touches — has been "free" since r01 because Postgres can unwind five
+   touches — has been "free" from the start because Postgres can unwind five
    tables' writes with one `ROLLBACK`. The moment `Reserve` commits in
    Inventory's own database, that single write-ahead log no longer spans
    both writes, and the rollback this book has been getting for nothing has
@@ -69,7 +69,7 @@ from the same `.proto` source. The proto's own header comment states its
 job directly:
 
 ```proto
-// r04/ch.19 -- the gRPC contract IS the anti-corruption layer for the
+// ch.19 -- the gRPC contract IS the anti-corruption layer for the
 // synchronous order<->inventory seam: a strongly-typed, versioned wire
 // vocabulary (stock_keeping_unit/display_name/unit_price_cents/
 // on_hand_qty) deliberately DISTINCT from the monolith's domain
@@ -138,7 +138,7 @@ one.
 ## Transaction-log tailing: Debezium reads the write-ahead log
 
 The gRPC seam alone doesn't solve the problem ch.18 raised: `inventory_items`
-is a real table with real rows the monolith has been writing to since r01,
+is a real table with real rows the monolith has been writing to from the start,
 and Inventory's own schema starts out empty. If cutover meant flipping
 straight from "monolith owns the table" to "Inventory owns an empty table,"
 every row already in stock would vanish from Inventory's point of view on
@@ -297,16 +297,16 @@ bound and accepting connections on `:9004` alongside the HTTP surface on
 Everything above explains how Inventory gets its own, correctly-backfilled
 copy of the data. It says nothing yet about the harder problem ch.19 opened
 with: once `Reserve` is a network call into a different process's database,
-what happens to the free rollback smell #2 has been describing since r01?
+what happens to the free rollback smell #2 has been describing all along?
 
 `order/services.py::place_order()` now dispatches on `settings.INVENTORY_MODE`
 between two checkout strategies, and reading them side by side is the
 clearest way to see exactly what changed:
 
-{% include codetabs.html langs="local mode (r01-r03, UNCHANGED) — free rollback|grpc mode (r04/ch.19) — explicit compensation" %}
+{% include codetabs.html langs="local mode (UNCHANGED) — free rollback|grpc mode (ch.19) — explicit compensation" %}
 
 ```python
-# order/services.py -- _place_order_local, UNCHANGED since r01
+# order/services.py -- _place_order_local, UNCHANGED from the monolith
 def _place_order_local(customer, items, payment_method, shipping_address):
     with transaction.atomic():
         order = Order.objects.create(customer=customer, ...)
@@ -323,7 +323,7 @@ def _place_order_local(customer, items, payment_method, shipping_address):
 ```
 
 ```python
-# order/services.py -- _place_order_remote, r04/ch.19
+# order/services.py -- _place_order_remote, ch.19
 def _place_order_remote(customer, items, payment_method, shipping_address):
     client = inventory_client.RemoteInventoryClient()
     try:
@@ -483,7 +483,7 @@ configuration, though, this book only exercises the two corners where both
 dimensions point the same direction, because that's the pair the CI gate
 below actually proves end to end.
 
-`tooling/newman/GOLDEN-BASELINE.md`'s r04 NEWMAN-GRPC lane runs the unedited
+`tooling/newman/GOLDEN-BASELINE.md`'s gRPC lane runs the unedited
 `mea.postman_collection.json` against both locked-together configurations:
 
 | Run | `INVENTORY_MODE` | `STRANGLER_INVENTORY_ENABLED` | Result |
@@ -555,7 +555,7 @@ confirms the new Inventory folder is a true no-op for every pre-existing
 caller: all three Inventory requests fire as harmless, idempotent reads and
 assert nothing with their guard off, and critically the Notification folder
 is **not stranded** — it still fires and halts exactly where it always has,
-at the identical 60/60 assertions the r03 lane's own baseline established.
+at the identical 60/60 assertions the baseline established.
 A new folder that could strand an existing one would be a regression no
 amount of new coverage should be allowed to hide behind.
 

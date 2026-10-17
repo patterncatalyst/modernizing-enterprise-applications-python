@@ -35,7 +35,7 @@ class OrderPlacedEvent(BaseModel):
     shared module between the monolith and this service (each is an
     independently deployable project) -- this duplication is the honest cost
     of a hand-maintained JSON wire contract with no schema registry until
-    ch.28/Apicurio (DRQ-036)."""
+    ch.28/Apicurio."""
 
     model_config = ConfigDict(populate_by_name=True)
 

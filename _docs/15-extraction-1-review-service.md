@@ -50,7 +50,7 @@ The hard problems (shared data, sagas, event-driven coordination) get their
 own chapters once this one has shown the baseline loop actually works.
 
 `review` does still have one thing worth extracting *for*, not just
-extracting *despite*: SMELL #7 (r02, Option B). Despite having no runtime
+extracting *despite*: SMELL #7. Despite having no runtime
 dependency on any other context, `review`'s write endpoint borrows the
 monolith's shared `django.contrib.auth` machinery — the same `auth_user`
 table and `BasicAuthentication` class every other context would reach for.
@@ -72,7 +72,7 @@ mechanism.
 
 Before a single line of the new service existed, the contract it would
 have to match already did: `tooling/newman/mea.postman_collection.json`,
-captured against the monolith at r01 and frozen as the externally-observable
+captured against the monolith and frozen as the externally-observable
 behavior every later extraction is held to. ch.14 said this already for the
 proxy's own cutover; it's worth restating here because it's the actual
 order of operations this chapter follows, not a retrospective justification:
@@ -97,7 +97,7 @@ its own — `app/db.py` points at the exact same Postgres database and the
 exact same tables (`reviews`, `customers`, `inventory_items`, `auth_user`)
 the monolith's `manage.py migrate`/`manage.py seed` create — because giving
 `review` its own database is a later chapter's problem (ch.18's shared-data-
-to-owned-data, ch.19's CDC backfill). For r02's walking skeleton, the goal
+to-owned-data, ch.19's CDC backfill). For the walking skeleton, the goal
 is behavioral equivalence through a safe cutover, not a fully decoupled
 data store yet. Reading and writing the same tables the monolith already
 uses is what lets the strangler proxy flip `STRANGLER_REVIEW_ENABLED`
