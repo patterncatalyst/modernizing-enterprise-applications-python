@@ -503,9 +503,10 @@ the behavior described, on a cluster where they've been asked to.
 
 ---
 
-*Verification status: `verified-live (user-run) — evidence pending
-capture`. This chapter's mesh, mTLS, and telemetry claims are verified
-against the committed manifests and scripts cited throughout — `deploy/
+*Verification status: `headless-verified; live mesh capture DEFERRED
+(user-run, scheduled post-merge)`. This chapter's mesh, mTLS, and telemetry
+claims are verified against the committed manifests and scripts cited
+throughout — `deploy/
 k8s/istio/*.yaml`, `deploy/k8s/observability/*.yaml`,
 `deploy/k8s/overlays/minikube/kustomization.yaml`, `deploy/k8s/scripts/
 {setup-profile,install-istio,deploy}.sh` all render under `kubectl
