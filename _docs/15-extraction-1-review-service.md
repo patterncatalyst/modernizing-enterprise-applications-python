@@ -670,13 +670,9 @@ reuses to cut its own seam.
 ---
 
 *Verification status: <span class="status status--verified">verified</span>.
-`uv run pytest` passes 11/11 against a real, throwaway
-`postgres:18.6-alpine` container migrated and seeded by `00-monolith`'s own
-management commands; `uv run ruff check .` passes clean; a live run on
-`:8001` was driven end to end with `curl` (list, filter, get, 404, 401
-no-auth, 401 bad-creds, 201 with auth, 400 invalid rating). The flag
-cutover itself is verified at the proxy/Newman level in ch.14 and
-`examples/01-strangler-proxy/CUTOVER.md`: 58/58 green with the flag off, on,
-and reverted, plus a negative check (review-service down) that fails loudly
-as required. The Phase A numbers in this chapter are a measured proxy, not
-a running server — Phase A code itself was never built, by design.*
+`uv run pytest` passes 11/11 against a real, throwaway Postgres container,
+`ruff check` passes clean, and a live run on `:8001` was driven end to end
+with `curl` covering list, filter, get, and both auth-failure and
+authenticated-create paths. The flag cutover itself is verified separately
+at the proxy/Newman level (ch.14); the Phase A numbers here are a measured
+proxy, since Phase A code was never built, by design.*

@@ -486,27 +486,10 @@ chapter's scorecard already accounts for.
 
 ---
 
-*Verification status: not applicable — this is a conceptual, docs-only
-chapter with no new runnable example; its job is to reconcile
-`_plans/build-plan.md` section C against the chapters already shipped, not
-to produce new evidence. Every verdict above cites the chapter that proved
-it: ch.14 (Strangler Fig), ch.16/ch.19 (ACL + content-based routing),
-ch.18/ch.19 (shared→owned data, CDC), ch.17/ch.20 (Transactional Outbox),
-ch.21 (Event Sourcing/CQRS), ch.22 (ACID→ACD), ch.23 (choreographed saga +
-idempotent compensation), ch.24 (orchestrated saga), ch.25 (resilience
-mechanisms), ch.26 (REST/gRPC/GraphQL, the GraphQL gateway), ch.27 (the
-FastAPI chassis scorecard), ch.28 (contracts + schema registry), ch.29
-(deployment patterns), ch.30 (service mesh + observability + tracing), and
-ch.31 (CI/CD + supply chain) — re-read directly for this chapter rather
-than paraphrased from `_plans/build-plan.md`'s own prose, per the ADLC-in-
-Action callout above. `_plans/build-plan.md` section C was reconciled this
-iteration: the Service Mesh / Observability / Tracing (H) row's Note, empty
-through r01–r09, is filled with the r10 result (Istio mesh with STRICT
-mTLS, the LGTM backend, OpenTelemetry on exactly 3 of 8 services), and
-every other row's "landed rNN" annotation was re-confirmed against the
-chapter it cites rather than assumed carried-forward. `_plans/
-reconciliation.md`'s r01–r09 entries are the source for the three ADLC
-corrections cited above (the configuration-mechanism finding at r08, the
-ConfigMap shape finding at r09, and the supply-chain scan finding at r09);
-re-read that ledger directly, not this chapter's summary of it, before
-citing any of the three again.*
+*Verification status: <span class="status status--unverified">unverified</span>.
+This is a conceptual, docs-only chapter with no new runnable example; its
+job is reconciling `_plans/build-plan.md` section C against chapters
+already shipped, not producing new evidence. Every verdict cites the
+chapter that proved it (ch.14 through ch.31), and this iteration's
+reconciliation was re-confirmed against each cited chapter rather than
+assumed carried-forward.*

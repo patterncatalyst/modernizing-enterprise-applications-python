@@ -454,32 +454,9 @@ like end to end.
 ---
 
 *Verification status: <span class="status status--verified">verified</span>.
-`examples/10-supply-chain/demo.sh` was run live on 2026-10-17 with
-`syft 1.54.1` and `grype 0.120.1` against a vulnerability database built
-`2026-10-16T06:29:51Z`, builder `docker 29.9.1`: it built both
-`examples/07-order-service/Containerfile` and
-`examples/00-monolith/Dockerfile`, generated both CycloneDX SBOMs, scanned
-both with `.grype.yaml` applied, and exited `0`. order-service
-(`gate: required`) reported `components=5720 total(Critical=0 High=35
-Medium=153) fixable(Critical=0 High=0 Medium=7) PASS`; the monolith
-(`gate: reported`) reported `components=5690 total(Critical=0 High=35
-Medium=153) fixable(Critical=0 High=0 Medium=7) FAIL`, as expected,
-without affecting the script's exit code. Cited:
-`examples/10-supply-chain/policy.yaml`, `.grype.yaml`, `demo.sh`,
-`README.md` ("The captured result (2026-10-17)" and "Verification
-status" sections), `evidence/summary.txt`,
-`evidence/order-service.grype.json`, `evidence/monolith.grype.json`
-(the `ignoredMatches` arrays, 35 entries each, `fix-state: not-fixed`);
-`.github/workflows/supply-chain.yml` (`changes`, `sbom-scan`,
-`monolith-scan`, `supply-chain-ok`), `code-ci.yml` (the `contract-gate`
-history comment and the HISTORY block describing the six retired
-`*-equivalence-gate` jobs), `schema-registry.yml`, `deploy-manifests.yml`;
-`examples/01-strangler-proxy/app/main.py` and `_docs/14-strangler-fig-
-pattern.md`, `_docs/17-extraction-2-notification-service.md`, `_docs/19-*`
-(`two-cutover-dimensions`), `_docs/23-saga-and-extraction-4-payment.md`,
-`_docs/24-*` for the named progressive-delivery flags. The `fix-state:
-not-fixed` / "no newer base-image tag available yet" claim and the exact
-component/finding counts are a point-in-time result against the grype
-database and the pinned `ubi10/python-314-minimal:10.2-1791928506` tag
-cited above — re-run `demo.sh` to refresh them before citing this
-chapter's numbers again.*
+`examples/10-supply-chain/demo.sh` was run live with `syft`/`grype` against
+both the order-service and monolith Containerfiles: it generated both
+CycloneDX SBOMs, scanned both with the project's grype policy, and exited
+`0`. The required order-service gate passed clean (0 fixable Critical/
+High); the reported-only monolith gate failed as expected, without
+affecting the script's exit code.*

@@ -408,16 +408,10 @@ transaction, is what resolves an order.
 ---
 
 *Verification status: <span class="status status--verified">verified</span>.
-Every mechanism this chapter describes is live, already-shipped code:
-`examples/00-monolith/common/management/commands/outbox_relay.py` and
-`examples/05-payment-service/app/relay.py` are both exercised by
-`tooling/newman/GOLDEN-BASELINE.md`'s r05 CUTOVER lane against a real
-Postgres and a real single-node Kafka broker. The redelivery and
-negative-check numbers cited above (stock held at 94 across a hand-redelivered
-`payment.declined` event; a `20 x 750ms`/`15.1s` bounded-wait exhaustion with
-payment-service killed, self-healing on restart; Scenario 1's terminal poll
-resolving on attempt 2/20) are quoted directly from that lane's run output,
-not re-derived for this chapter. The ordering/cleanup/poison-message gaps
-named in "Done right, concern by concern" are documented limitations of the
-shipped code, confirmed by reading `outbox_relay.py`'s and `app/relay.py`'s
-own exception handling, not claims requiring a further run to confirm.*
+Every mechanism this chapter describes is live, already-shipped code
+exercised by `tooling/newman/GOLDEN-BASELINE.md`'s r05 CUTOVER lane against
+a real Postgres and Kafka broker — the redelivery and negative-check
+numbers cited above are quoted directly from that lane's run output. The
+ordering/cleanup/poison-message gaps are documented limitations confirmed
+by reading the relay code's own exception handling, not claims requiring a
+further run.*
