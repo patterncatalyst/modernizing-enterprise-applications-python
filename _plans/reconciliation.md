@@ -1401,3 +1401,200 @@ observability, GitOps/supply-chain, and the closing chapter); the
 OpenShift/CRC appendix (ch.33, per the standing OpenShift/CRC Appendix
 Standard); and the three companion decks. None of these are extractions —
 the decomposition roadmap itself (§E) is finished as of this section.
+
+---
+
+## ch.27-28 — FastAPI Chassis + Contracts & Service Registry (r08, Part 8, non-extraction)
+
+### The chassis scorecard, and the pydantic-settings correction
+
+**Source:** `build-plan.md` §B.2's ch.27 blurb and §C's "Microservices
+Chassis" row — both asserted, at planning time, that the chassis chapter
+would document **pydantic-settings** as the configuration mechanism. This is
+the first doc-vs-code drift this project's reconciliation practice has found
+in its own planning artifacts (every prior reconcile section found drift
+only between a reused *external* source and its adaptation, e.g. the
+chunked-body proxy bug or the GraphQL staged-query bug — this one is a plan
+describing something the as-built code never did).
+
+**What the code actually does, verified by reading every service's own
+config module, not by re-trusting the plan:** 7 of 8 services (strangler
+proxy excepted; see below) use a **frozen `@dataclass` with a `from_env()`
+classmethod** reading `os.environ` — `pydantic-settings` is not a dependency
+of any `pyproject.toml` in this repo. The strangler proxy uses a
+module-level singleton instead of a `Settings` dataclass instance; the
+review-service makes bare `os.environ` calls with no `Settings` object at
+all. **No service ever adopted pydantic-settings** — the plan's claim was
+aspirational, written before any extraction shipped a config module, and
+never revisited against the as-built code until this reconcile pass.
+
+**What shipped (the correction, recorded as DRQ-083):** ch.27 is authored
+against the real shape, not the planned one; `build-plan.md` §B.2/§C are
+corrected in place (not silently rewritten — the correction itself is named
+and cross-referenced to DRQ-083, so a reader of the ledger's history can see
+what was claimed, when it was caught, and what replaced it). The chapter's
+full scorecard, each cell independently verified against the actual
+service code rather than assumed from the pattern established by the first
+service checked:
+
+| Mechanism | Coverage | Detail |
+|---|---|---|
+| Config = frozen `@dataclass Settings.from_env()` | 7/8 | proxy = module singleton; review = bare `os.environ`, no `Settings` object |
+| pydantic models for request/response schemas | 6/8 | |
+| stdlib logging → `logs/` | 8/8 | |
+| Containerfile | 8/8 | |
+| `/health` route | 6/8 | absent in proxy + review |
+| `errors.py` (uniform error body) | 6/8 | absent in proxy + gateway |
+| `tenacity` retry/timeout | 1/8 | shipping only (DRQ-068/069) |
+| OTel traces/metrics | 0/8 | DEFERRED — ch.30 adds OTel to 3 services |
+| pybreaker (circuit breaker) / bulkhead | 0/8 | DEFERRED — named at DRQ-068, still true at r08 |
+| Shared chassis library (one package, 8 importers) | not built | DEFERRED BY CHOICE (DRQ-082) — each service's chassis bits are independently written, not extracted into a common dependency |
+
+**Named divergence:** the shared-chassis-library framing implied by the
+chapter's working title ("the FastAPI chassis") does not exist as a single
+artifact — DRQ-082 names this explicitly: convention, not library. The
+chapter's honesty is the point — a chassis chapter that claimed uniform
+coverage across 8 independently-built services, or implied a shared package
+that was never written, would be exactly the kind of silent drift this
+ledger's R4 standard exists to catch.
+
+**Verdict:** CLEAN — a real doc-vs-code drift (the pydantic-settings claim)
+was found during this reconcile pass, named, corrected at its source
+(`build-plan.md` §B.2/§C), and traced to an accepted DRQ (DRQ-083) rather
+than quietly rewritten without a trail; the chassis chapter itself is
+authored as a scorecard, not an inflated uniformity claim.
+
+### Contracts & Service Registry: the schema-registry demo
+
+**Source:** `_plans/decisions.md` DRQ-036 (r03) named the gap explicitly —
+"a schema registry (Apicurio, Avro/Protobuf/JSONSchema) is deferred to
+ch.28" — and `_plans/decisions.md` DRQ-033 (r03) rejected `confluent-kafka`
+for the project's Kafka client, a constraint this chapter's registry client
+choice has to honor too, not just the original consumer/producer seam.
+`_plans/backmatter-track-plan.md`'s USER DECISION A/B-1 is the direct design
+source: **(A) fastavro + aiokafka + Apicurio v3 REST** (pure-Python,
+consistent with DRQ-033) was recommended and chosen over **(B)**
+`confluent-kafka[avro]` (which would have pulled librdkafka back in,
+contradicting DRQ-033 for the sake of one demo).
+
+**What shipped:** `examples/09-schema-registry-demo/` — a producer/consumer
+pair exchanging Avro-encoded messages through Kafka, with the schema itself
+registered in and resolved from a live Apicurio v3 instance over its REST
+API (no confluent-kafka, no librdkafka). Because fastavro has no built-in
+Confluent-wire-format framing the way `confluent-kafka`'s `AvroSerializer`
+does, the demo **hand-rolls the wire envelope**: `[magic byte][4-byte
+big-endian global id][Avro binary payload]`, encode and decode both
+implemented in the example itself (DRQ-084) — a deliberate, named
+consequence of the pure-Python client choice, not an oversight.
+
+**Round-trip and compatibility, verified live, not asserted:** a
+Testcontainers-backed integration test spins up real Kafka + a real
+Apicurio 3.3.3 instance and proves (1) a message encoded against a
+registered schema round-trips byte-for-byte through the hand-rolled
+envelope and back to the original record, and (2) Apicurio's own
+compatibility rule enforcement is real, not a client-side illusion:
+registering a **v2** schema (an optional field with a default — backward-
+compatible) against the same subject **succeeds, HTTP 200**; registering a
+**v3** schema (retyping an existing field — backward-incompatible) against
+the same subject **fails, HTTP 400 `RuleViolationException`**. The track
+plan's own risk note flagged that the Java sibling observed a 409→400
+status drift across Apicurio versions for this exact kind of check — the
+**actual observed status (400, not assumed)** against the pinned
+`apicurio-registry:3.3.3` image is what's recorded here, not the status the
+planner guessed before the image was pulled.
+
+**Verdict:** CLEAN — the client-library choice honors a standing rejection
+(DRQ-033) rather than quietly reintroducing the dependency it rejected, the
+wire-envelope gap created by that choice is named and implemented rather
+than hidden, and the compatibility-rule claim (accept-compatible,
+reject-incompatible) is demonstrated against a live, pinned registry
+instance with the actual HTTP status recorded, not inferred from Apicurio's
+documentation.
+
+### Additive posture: compose, CI, and the live JSON flows left untouched
+
+**Source:** `_plans/backmatter-track-plan.md`'s "compose has NO Apicurio
+yet" reconnaissance note and its CI-discipline note ("new gates = SEPARATE
+additive workflows... never touch `code-ci.yml`/`contract-gate`/
+`code-ci-ok`").
+
+**What shipped:** Apicurio (`quay.io/apicurio/apicurio-registry:3.3.3`)
+added to `compose.yaml` as a new `apicurio` service on `:8095`, and
+`APICURIO_IMAGE_TAG=3.3.3` added to `.env.example` — both scoped,
+by inspection, to `examples/09-schema-registry-demo/`'s own use; no existing
+service's `order.placed`/`payment.captured`/`payment.declined`/
+`shipment.dispatched`/`shipment.failed` hand-maintained JSON event contract
+(DRQ-036 and its descendants through r07) references Apicurio, is validated
+against a registered schema, or has its producer/consumer code touched in
+any way (DRQ-085). CI gained a **separate** `.github/workflows/
+schema-registry.yml` with its own summary job (Testcontainers-backed Kafka
++ Apicurio) and no `paths:` filter; `code-ci.yml`'s `contract-gate` and the
+required `code-ci-ok` summary status are unmodified and remain the gate
+every prior extraction's equivalence check still reports to (DRQ-086).
+`demos/demo-schema-registry.sh` runs the round-trip + compatibility
+scenario standalone, green.
+
+**Verdict:** CLEAN — the registry's blast radius is exactly the one new
+demo it was built to teach, verified by checking that no live event
+contract's producer or consumer code changed, not merely by asserting the
+new compose service is "additive" from its position in the file.
+
+### The real per-service JSON drift ch.28 documents (not a replayed Java anecdote)
+
+**Source:** `_plans/backmatter-track-plan.md`'s reconnaissance note: "Python's
+real per-service drift ≠ Java's 'notification missing paymentMethod' — read
+the actual order-service producer payload + payment/notification `schemas.py`
+and tell Python's true story." This is a reconciliation finding in its own
+right — a borrowed anecdote from the Java sibling would have been exactly
+the kind of unexamined cross-project assumption R4 is built to catch.
+
+**What was actually found, read from the live producer/consumer code rather
+than assumed from the Java sibling's analogous chapter:** order-service's
+`order.placed` outbox payload (DRQ-036/DRQ-078) carries the full frozen
+contract (`orderId`, `customerId`, `customerEmail`, `totalCents`,
+`confirmationMessage`, `placedAt`, plus the additive optional
+`paymentMethod` field from DRQ-050) — every downstream consumer
+(payment-service, the monolith's frozen `order_placed_consumer`) tolerates
+unknown/absent fields by construction (the additive-field discipline
+established at DRQ-050/DRQ-062 for exactly this reason), so there is no
+analogous "a consumer silently drops a field it needs" drift instance to
+report for this project's real event contracts. ch.28 names this plainly —
+the project's hand-maintained-JSON contracts have, in practice, stayed
+forward-compatible by discipline (every new field addition since r05 has
+been additive-and-optional, DRQ-050/DRQ-062), not by registry enforcement —
+which is itself the honest motivating case for ch.28's registry demo: a
+registry makes that discipline *checkable*, where today it is only
+*practiced*.
+
+**Verdict:** CLEAN — the chapter's drift anecdote is independently
+re-derived from this project's own producer/consumer code, not carried over
+from the Java sibling's unrelated (and inapplicable) "notification missing
+paymentMethod" story.
+
+### Verdicts summary
+
+CLEAN across every artifact in this section, **plus one real doc-vs-code
+drift found and fixed during this reconcile pass**: the build-plan's
+pydantic-settings claim for the chassis config mechanism, corrected in
+place and traced to DRQ-083. Two USER DECISIONS from
+`_plans/backmatter-track-plan.md` applied to this iteration's scope — A/B-1
+(Avro client = fastavro+aiokafka+Apicurio-REST, DRQ-084) and A/B-3 (build
+the runnable demo + its CI gate, not prose-only, DRQ-086/087) — both
+resolved in favor of the planner's recommended option. The schema-registry
+demo's compatibility claim (accept-compatible, reject-incompatible) was
+verified live against a real, pinned Apicurio instance with the actual
+observed HTTP status recorded (400), not assumed from the Java sibling's
+different-version behavior (409). The additive posture (compose, CI, and
+every live JSON event contract) was verified by inspection, not merely
+asserted. No unexplained drift for ch.27/28.
+
+**Forward reference:** the next sub-iteration, **r09**, covers **ch.29
+(Deployment Patterns, `deploy/k8s/` kustomize base + overlays, verified via
+`kubectl kustomize` + client-side dry-run, no live cluster) and ch.31
+(CI/CD & Supply Chain, `examples/10-supply-chain/`, syft→grype→policy,
+scanning both order-service and the frozen `00-monolith` "before" per
+track-plan USER DECISION A/B-4, still open at r08 close)** — both
+CI-verifiable headless, per `_plans/backmatter-track-plan.md`'s grouping.
+ch.30 (Mesh/Observability, the one live-cluster chapter, per-track USER
+DECISION A/B-2, still open at r08 close) and ch.32 (the capstone) remain
+grouped at r10.
