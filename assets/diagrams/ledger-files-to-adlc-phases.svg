@@ -3,7 +3,7 @@
 <rect x="20" y="68" width="1560" height="112" rx="12" fill="#ffffff" stroke="#ddd"/>
 <text x="32" y="88" font-size="12" font-weight="700" fill="#1d1d1d">ADLC phases -- this project&#x27;s own cycle (Frame -&gt; Map -&gt; Plan -&gt; Generate -&gt; Verify -&gt; Operate -&gt; Reconcile)</text>
 <rect x="20" y="186" width="1560" height="174" rx="12" fill="#fafafa" stroke="#ddd"/>
-<text x="32" y="206" font-size="12" font-weight="700" fill="#1d1d1d">This project&#x27;s own `_plans/` files -- checkable against the repository as you read</text>
+<text x="32" y="206" font-size="12" font-weight="700" fill="#1d1d1d">The ledger this project keeps -- checkable against the repository as you read</text>
 <rect x="150" y="400" width="1300" height="180" rx="12" fill="#eaf4ec" stroke="#ddd"/>
 <text x="162" y="420" font-size="12" font-weight="700" fill="#1d1d1d">Interruption and resume -- not hypothetical; this project&#x27;s own checkpoint discipline</text>
 <rect x="40" y="90" width="200" height="70" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
@@ -28,29 +28,29 @@
 <text x="1460.0" y="123.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Reconcile</text>
 <text x="1460.0" y="140.0" font-size="11.5" fill="#555555" text-anchor="middle">records the outcome</text>
 <rect x="40" y="235" width="288" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
-<text x="184.0" y="280.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">_plans/build-plan.md</text>
+<text x="184.0" y="280.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Build plan</text>
 <text x="184.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">phase table, iteration backlog,</text>
-<text x="184.0" y="312.5" font-size="11.5" fill="#555555" text-anchor="middle">section J status per iteration</text>
+<text x="184.0" y="312.5" font-size="11.5" fill="#555555" text-anchor="middle">status per iteration</text>
 <rect x="348" y="235" width="288" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
-<text x="492.0" y="280.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">_plans/rNN-build-plan.md</text>
+<text x="492.0" y="280.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Per-iteration plan</text>
 <text x="492.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">lanes + acceptance criteria,</text>
 <text x="492.0" y="312.5" font-size="11.5" fill="#555555" text-anchor="middle">header records approval status</text>
 <rect x="656" y="235" width="288" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
-<text x="800.0" y="280.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">_plans/decisions.md</text>
+<text x="800.0" y="280.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Decision log</text>
 <text x="800.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">append decision outcomes --</text>
-<text x="800.0" y="312.5" font-size="11.5" fill="#555555" text-anchor="middle">DRQ rows: fixed / accepted / proposed</text>
+<text x="800.0" y="312.5" font-size="11.5" fill="#555555" text-anchor="middle">rows: fixed / accepted / proposed</text>
 <rect x="964" y="235" width="288" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
-<text x="1108.0" y="280.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">_plans/reconciliation.md</text>
+<text x="1108.0" y="280.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Reconciliation log</text>
 <text x="1108.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">append artifact-vs-source verdicts --</text>
-<text x="1108.0" y="312.5" font-size="11.5" fill="#555555" text-anchor="middle">LIVE: 1,900+ lines by r10</text>
+<text x="1108.0" y="312.5" font-size="11.5" fill="#555555" text-anchor="middle">live: one section per iteration</text>
 <rect x="1272" y="235" width="288" height="110" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
 <text x="1416.0" y="280.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">lgtm-python skill</text>
 <text x="1416.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">Map/Generate substitute --</text>
-<text x="1416.0" y="312.5" font-size="11.5" fill="#555555" text-anchor="middle">no MCP equivalent (DRQ-020)</text>
+<text x="1416.0" y="312.5" font-size="11.5" fill="#555555" text-anchor="middle">no MCP equivalent</text>
 <rect x="270" y="430" width="1060" height="120" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
-<text x="800.0" y="473.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Resume mechanism: the iteration&#x27;s own build-plan header, read again</text>
-<text x="800.0" y="490.0" font-size="11.5" fill="#555555" text-anchor="middle">Each _plans/rNN-build-plan.md opens with its own approval/status line</text>
-<text x="800.0" y="505.0" font-size="11.5" fill="#555555" text-anchor="middle">build-plan.md&#x27;s section J gains one long row per iteration, naming what landed and what didn&#x27;t</text>
+<text x="800.0" y="473.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Resume mechanism: the iteration&#x27;s own plan header, read again</text>
+<text x="800.0" y="490.0" font-size="11.5" fill="#555555" text-anchor="middle">Each per-iteration plan opens with its own approval/status line</text>
+<text x="800.0" y="505.0" font-size="11.5" fill="#555555" text-anchor="middle">The build plan gains a status row per iteration, naming what landed and what didn&#x27;t</text>
 <text x="800.0" y="520.0" font-size="11.5" fill="#555555" text-anchor="middle">Next session reads that header plus the lane definitions and continues</text>
 <path d="M460.0,140.625 L1272.0,267.5" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <path d="M496.0,160.0 L316.0,235.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
@@ -65,18 +65,18 @@
 <text x="1158.0" y="186.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">append decision outcomes</text>
 <text x="1158.0" y="186.0" font-size="11" fill="#2f5f3d" text-anchor="middle">append decision outcomes</text>
 <path d="M1385.3333333333333,160.0 L1225.3333333333333,235.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
-<text x="1311.3333333333333" y="209.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">append drift verdict -- R4: zero unexplained drift</text>
-<text x="1311.3333333333333" y="209.5" font-size="11" fill="#2f5f3d" text-anchor="middle">append drift verdict -- R4: zero unexplained drift</text>
+<text x="1311.3333333333333" y="209.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">append drift verdict -- zero unexplained drift</text>
+<text x="1311.3333333333333" y="209.5" font-size="11" fill="#2f5f3d" text-anchor="middle">append drift verdict -- zero unexplained drift</text>
 <path d="M800.0,345 L800.0,380" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
 <path d="M800.0,380 L184.0,380" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
-<text x="498.0" y="374.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Reconcile also appends a build-plan.md section J row -- same file, same discipline</text>
-<text x="498.0" y="374.0" font-size="11" fill="#2f5f3d" text-anchor="middle">Reconcile also appends a build-plan.md section J row -- same file, same discipline</text>
+<text x="498.0" y="374.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Reconcile also updates the build plan&#x27;s status -- same discipline</text>
+<text x="498.0" y="374.0" font-size="11" fill="#2f5f3d" text-anchor="middle">Reconcile also updates the build plan&#x27;s status -- same discipline</text>
 <path d="M184.0,380 L184.0,345" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
 <path d="M576.7,345.0 L707.6,430.0" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
 <text x="902.1500000000001" y="381.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">status line read again to resume</text>
 <text x="902.1500000000001" y="381.5" font-size="11" fill="#2f5f3d" text-anchor="middle">status line read again to resume</text>
 <text x="800.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.02 -- The ledger&#x27;s files, mapped onto the ADLC&#x27;s own phases</text>
 <text x="800.0" y="56" font-size="12" fill="#555555" text-anchor="middle">Plan and Verify (blue) are this project&#x27;s two human gates; Reconcile (green) is where the ledger actually gets written</text>
-<text x="40" y="634" font-size="10.5" fill="#555555" text-anchor="start">Sourced from _plans/build-plan.md (section F.1&#x27;s phase table, section J&#x27;s iteration rows).</text>
-<text x="40" y="664" font-size="10.5" fill="#555555" text-anchor="start">Unlike a chapter-era snapshot frozen at authoring time, reconciliation.md here is a LIVE, append-only log by the time this chapter is read.</text>
+<text x="40" y="634" font-size="10.5" fill="#555555" text-anchor="start">Sourced from the project&#x27;s build plan (its phase table and per-iteration status rows).</text>
+<text x="40" y="664" font-size="10.5" fill="#555555" text-anchor="start">Unlike a chapter-era snapshot frozen at authoring time, the reconciliation log here is a live, append-only record by the time this chapter is read.</text>
 </svg>

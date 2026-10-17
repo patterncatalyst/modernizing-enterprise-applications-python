@@ -105,12 +105,12 @@ must stop the loop and decide.
 
 1. **Frame** — a human states the outcome and acceptance criteria for this
    step of work, as a short statement of intent plus an entry in the
-   project's decision log (`decisions.md`). This is "express intent," made
+   project's decision log. This is "express intent," made
    concrete and recorded rather than said once and forgotten.
 2. **Map** — reconnaissance: classify the legacy Django module in play,
    map its dependencies, and locate the seam this step will cut along. No
    code changes yet; this phase answers "what exactly am I touching."
-3. **Plan** — a concrete step plan and a `decisions.md` entry describing
+3. **Plan** — a concrete step plan and a decision-log entry describing
    the approach get drafted. **Human gate: the plan is approved before any
    code is written.** This is the point where a wrong assumption is
    cheapest to catch — before it's embodied in a diff.
@@ -124,8 +124,8 @@ must stop the loop and decide.
 6. **Operate** — the change rolls out behind a feature flag, observed
    through the stack's telemetry, with the human controlling what
    percentage of traffic sees it and how fast that percentage grows.
-7. **Reconcile** — `decisions.md`, `build-plan.md`, and
-   `reconciliation.md` get updated with the outcome, including any drift
+7. **Reconcile** — the decision log, the build plan, and the
+   reconciliation log get updated with the outcome, including any drift
    from what was planned. Nothing here is thrown away; it becomes the next
    step's Map input.
 
@@ -142,8 +142,8 @@ re-runnable suite. "Deploy and ship" and "monitoring and observability"
 both land in Operate, because rollout and the telemetry that watches it are
 one continuous activity, not two. "Learn and iterate" is Reconcile.
 
-The three ledger artifacts this book keeps — `decisions.md`,
-`build-plan.md`, and `reconciliation.md` — are the ADLC's substitute for
+The three ledger artifacts this book keeps — the decision log, the
+build plan, and the reconciliation log — are the ADLC's substitute for
 the SDLC's heavyweight design document, test plan, and traceability
 matrix. They do the same job those documents did — recording *why* a
 decision was made, *what* was planned, and *whether* the outcome matched

@@ -31,11 +31,9 @@ frame statement wasn't a chapter-sized essay — it was a single decision-log
 row that fixed the one fact everything downstream depends on:
 
 ```
-From decisions.md — DRQ-010
-
 The Newman behavior-equivalence suite is the CI equivalence gate for every
-future extraction, captured against the monolith at r01 and re-run
-unchanged against each extracted service.
+future extraction, captured against the monolith and re-run unchanged
+against each extracted service.
 ```
 
 Notice what that one row buys. It doesn't say "write good tests" — it names
@@ -59,14 +57,14 @@ its data shape — found that Review was REST-only, had no synchronous call
 into or out of it from any other context, and shared only an incidental
 dependency on the monolith's authentication setup, not a runtime one. That
 is what made Review the right slice to cut first rather than an arbitrary
-first pick, per the extraction order recorded at DRQ-013 and argued in
-full in Chapter 4: it let the very first pass through the loop exercise the
+first pick, per the extraction order argued in full in Chapter 4: it let
+the very first pass through the loop exercise the
 *entire* seam machinery — the strangler proxy, the FastAPI scaffold, the
 equivalence gate, the flag-gated cutover — without a second bounded
 context's behavior confounding the result.
 
-Map also surfaced a fact that this chapter keeps returning to. Per
-DRQ-028, Review's extracted form was scoped to keep sharing the monolith's
+Map also surfaced a fact that this chapter keeps returning to: Review's
+extracted form was scoped to keep sharing the monolith's
 existing `reviews` table — true per-context data ownership is deferred to
 Chapter 18/19's data-ownership pass, not this extraction's job. While
 Review stayed in that shared-schema form, the extracted service and the
@@ -106,7 +104,7 @@ matching the request's full path, hop-by-hop headers stripped, and — the
 detail everything below turns on — the request body read with
 `content=request.stream()`, an async generator passed straight through to
 `httpx` rather than read into memory first. The second was
-`examples/02-review-service`, built per the two-phase policy at DRQ-009:
+`examples/02-review-service`, built per the project's two-phase policy:
 Phase A, a thin FastAPI layer reusing the monolith's Django ORM, was
 sketched and measured but never shipped as code once two concrete problems
 surfaced while sketching it (a synchronous ORM bridged into an async
@@ -223,7 +221,7 @@ ran clean in every state the cutover cares about:
 
 ```
 Captured — newman, post-fix, flag OFF / flag ON / flip-back
-(tooling/newman/GOLDEN-BASELINE.md, "The r02 PHASE-2 repair lane")
+(tooling/newman/GOLDEN-BASELINE.md)
 
 Run A  (flag false, monolith)         58/58 assertions, 0 failed
 Run B  (flag true,  review-service)   58/58 assertions, 0 failed
@@ -254,7 +252,7 @@ Finding and fixing the chunked-body bug didn't, by itself, close the Verify
 phase. The ADLC's second gate sits exactly here: a human has to look at
 "58/58 green" and decide that's sufficient evidence to trust the cutover,
 rather than treating a green suite run as self-certifying. That distinction
-isn't cosmetic, and Review's shared-schema scoping (DRQ-028) is exactly why.
+isn't cosmetic, and Review's shared-schema scoping is exactly why.
 Because the monolith and the review-service read and write the *same*
 `reviews` rows while the cutover window is open, a suite that only checked
 the HTTP response's shape — status code, body — could not, on its own, tell
@@ -292,12 +290,12 @@ this chapter's story legible to anyone who wasn't in the room when it
 happened. Nothing about the chunked-body bug was left as a verbal
 anecdote: `tooling/newman/GOLDEN-BASELINE.md` carries the dated record of
 both passes — the run that found it, left unfixed in that same commit
-because the fix was scoped to a separate follow-up lane, and the repair
-pass that closed it — and `decisions.md`'s DRQ-026 entry records the root
+because the fix was scoped to a separate follow-up, and the repair
+pass that closed it — and the project's decision log records the root
 cause, the fix, and the regression test in one place a reader can check
-against the code directly. Both documents also record what stayed *out of
+against the code directly. Both records also note what stayed *out of
 scope* for this extraction: Review's shared-schema
-scoping (DRQ-028) stayed in place, even though giving Review its own schema
+scoping stayed in place, even though giving Review its own schema
 from the start would have narrowed the blast radius of a routing mistake —
 because true per-context data ownership is Chapter 18/19's subject, not
 this one's, and reopening that scope here would have meant re-litigating a

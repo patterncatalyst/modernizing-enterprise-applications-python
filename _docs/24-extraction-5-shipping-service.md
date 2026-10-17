@@ -77,7 +77,7 @@ shipping saga side by side so the contrast reads as a picture, not just a
 paragraph: the left panel has no box that knows the whole sequence; the right
 panel has exactly one.
 
-{% include excalidraw.html file="choreography-vs-orchestration-contrast" alt="r05's choreographed payment saga and r06's orchestrated shipping saga side by side -- the left panel has no box that knows the whole sequence, the right panel has exactly one" caption="Figure 24.1 — Choreography has no coordinator; orchestration has exactly one" %}
+{% include excalidraw.html file="choreography-vs-orchestration-contrast" alt="The choreographed payment saga and the orchestrated shipping saga side by side -- the left panel has no box that knows the whole sequence, the right panel has exactly one" caption="Figure 24.1 — Choreography has no coordinator; orchestration has exactly one" %}
 
 This is a trade, not a strict improvement. Choreography scales its failure
 domain naturally — no single box can crash the whole saga — but makes the
@@ -385,7 +385,7 @@ that already left `AWAITING_SHIPMENT` on an earlier delivery of either event
 is a no-op, so Kafka's at-least-once redelivery can never double-confirm or
 double-release.
 
-{% include excalidraw.html file="order-lifecycle-awaiting-shipment-refund" alt="The full order lifecycle once SHIPPING_MODE=orchestrated: PENDING to AWAITING_SHIPMENT to CONFIRMED or SHIPPING_FAILED, plus the refund hop that closes r05's stranded-payment gap" caption="Figure 24.4 — AWAITING_SHIPMENT is a real intermediate status, not an implementation detail" %}
+{% include excalidraw.html file="order-lifecycle-awaiting-shipment-refund" alt="The full order lifecycle once SHIPPING_MODE=orchestrated: PENDING to AWAITING_SHIPMENT to CONFIRMED or SHIPPING_FAILED, plus the refund hop that closes the stranded-payment gap" caption="Figure 24.4 — AWAITING_SHIPMENT is a real intermediate status, not an implementation detail" %}
 
 This extraction, like ch.19's and ch.23's, has **two independent cutover
 dimensions**, and conflating them is the mistake this book has repeatedly
@@ -400,7 +400,7 @@ to `PAYMENT_MODE`: both values of `SHIPPING_MODE` react to the same
 `payment.captured` event regardless of whether payment itself was charged
 synchronously or choreographed.
 
-## The refund hop: closing DRQ-054
+## The refund hop: closing the stranded-payment gap
 
 ch.22 and ch.23 both named the same gap and left it open as a documented deferral: a
 payment captured, then stranded, when shipping fails afterward — the
@@ -440,18 +440,18 @@ the only path to `REFUNDED` requires finding a row that is currently
 
 The live cutover proved this chain end to end, not just at the unit level: a
 `SHIP-FAIL` checkout resolved to `SHIPPING_FAILED`, with the same captured
-payment reaching `REFUNDED` — the r06 win `tooling/newman/GOLDEN-BASELINE.md`
+payment reaching `REFUNDED` — the win `tooling/newman/GOLDEN-BASELINE.md`
 records against the fully-orchestrated topology — and a redelivered
 `shipment.failed` against an already-`REFUNDED` payment was confirmed as a
 safe no-op, no double refund, no second `payment.refunded` event. Earlier
-drafts of this service's own `CUTOVER.md` carried r05's documented gap
+drafts of this service's own `CUTOVER.md` carried the earlier documented gap
 forward verbatim; it has since been rewritten to record the gap as **closed**,
 with the proof attached, rather than left as an open deferral one more
 iteration.
 
 > **ADLC in Action** — The refund hop was not an improvisation discovered
-> mid-build; closing DRQ-054 was named as an explicit r06 acceptance
-> criterion before `ShipmentFailedConsumer` was written, specifically
+> mid-build; closing the stranded-payment gap was named as an explicit
+> acceptance criterion before `ShipmentFailedConsumer` was written, specifically
 > *because* an orchestrated saga gives shipping's failure outcome a durable,
 > subscribable event that a choreographed in-process exception never had.
 > The planning record also considered and rejected refunding synchronously

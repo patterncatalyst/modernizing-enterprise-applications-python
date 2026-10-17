@@ -323,9 +323,9 @@ breadth, OpenTelemetry gives depth.** Breadth, because it costs nothing in
 application code and covers every service uniformly. Depth, because it's
 the only way to see what a service does with a request after Envoy hands
 it off — and depth is exactly what gets lost if a chapter stopped at the
-mesh and called the story finished. Per `_plans/r10-build-plan.md`'s own
-resolution of that trade-off, this chapter instruments three services with
-application-level OpenTelemetry rather than all eight: `strangler-proxy`,
+mesh and called the story finished. Resolving that trade-off, this chapter
+instruments three services with application-level OpenTelemetry rather than
+all eight: `strangler-proxy`,
 `order-service`, and `inventory-service` — the three that sit on one
 connected, synchronous request path, chosen over an alternative trio built
 around the asynchronous Kafka saga hops specifically because that
@@ -486,9 +486,8 @@ the behavior described, on a cluster where they've been asked to.
 > project's `graphql-gateway` has no comparable role — it's a read-side
 > front door added at ch.26, with no outbox, no saga fan-in, and no
 > business reason to be one of the three OTel-instrumented services.
-> Re-rooting the hero trace at `strangler-proxy` instead meant reading
-> `_plans/r10-build-plan.md`'s own DRQ-096 analysis of two candidate
-> trios — the synchronous `strangler-proxy`/`order-service`/
+> Re-rooting the hero trace at `strangler-proxy` instead meant weighing
+> two candidate trios — the synchronous `strangler-proxy`/`order-service`/
 > `inventory-service` path chosen here, and an asynchronous
 > `strangler-proxy`/`order-service`/`payment-service` alternative that
 > would have needed `traceparent` persisted through `order-service`'s

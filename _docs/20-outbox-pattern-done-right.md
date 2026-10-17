@@ -19,7 +19,7 @@ writing one of its own. None of the code below is new. It is the same
 `examples/00-monolith/common/management/commands/outbox_relay.py` ch.17
 built, read again at the depth a reader needs before trusting this pattern
 with their own checkout flow — plus its first independent sibling,
-`examples/05-payment-service/app/relay.py`, which r05's payment extraction
+`examples/05-payment-service/app/relay.py`, which the payment extraction
 needed for a reason ch.17's Notification extraction never did: this is the
 first service in this book that both *consumes* an event and *produces* one
 of its own.
@@ -238,13 +238,13 @@ and at-least-once. It says nothing about what happens when "at least once"
 actually means "twice" — and in a system that has been running this
 mechanism since ch.17, it eventually will, whether from the relay's own
 crash-and-republish window, a Kafka consumer group rebalance replaying the
-last uncommitted offset, or (as the r05 cutover evidence below records) a
+last uncommitted offset, or (as the cutover evidence below records) a
 message redelivered by hand to prove the point. **At-least-once is a
 promise about the pipe, not about the effect** — it guarantees the message
 arrives, not that it arrives once — and the only thing that turns "arrives
 one or more times" into "applied exactly once" is an idempotent consumer on
-the receiving end. This project has landed three different idioms for that
-by r05, and lining them up side by side matters, because picking the wrong
+the receiving end. This project has landed three different idioms for that,
+and lining them up side by side matters, because picking the wrong
 one for a given kind of write is its own class of bug.
 
 **Check-then-insert plus a unique-index backstop** is Notification's answer,
@@ -324,8 +324,8 @@ complexity once polling latency or the load polling itself puts on the
 database becomes the actual bottleneck, and neither relay in this book has
 hit that ceiling yet.
 
-> **ADLC in Action** — The r05 build plan settled the multi-outbox shape
-> (DRQ-050, DRQ-051) before a line of payment-service code existed: the
+> **ADLC in Action** — The build plan settled the multi-outbox shape
+> before a line of payment-service code existed: the
 > planning phase decided that payment-service would own its own schema and
 > its own outbox, matching the monolith's proven relay shape
 > rather than inventing a second delivery mechanism, and recorded *why*
@@ -340,7 +340,7 @@ hit that ceiling yet.
 
 ## Evidence: the outbox under real redelivery, not just under code review
 
-`tooling/newman/GOLDEN-BASELINE.md`'s r05 CUTOVER lane is where this
+`tooling/newman/GOLDEN-BASELINE.md`'s cutover lane is where this
 chapter's claims stop being design arguments and start being measurements.
 With the full topology running — monolith, payment-service, inventory-service,
 the strangler proxy, and a real single-node Kafka broker — a normal
@@ -390,7 +390,7 @@ pipeline with an idempotent consumer is supposed to provide.
   "applied exactly once," and this project has three different correct
   idioms for it (check-then-insert, upsert, status-transition guard)
   depending on what kind of write is being protected.
-- r05's payment-service is this project's first service that is both a
+- The payment-service is this project's first service that is both a
   consumer and a producer of events, which is what makes two independently
   owned outboxes chain end to end for the first time — no orchestrator
   anywhere in that chain, just three independent at-least-once hops.

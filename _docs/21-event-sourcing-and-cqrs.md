@@ -13,7 +13,7 @@ once a fact is published, reliably, what do you *do* with it on the
 consuming side — and when does building a second model around "react to
 facts" pays for itself rather than adding cost for no reason? That is the
 question CQRS and event sourcing both answer, in two related but distinct
-ways, and this chapter was held back from r05, by design, to answer it
+ways, and this chapter was held back, by design, to answer it
 against the one artifact in this book built to make the answer concrete:
 `examples/07-order-service`'s `order_view`, a read model projected inside
 the **same transaction** as every write to the order it describes. ch.17's
@@ -187,7 +187,7 @@ A read path that could silently fall back to querying `orders`/
 projection completely, and a chapter that only asserted "reads come from
 `order_view`" in prose would be making exactly the kind of claim this
 book's own verification discipline refuses to let stand unproven.
-`tooling/newman/GOLDEN-BASELINE-r07.md`'s STEP C closes that gap with a
+`tooling/newman/`'s order-service contract run closes that gap with a
 real intervention, not a thought experiment: the `await
 _upsert_order_view(session, order, items)` call inside `transition_order_
 status_with_view` was temporarily commented out — the aggregate still
@@ -306,7 +306,7 @@ events be the system of record" (no) to "how do independently-deployed
 consumers stay safe when a producer's event shape changes" (yes, and that
 needs tooling CQRS alone doesn't provide).
 
-> **ADLC in Action** — Deferring this chapter from r05 to r07 (DRQ-057) was
+> **ADLC in Action** — Deferring this chapter was
 > a planning-phase decision, not a scheduling accident: the build plan
 > judged that teaching CQRS against a read model fed by an asynchronous
 > consumer (Notification, already shipped) would only demonstrate half the
@@ -317,7 +317,7 @@ needs tooling CQRS alone doesn't provide).
 > chapter early and revising it later, the decision was to hold the whole
 > chapter until the artifact that earns it was real, verified code. The
 > projection-disabled evidence cited above is exactly that artifact,
-> exercised in `tooling/newman/GOLDEN-BASELINE-r07.md`'s STEP C, not a
+> exercised in `tooling/newman/`'s order-service contract run, not a
 > claim asserted from reading `repository.py` alone.
 
 ## What you learned
@@ -340,7 +340,7 @@ needs tooling CQRS alone doesn't provide).
   broken projection completely** — the only real proof a CQRS read model
   does anything at all is a negative check that disables the projection and
   watches the read go stale while the write moves on, exactly what
-  `GOLDEN-BASELINE-r07.md`'s STEP C did against live code.
+  that contract run did against live code.
 - **A CQRS read model should be rebuildable, not precious** —
   `rebuild_order_view` recomputes `order_view` from the current aggregate at
   any time, which is what keeps it a cache rather than a second source of

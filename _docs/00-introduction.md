@@ -255,9 +255,8 @@ it as it was then.
 
 ## The reference-book map
 
-This book draws, by name and with every reuse recorded in
-`_plans/reconciliation.md`, on two other projects rather than inventing
-everything from scratch. The closer of the two is its own **Java sibling**,
+This book draws, by name and with every reuse recorded, on two other
+projects rather than inventing everything from scratch. The closer of the two is its own **Java sibling**,
 *Modernizing Enterprise Applications* — the same shipping-and-e-commerce
 domain, the same six extractions in the same order, a Spring Boot monolith
 strangled into Quarkus and Apache Camel services instead of a Django monolith
