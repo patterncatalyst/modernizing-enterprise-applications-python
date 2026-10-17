@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1540 820" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="230" y="40" width="1280" height="660" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="242" y="60" font-size="12" font-weight="700" fill="#1d1d1d">project: mea -- OpenShift Local (CRC), default restricted-v2 SCC</text>
+<rect x="30" y="330" width="170" height="80" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="115.0" y="368.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Client</text>
+<text x="115.0" y="385.0" font-size="11.5" fill="#555555" text-anchor="middle">https://&lt;route-host&gt;.apps-crc.testing</text>
+<rect x="270" y="300" width="230" height="100" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="385.0" y="340.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">strangler-proxy</text>
+<text x="385.0" y="357.5" font-size="11.5" fill="#555555" text-anchor="middle">Route: edge TLS, redirect (DRQ-106)</text>
+<text x="385.0" y="372.5" font-size="11.5" fill="#555555" text-anchor="middle">restricted-v2, tcp probe</text>
+<rect x="270" y="560" width="230" height="90" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="385.0" y="595.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">graphql-gateway</text>
+<text x="385.0" y="612.5" font-size="11.5" fill="#555555" text-anchor="middle">Route: edge TLS, redirect (DRQ-106)</text>
+<text x="385.0" y="627.5" font-size="11.5" fill="#555555" text-anchor="middle">restricted-v2, http probe</text>
+<rect x="1020" y="148" width="260" height="90" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="1150.0" y="191.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">postgres StatefulSet</text>
+<text x="1150.0" y="208.0" font-size="11.5" fill="#555555" text-anchor="middle">SA mea-infra, nonroot-v2 (UID 70)</text>
+<rect x="1020" y="328" width="260" height="90" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="1150.0" y="371.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">kafka StatefulSet</text>
+<text x="1150.0" y="388.0" font-size="11.5" fill="#555555" text-anchor="middle">SA mea-infra, nonroot-v2 (UID 1000)</text>
+<rect x="1020" y="498" width="260" height="100" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="1150.0" y="538.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">otel-lgtm (platform tier)</text>
+<text x="1150.0" y="555.5" font-size="11.5" fill="#555555" text-anchor="middle">anyuid, runAsUser: 0 only</text>
+<text x="1150.0" y="570.5" font-size="11.5" fill="#555555" text-anchor="middle">no seccompProfile set</text>
+<rect x="600" y="78" width="240" height="62" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="720.0" y="107.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">review-service</text>
+<text x="720.0" y="124.0" font-size="11.5" fill="#555555" text-anchor="middle">restricted-v2, schema: public</text>
+<rect x="600" y="148" width="240" height="62" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="720.0" y="177.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">notification-service</text>
+<text x="720.0" y="194.0" font-size="11.5" fill="#555555" text-anchor="middle">restricted-v2, kafka consumer</text>
+<rect x="600" y="218" width="240" height="70" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="720.0" y="251.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">inventory-service</text>
+<text x="720.0" y="268.0" font-size="11.5" fill="#555555" text-anchor="middle">restricted-v2, grpc :9004</text>
+<rect x="600" y="296" width="240" height="62" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="720.0" y="325.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">payment-service</text>
+<text x="720.0" y="342.0" font-size="11.5" fill="#555555" text-anchor="middle">restricted-v2, kafka consumer</text>
+<rect x="600" y="366" width="240" height="62" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="720.0" y="395.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">shipping-service</text>
+<text x="720.0" y="412.0" font-size="11.5" fill="#555555" text-anchor="middle">restricted-v2, kafka consumer</text>
+<rect x="600" y="436" width="240" height="76" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="720.0" y="472.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">order-service</text>
+<text x="720.0" y="489.0" font-size="11.5" fill="#555555" text-anchor="middle">restricted-v2, kafka consumer</text>
+<path d="M200.0,363.7037037037037 L270.0,358.51851851851853" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="241.0" y="355.1111111111111" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Route: strangler-proxy</text>
+<text x="241.0" y="355.1111111111111" font-size="11" fill="#555" text-anchor="middle">Route: strangler-proxy</text>
+<path d="M160.95744680851064,410.0 L333.29787234042556,560.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="253.1276595744681" y="479.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Route: graphql-gateway</text>
+<text x="253.1276595744681" y="479.0" font-size="11" fill="#555" text-anchor="middle">Route: graphql-gateway</text>
+<path d="M454.5020746887967,300.0 L676.9087136929461,140.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="571.7053941908714" y="214.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">ClusterIP, in-mesh when mesh.enabled (6 backends)</text>
+<text x="571.7053941908714" y="214.0" font-size="11" fill="#2f5f3d" text-anchor="middle">ClusterIP, in-mesh when mesh.enabled (6 backends)</text>
+<path d="M482.953216374269,300.0 L659.2690058479532,210.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M500.0,316.7014925373134 L600.0,287.74626865671644" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M500.0,342.1044776119403 L600.0,335.23880597014926" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M500.0,366.13432835820896 L600.0,380.1641791044776" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M500.0,392.56716417910445 L617.3387096774194,436.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M720.0,436.0 L720.0,288.0" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<text x="726.0" y="356.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">gRPC Reserve (ACL seam, ch.19)</text>
+<text x="726.0" y="356.0" font-size="11" fill="#2f5f3d" text-anchor="middle">gRPC Reserve (ACL seam, ch.19)</text>
+<path d="M427.82670454545456,560.0 L686.6903409090909,288.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="563.2585227272727" y="418.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">gRPC</text>
+<text x="563.2585227272727" y="418.0" font-size="11" fill="#555" text-anchor="middle">gRPC</text>
+<path d="M840.0,260.7674418604651 L1020.0,221.41860465116278" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="936.0" y="235.09302325581393" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">DATABASE_URL (6 services)</text>
+<text x="936.0" y="235.09302325581393" font-size="11" fill="#555" text-anchor="middle">DATABASE_URL (6 services)</text>
+<path d="M840.0,336.2325581395349 L1020.0,357.5813953488372" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="936.0" y="340.90697674418607" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">KAFKA_BOOTSTRAP_SERVERS (4 consumers)</text>
+<text x="936.0" y="340.90697674418607" font-size="11" fill="#555" text-anchor="middle">KAFKA_BOOTSTRAP_SERVERS (4 consumers)</text>
+<text x="770.0" y="24" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.33 -- the mea project on OpenShift Local: three SCC postures, two Routes as the only edge</text>
+<text x="240" y="764" font-size="11" fill="#555555" text-anchor="start">restricted-v2 (8 app Deployments, no runAsUser) / nonroot-v2 (postgres, kafka via SA mea-infra) / anyuid+runAsUser:0 (otel-lgtm only) -- DRQ-107.</text>
+<text x="240" y="782" font-size="11" fill="#555555" text-anchor="start">strangler-proxy and graphql-gateway are the only externally reachable workloads -- every other Service stays ClusterIP-only.</text>
+<text x="240" y="800" font-size="11" fill="#555555" text-anchor="start">Images are pulled in-cluster from the integrated registry (Figure 33.2); when mesh.enabled, Route traffic needs the PERMISSIVE carve-out (Figure 33.3).</text>
+</svg>

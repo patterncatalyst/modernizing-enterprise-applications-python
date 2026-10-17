@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1540 820" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="230" y="40" width="1280" height="660" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="242" y="60" font-size="12" font-weight="700" fill="#1d1d1d">project: mea -- OSSM 3 (Sail), Istio v1.30.5, mesh.enabled=true</text>
+<rect x="30" y="330" width="170" height="80" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="115.0" y="368.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Client</text>
+<text x="115.0" y="385.0" font-size="11.5" fill="#555555" text-anchor="middle">no sidecar -- plain HTTPS</text>
+<rect x="30" y="460" width="170" height="80" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="115.0" y="490.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">OSSM provisions no</text>
+<text x="115.0" y="507.5" font-size="11.5" fill="#555555" text-anchor="middle">ingress gateway here --</text>
+<text x="115.0" y="522.5" font-size="11.5" fill="#555555" text-anchor="middle">the Route IS the edge</text>
+<rect x="270" y="300" width="230" height="110" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="385.0" y="345.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">strangler-proxy + istio-proxy</text>
+<text x="385.0" y="362.5" font-size="11.5" fill="#555555" text-anchor="middle">PeerAuth strangler-proxy-edge: PERMISSIVE</text>
+<text x="385.0" y="377.5" font-size="11.5" fill="#555555" text-anchor="middle">istio.io/rev: default label</text>
+<rect x="270" y="560" width="230" height="100" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="385.0" y="600.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">graphql-gateway + istio-proxy</text>
+<text x="385.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">PeerAuth graphql-gateway-edge: PERMISSIVE</text>
+<text x="385.0" y="632.5" font-size="11.5" fill="#555555" text-anchor="middle">istio.io/rev: default label</text>
+<rect x="1020" y="150" width="260" height="90" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="1150.0" y="193.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">postgres StatefulSet</text>
+<text x="1150.0" y="210.0" font-size="11.5" fill="#555555" text-anchor="middle">no istio.io/rev label -- unmeshed</text>
+<rect x="1020" y="330" width="260" height="90" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="1150.0" y="373.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">kafka StatefulSet</text>
+<text x="1150.0" y="390.0" font-size="11.5" fill="#555555" text-anchor="middle">no istio.io/rev label -- unmeshed</text>
+<rect x="1020" y="500" width="260" height="100" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="1150.0" y="540.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Kiali -&gt; otel-lgtm Prometheus</text>
+<text x="1150.0" y="557.5" font-size="11.5" fill="#555555" text-anchor="middle">lgtm.&lt;ns&gt;.svc.cluster.local:9090</text>
+<text x="1150.0" y="572.5" font-size="11.5" fill="#555555" text-anchor="middle">(no cluster Prometheus on CRC)</text>
+<rect x="600" y="80" width="240" height="62" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="720.0" y="109.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">review-service + istio-proxy</text>
+<text x="720.0" y="126.0" font-size="11.5" fill="#555555" text-anchor="middle">default PeerAuth: STRICT</text>
+<rect x="600" y="150" width="240" height="62" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="720.0" y="179.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">notification-service + istio-proxy</text>
+<text x="720.0" y="196.0" font-size="11.5" fill="#555555" text-anchor="middle">default PeerAuth: STRICT</text>
+<rect x="600" y="220" width="240" height="70" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="720.0" y="253.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">inventory-service + istio-proxy</text>
+<text x="720.0" y="270.0" font-size="11.5" fill="#555555" text-anchor="middle">default PeerAuth: STRICT</text>
+<rect x="600" y="298" width="240" height="62" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="720.0" y="327.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">payment-service + istio-proxy</text>
+<text x="720.0" y="344.0" font-size="11.5" fill="#555555" text-anchor="middle">default PeerAuth: STRICT</text>
+<rect x="600" y="368" width="240" height="62" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="720.0" y="397.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">shipping-service + istio-proxy</text>
+<text x="720.0" y="414.0" font-size="11.5" fill="#555555" text-anchor="middle">default PeerAuth: STRICT</text>
+<rect x="600" y="438" width="240" height="76" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="720.0" y="474.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">order-service + istio-proxy</text>
+<text x="720.0" y="491.0" font-size="11.5" fill="#555555" text-anchor="middle">default PeerAuth: STRICT</text>
+<path d="M200.0,365.27777777777777 L270.0,361.3888888888889" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="241.0" y="357.33333333333337" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Route: edge TLS (plaintext to the sidecar)</text>
+<text x="241.0" y="357.33333333333337" font-size="11" fill="#555" text-anchor="middle">Route: edge TLS (plaintext to the sidecar)</text>
+<path d="M160.0,410.0 L328.75,560.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="250.375" y="479.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Route: edge TLS (plaintext to the sidecar)</text>
+<text x="250.375" y="479.0" font-size="11" fill="#555" text-anchor="middle">Route: edge TLS (plaintext to the sidecar)</text>
+<path d="M460.5122950819672,300.0 L677.438524590164,142.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="574.9754098360656" y="215.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">mTLS STRICT, sidecar-to-sidecar (6 backends)</text>
+<text x="574.9754098360656" y="215.0" font-size="11" fill="#2f5f3d" text-anchor="middle">mTLS STRICT, sidecar-to-sidecar (6 backends)</text>
+<path d="M490.89080459770116,300.0 L660.316091954023,212.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M500.0,320.67164179104475 L602.75,290.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M500.0,346.07462686567163 L600.0,338.3134328358209" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M500.0,370.1044776119403 L600.0,383.23880597014926" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M500.0,396.53731343283584 L614.7933884297521,438.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M720.0,438.0 L720.0,290.0" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<text x="726.0" y="358.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">gRPC Reserve, mTLS STRICT</text>
+<text x="726.0" y="358.0" font-size="11" fill="#2f5f3d" text-anchor="middle">gRPC Reserve, mTLS STRICT</text>
+<path d="M432.1830985915493,560.0 L686.9718309859155,290.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="565.5774647887324" y="419.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">gRPC, mTLS STRICT</text>
+<text x="565.5774647887324" y="419.0" font-size="11" fill="#555" text-anchor="middle">gRPC, mTLS STRICT</text>
+<path d="M840.0,366.8837209302326 L1065.3543307086613,500.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="958.6771653543307" y="427.4418604651163" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Envoy spans + :15020 Prometheus scrape</text>
+<text x="958.6771653543307" y="427.4418604651163" font-size="11" fill="#555" text-anchor="middle">Envoy spans + :15020 Prometheus scrape</text>
+<text x="770.0" y="24" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.33 -- OSSM 3 on OpenShift: STRICT mesh-wide, a PERMISSIVE carve-out at each Route, Kiali reading otel-lgtm</text>
+<text x="240" y="764" font-size="11" fill="#555555" text-anchor="start">Injection is by the istio.io/rev: default pod-template LABEL (app-deployment.yaml) -- Sail&#x27;s revisioned webhook ignores sidecar.istio.io/inject entirely.</text>
+<text x="240" y="782" font-size="11" fill="#555555" text-anchor="start">Without the per-Route PERMISSIVE PeerAuthentication, the STRICT default would 502 every Route request: the router is not a mesh member.</text>
+<text x="240" y="800" font-size="11" fill="#555555" text-anchor="start">postgres and kafka carry no istio.io/rev label -- deliberately unmeshed, same as the minikube path (ch.30).</text>
+</svg>
