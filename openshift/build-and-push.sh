@@ -15,9 +15,13 @@
 # Prerequisites (not performed by this script -- see install-infra.sh):
 #   - the project exists (oc new-project mea)
 #   - the integrated registry's default Route is exposed
-#   - podman is logged into that Route (oc whoami -t as the password)
+#   - logged in to OpenShift (oc login) so `oc whoami -t` yields a push token
+#
+# Engine: CONTAINER_ENGINE=podman (default) or =docker. Use docker on hosts
+# where rootless podman fails these non-root UBI builds (uv .venv permission).
 #
 #   ./openshift/build-and-push.sh                 # the 8 services + monolith
+#   CONTAINER_ENGINE=docker ./openshift/build-and-push.sh   # docker + skopeo push
 #   ./openshift/build-and-push.sh --mirror-infra   # + postgres/kafka images
 #   ./openshift/build-and-push.sh strangler-proxy order-service   # a subset
 set -uo pipefail
@@ -25,7 +29,16 @@ set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 require_crc
-command -v podman >/dev/null 2>&1 || fail "podman not on PATH"
+# CONTAINER_ENGINE selects the build engine (default podman, the OpenShift-path
+# convention). docker builds these non-root UBI Containerfiles cleanly; rootless
+# podman's user-namespace remap can leave the USER 1001 WORKDIR unwritable
+# (`uv sync` -> `/app/.venv: Permission denied`), so on such hosts set
+# CONTAINER_ENGINE=docker. The docker path pushes with skopeo, which handles the
+# integrated registry's self-signed cert + token creds without a daemon login.
+ENGINE="${CONTAINER_ENGINE:-podman}"
+case "$ENGINE" in podman|docker) ;; *) fail "CONTAINER_ENGINE must be podman or docker (got '$ENGINE')" ;; esac
+command -v "$ENGINE" >/dev/null 2>&1 || fail "$ENGINE not on PATH"
+[[ "$ENGINE" == docker ]] && { command -v skopeo >/dev/null 2>&1 || fail "skopeo not on PATH (needed for the docker push path)"; }
 occ get project "$NS" >/dev/null 2>&1 || fail "project $NS missing: run ./openshift/install-infra.sh first"
 
 MIRROR_INFRA=false
@@ -37,23 +50,35 @@ for arg in "$@"; do
   esac
 done
 
-step "Logging podman into the registry"
-TOKEN="$(occ whoami -t)" || fail "oc whoami -t failed -- not logged in to OpenShift?"
-podman login -u "$(occ whoami)" -p "$TOKEN" --tls-verify=false "$REGISTRY_HOST" >/dev/null \
-  || fail "podman login $REGISTRY_HOST failed"
-unset TOKEN
-ok "podman logged in to $REGISTRY_HOST"
+step "Authenticating to the registry ($ENGINE)"
+REGISTRY_USER="$(occ whoami)" || fail "oc whoami failed -- not logged in to OpenShift?"
+REGISTRY_TOKEN="$(occ whoami -t)" || fail "oc whoami -t failed -- not logged in to OpenShift?"
+if [[ "$ENGINE" == podman ]]; then
+  podman login -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN" --tls-verify=false "$REGISTRY_HOST" >/dev/null \
+    || fail "podman login $REGISTRY_HOST failed"
+fi
+ok "registry auth ready ($REGISTRY_HOST)"
 
 build_and_push() {
   local name="$1" context="$2"
-  [[ -f "$context/Containerfile" ]] || fail "$context/Containerfile not found"
-  step "Building $name:$IMAGE_TAG"
-  podman build -t "$name:$IMAGE_TAG" -f "$context/Containerfile" "$context" \
-    || fail "podman build $name failed"
+  # Services ship a Containerfile; the frozen monolith (00-monolith) ships a
+  # Dockerfile (Django + gunicorn) -- accept either.
+  local dockerfile="$context/Containerfile"
+  [[ -f "$dockerfile" ]] || dockerfile="$context/Dockerfile"
+  [[ -f "$dockerfile" ]] || fail "no Containerfile or Dockerfile in $context"
+  step "Building $name:$IMAGE_TAG ($ENGINE, $(basename "$dockerfile"))"
+  "$ENGINE" build -t "$name:$IMAGE_TAG" -f "$dockerfile" "$context" \
+    || fail "$ENGINE build $name failed"
   step "Pushing $name:$IMAGE_TAG -> $REGISTRY_HOST/$NS/$name:$IMAGE_TAG"
-  podman tag "$name:$IMAGE_TAG" "$REGISTRY_HOST/$NS/$name:$IMAGE_TAG"
-  podman push --tls-verify=false "$REGISTRY_HOST/$NS/$name:$IMAGE_TAG" \
-    || fail "podman push $name failed"
+  if [[ "$ENGINE" == podman ]]; then
+    podman tag "$name:$IMAGE_TAG" "$REGISTRY_HOST/$NS/$name:$IMAGE_TAG"
+    podman push --tls-verify=false "$REGISTRY_HOST/$NS/$name:$IMAGE_TAG" \
+      || fail "podman push $name failed"
+  else
+    skopeo copy --dest-tls-verify=false --dest-creds "$REGISTRY_USER:$REGISTRY_TOKEN" \
+      "docker-daemon:$name:$IMAGE_TAG" "docker://$REGISTRY_HOST/$NS/$name:$IMAGE_TAG" \
+      || fail "skopeo push $name failed"
+  fi
   ok "$name:$IMAGE_TAG pushed"
 }
 
@@ -86,11 +111,15 @@ if [[ "$MIRROR_INFRA" == true ]]; then
   for name in "${!INFRA_IMAGES[@]}"; do
     upstream="${INFRA_IMAGES[$name]}"
     tag="${upstream##*:}"
-    step "Pulling $upstream"
-    podman pull "$upstream" || fail "podman pull $upstream failed"
-    step "Pushing -> $REGISTRY_HOST/$NS/$name:$tag"
-    podman tag "$upstream" "$REGISTRY_HOST/$NS/$name:$tag"
-    podman push --tls-verify=false "$REGISTRY_HOST/$NS/$name:$tag" || fail "podman push $name failed"
+    step "Mirroring $upstream -> $REGISTRY_HOST/$NS/$name:$tag"
+    if [[ "$ENGINE" == podman ]]; then
+      podman pull "$upstream" || fail "podman pull $upstream failed"
+      podman tag "$upstream" "$REGISTRY_HOST/$NS/$name:$tag"
+      podman push --tls-verify=false "$REGISTRY_HOST/$NS/$name:$tag" || fail "podman push $name failed"
+    else
+      skopeo copy --dest-tls-verify=false --dest-creds "$REGISTRY_USER:$REGISTRY_TOKEN" \
+        "docker://$upstream" "docker://$REGISTRY_HOST/$NS/$name:$tag" || fail "skopeo mirror $name failed"
+    fi
     ok "$name:$tag mirrored"
   done
   printf '\n    matches the defaults in openshift/helm/mea/values.yaml (postgres.image, kafka.image)\n'

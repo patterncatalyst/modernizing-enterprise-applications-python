@@ -37,6 +37,7 @@ install_operator "$PLATFORM/subscriptions/opentelemetry-subscription.yaml" opens
 step "2/4 otel-lgtm (anyuid, runAsUser:0 only -- no seccompProfile, or admission flips back to restricted-v2)"
 occ apply -n "$NS" -f "$PLATFORM/observability/lgtm-serviceaccount.yaml" >/dev/null || fail "apply lgtm-serviceaccount.yaml"
 occ apply -n "$NS" -f "$PLATFORM/observability/otelcol-configmap.yaml" >/dev/null || fail "apply otelcol-configmap.yaml"
+occ apply -n "$NS" -f "$PLATFORM/observability/grafana-datasources-configmap.yaml" >/dev/null || fail "apply grafana-datasources-configmap.yaml"
 occ apply -n "$NS" -f "$PLATFORM/observability/lgtm-deployment.yaml" >/dev/null || fail "apply lgtm-deployment.yaml"
 occ apply -n "$NS" -f "$PLATFORM/observability/lgtm-service.yaml" >/dev/null || fail "apply lgtm-service.yaml"
 occ rollout status deployment/lgtm -n "$NS" --timeout=600s >/dev/null || fail "otel-lgtm not Ready"
@@ -46,6 +47,10 @@ step "3/4 Flip observability.otlp.enabled on the 3 instrumented services"
 "$OPENSHIFT_DIR/deploy.sh" --set observability.otlp.enabled=true >/dev/null \
   || fail "deploy.sh with observability.otlp.enabled failed"
 for d in strangler-proxy inventory-service order-service; do
+  # OTEL_SDK_DISABLED / OTEL_EXPORTER_OTLP_ENDPOINT come from the mea-app-config
+  # ConfigMap via envFrom; a ConfigMap change does not restart running pods, so
+  # the flip only takes effect after an explicit rollout restart.
+  occ rollout restart "deployment/$d" -n "$NS" >/dev/null || fail "$d rollout restart failed"
   occ rollout status "deployment/$d" -n "$NS" --timeout=300s >/dev/null || fail "$d did not roll out"
 done
 ok "strangler-proxy/inventory-service/order-service now export OTLP to lgtm.$NS.svc.cluster.local:4317"

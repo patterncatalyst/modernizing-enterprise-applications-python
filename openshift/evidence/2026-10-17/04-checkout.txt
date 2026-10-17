@@ -1,0 +1,7 @@
+-- POST https://strangler-proxy-mea.apps-crc.testing/api/orders
+{"id":3,"customerId":1,"status":"PENDING","totalCents":1999,"createdAt":"2026-10-17T08:42:42.704903Z","shippingAddress":"1 Equivalence Suite Way, Testville","items":[{"sku":"SKU-WIDGET-001","quantity":1,"unitPriceCents":1999}]}
+http_status=202
+poll 01: status=PENDING
+poll 02: status=CONFIRMED
+-- GET https://strangler-proxy-mea.apps-crc.testing/api/orders/3 (final)
+{"id":3,"customerId":1,"status":"CONFIRMED","totalCents":1999,"createdAt":"2026-10-17T08:42:42.704903Z","shippingAddress":"1 Equivalence Suite Way, Testville","items":[{"sku":"SKU-WIDGET-001","quantity":1,"unitPriceCents":1999}]}

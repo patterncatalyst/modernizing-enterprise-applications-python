@@ -53,8 +53,10 @@ step "2/6 Pods under restricted-v2"
 occ get pods -n "$NS" --field-selector=status.phase=Running \
   -o custom-columns='POD:.metadata.name,READY:.status.containerStatuses[*].ready,RESTARTS:.status.containerStatuses[*].restartCount,SCC:.metadata.annotations.openshift\.io/scc,UID:.spec.containers[0].securityContext.runAsUser' \
   > "$OUT/02-pods.txt"
-# The one exception is otel-lgtm (platform/install-observability.sh): anyuid.
-bad=$(awk 'NR>1 && ($2 ~ /false/ || ($4 != "restricted-v2" && !($1 ~ /^lgtm/ && $4 == "anyuid")))' "$OUT/02-pods.txt" | grep -c . || true)
+# Allowed SCCs: app pods restricted-v2; postgres/kafka infra nonroot-v2 (the
+# mea-infra SA, DRQ-107); otel-lgtm anyuid (install-observability.sh). A pod is
+# bad if any container is not ready or its SCC is outside that per-workload set.
+bad=$(awk 'NR>1 && ($2 ~ /false/ || !($4=="restricted-v2" || (($1 ~ /^postgres/ || $1 ~ /^kafka/) && $4=="nonroot-v2") || ($1 ~ /^lgtm/ && $4=="anyuid")))' "$OUT/02-pods.txt" | grep -c . || true)
 occ get namespace "$NS" -o jsonpath='namespace uid-range: {.metadata.annotations.openshift\.io/sa\.scc\.uid-range}{"\n"}' >> "$OUT/02-pods.txt"
 (( bad == 0 )) || fail "$bad pod(s) not Ready or not restricted-v2 (see $OUT/02-pods.txt)"
 ok "all pods Ready, restricted-v2"
@@ -89,7 +91,12 @@ step "6/6 Secret scrub"
 leaks=0
 if occ get secret mea-postgres-app -n "$NS" >/dev/null 2>&1; then
   password="$(occ get secret mea-postgres-app -n "$NS" -o jsonpath='{.data.password}' | base64 -d)"
-  grep -rqF -- "$password" "$OUT" && { printf '    database password found in evidence\n' >&2; leaks=1; }
+  # The dev password may equal a common token (here it is "monolith", which is
+  # also an image name): a match inside a container image reference is not a
+  # credential leak. Flag the password only on non-image-reference lines.
+  if grep -rhF -- "$password" "$OUT" | grep -vqE 'image-registry|/mea/[a-z0-9-]+[:@]'; then
+    printf '    database password found in evidence (non-image context)\n' >&2; leaks=1
+  fi
   unset password
 fi
 grep -rlE 'sha256~[A-Za-z0-9_-]{20,}|BEGIN [A-Z ]*PRIVATE KEY|kubeadmin-password|"token"|"auths"' "$OUT" >&2 && leaks=1

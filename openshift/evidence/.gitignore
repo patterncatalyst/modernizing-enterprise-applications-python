@@ -6,5 +6,6 @@
 *
 !.gitignore
 # To commit a scrubbed run, uncomment and name it explicitly, e.g.:
-#!2026-10-17/
-#!2026-10-17/**
+# Reviewed + scrubbed headless CRC run (DRQ-104, ch.33 verified-live):
+!2026-10-17/
+!2026-10-17/**

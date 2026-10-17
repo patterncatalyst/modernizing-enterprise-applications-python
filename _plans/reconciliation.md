@@ -1864,15 +1864,36 @@ inferring it.
 `helm template | kubeconform -strict -ignore-missing-schemas` passes for both
 the mesh-off/observability-off default and the mesh-on/observability-on
 platform-tier flag set (Routes and PeerAuthentication skipped on missing
-schema, not invalid). The live CRC verification is **pending** the
-orchestrator's headless run: `openshift/project-checks.sh` plus the
-mesh/mTLS/trace checks are the pass/fail criterion (DRQ-104), named and not
-yet exercised — nothing in ch.33's footer or this entry assumes an outcome
-ahead of that run.
+schema, not invalid).
+
+**Live CRC run — DONE, verified (2026-10-17).** The headless run on OpenShift
+Local 2.64.0 (OpenShift 4.22.14) passed all six `capture-evidence.sh` checks:
+nine `:v1` ImageStream tags; every app pod Ready under restricted-v2, Postgres/
+Kafka under nonroot-v2, otel-lgtm under anyuid; both edge-TLS Routes; a
+happy-path checkout through the strangler-proxy Route reaching `CONFIRMED`;
+OSSM 3 (Istio v1.30.5) STRICT mTLS rejecting a plaintext caller (exit 56) +
+Kiali `MTLS_ENABLED`; OTLP traces for the instrumented services in Tempo. The
+scrubbed run is committed under `openshift/evidence/2026-10-17/`; ch.33's footer
+is `verified`. The run surfaced **six real portability defects in the
+`openshift/` scripts, each found-and-fixed on the live cluster** (the value of
+running it rather than asserting it): (1) `build-and-push.sh` was podman-only and
+rootless podman fails the non-root UBI builds (`uv` `.venv` permission) — added a
+`CONTAINER_ENGINE=docker` path (docker build + skopeo push); (2) it hardcoded
+`Containerfile`, skipping the monolith's `Dockerfile` — added a fallback; (3)
+`install_operator` waited for an InstallPlan for a pinned CSV that never comes
+when a newer one is already present (the grpc appendix's RHBOTel v0.158.0-3) —
+now accepts an already-installed newer CSV; (4) `install-observability.sh` never
+applied the `grafana-datasources` ConfigMap the lgtm pod mounts; (5) flipping
+`OTEL_SDK_DISABLED` via a ConfigMap did not restart the pods, so the 3 services
+kept exporting-disabled — added a rollout restart; (6) `capture-evidence.sh`'s
+SCC check rejected the legitimate nonroot-v2 infra pods, and its secret scrub
+false-positived on the `monolith` DB password colliding with the `mea/monolith`
+image name — both tightened. A shared CRC carrying the grpc appendix's OSSM/
+RHBOTel operators + namespaces was navigated by joining the existing compatible
+v1.30.5 control plane rather than installing a second one.
 
 **Forward reference:** ch.33 is the project's **final chapter** — no further
 back-matter or appendix chapters remain. What's left across the whole
-project: the front-matter chapters (ch.00–13), the three decks, landing
-ch.33's live CRC evidence once the pending run completes, and landing ch.30's
-live minikube/Istio/LGTM evidence (DRQ-095) once its own pending run
+project: the front-matter chapters (ch.00–13), the three decks, and landing
+ch.30's live minikube/Istio/LGTM evidence (DRQ-095) once its own pending run
 completes.

@@ -115,6 +115,16 @@ install_operator() {
   }
   _plan_proposed() { [[ -n "$(_plan)" ]]; }
   if _csv_ok; then ok "$csv already Succeeded"; return 0; fi
+  # Accept an already-installed newer CSV of the same operator: a shared CRC
+  # may carry a newer build from another project (e.g. the grpc appendix), in
+  # which case no InstallPlan for the older pinned <csv> is ever proposed.
+  local csv_prefix installed
+  csv_prefix="${csv%.v*}"
+  installed="$(occ get csv -n "$ns" -o jsonpath='{range .items[?(@.status.phase=="Succeeded")]}{.metadata.name}{"\n"}{end}' 2>/dev/null \
+    | grep -E "^${csv_prefix}\.v" | sort -V | tail -1)"
+  if [[ -n "$installed" && "$(printf '%s\n%s\n' "$csv" "$installed" | sort -V | tail -1)" == "$installed" ]]; then
+    ok "$installed already Succeeded (>= pinned $csv)"; return 0
+  fi
   # redhat-operators reports READY before it serves packages (about a
   # minute after crc start), so wait for the package itself.
   wait_for 300 "OperatorHub serves $pkg" occ get packagemanifest "$pkg" -n openshift-marketplace

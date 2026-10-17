@@ -1,0 +1,14 @@
+CRC version: 2.64.0+458092
+OpenShift version: 4.22.14
+MicroShift version: 4.22.13
+Server Version: 4.22.14
+Kubernetes Version: v1.35.6
+strangler-proxy:v1 image-registry.openshift-image-registry.svc:5000/mea/strangler-proxy@sha256:951c4662755a91b2c4336fa3ed5c1574255b1a8776ec3e4759521e170fbd5f09
+review-service:v1 image-registry.openshift-image-registry.svc:5000/mea/review-service@sha256:45d33c78c7fedd03c51a7365f58d0fb89a837c8447ee22cbb029e50770de037c
+notification-service:v1 image-registry.openshift-image-registry.svc:5000/mea/notification-service@sha256:39539c1c8ba23bf896eb3249cae840889cda377661d53e9db3733fbe20c860a9
+inventory-service:v1 image-registry.openshift-image-registry.svc:5000/mea/inventory-service@sha256:8886c4ef946c18db9d470ccffa8e092d732ad9757be18c07187b192725c66dad
+payment-service:v1 image-registry.openshift-image-registry.svc:5000/mea/payment-service@sha256:0a6e2907d6bef6766b98f9cfeedc3b4da19b9d5cfabddfc6109d91c1ecfca72d
+shipping-service:v1 image-registry.openshift-image-registry.svc:5000/mea/shipping-service@sha256:0522a66944ce3bff97480fc372381072c445ba7e19817e88e67936717686f56a
+order-service:v1 image-registry.openshift-image-registry.svc:5000/mea/order-service@sha256:974af5afac814c7ee2f6bedc961aa9e1abacd1fc24cbaa821d9523b9ca79f339
+graphql-gateway:v1 image-registry.openshift-image-registry.svc:5000/mea/graphql-gateway@sha256:78f88ff13b6fbc51022220085c2be74f6e536d8cdd7ad5f6cd138e43e82c3e50
+monolith:v1 image-registry.openshift-image-registry.svc:5000/mea/monolith@sha256:a9c8a5b15ffe0e70c6015595c826096df36173c74b8168627721043a973a6acf
