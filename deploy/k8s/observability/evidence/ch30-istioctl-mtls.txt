@@ -1,0 +1,37 @@
+# istioctl x describe pod -n mea order-service-7c6c75796-smt92
+
+Pod: order-service-7c6c75796-smt92
+   Pod Revision: default
+   Pod Ports: 8088 (order-service)
+--------------------
+Service: order-service
+   Port: http 8088/HTTP targets pod port 8088
+--------------------
+Effective PeerAuthentication:
+   Workload mTLS mode: STRICT
+Applied PeerAuthentication:
+   default.mea
+
+# istioctl authn tls-check order-service-7c6c75796-smt92.mea (best-effort; not all Istio versions ship this subcommand)
+
+Error: unknown command "authn" for "istioctl"
+
+Did you mean this?
+	authz
+
+Run 'istioctl --help' for usage.
+
+# kubectl --context mea -n mea get pods (2/2 READY = app + istio-proxy sidecar)
+
+NAME                                  READY   STATUS    RESTARTS      AGE
+graphql-gateway-6c445f9dcf-9r8s9      2/2     Running   0             36m
+inventory-service-9d64b956f-mxk26     2/2     Running   3 (35m ago)   36m
+kafka-0                               1/1     Running   0             36m
+lgtm-8cb8fc76d-72vm8                  1/1     Running   0             36m
+notification-service-7c47fb47-gp5mm   2/2     Running   3 (35m ago)   36m
+order-service-7c6c75796-smt92         2/2     Running   3 (35m ago)   36m
+payment-service-59ff99d459-z79mq      2/2     Running   3 (35m ago)   36m
+postgres-0                            1/1     Running   0             36m
+review-service-7df6f8885f-t8sk2       2/2     Running   0             36m
+shipping-service-8bff644dc-hhwd9      2/2     Running   3 (35m ago)   36m
+strangler-proxy-c64c7c5d9-rq69s       2/2     Running   0             36m
