@@ -386,13 +386,8 @@ the free rollback a shared transaction used to give away for nothing.
 ---
 
 *Verification status: <span class="status status--verified">verified</span>.
-This chapter is a planning and analysis chapter — it introduces no new code
-of its own — and every artifact it cites is real, already-built r04 code:
-`order/models.py::OrderItem` and `order/migrations/0002_orderitem_sku_snapshot.py`
-(confirmed via `python manage.py migrate` and `python manage.py sqlmigrate
-order 0002`, which shows the `ADD COLUMN` / backfill / `DROP COLUMN`
-sequence in that exact order), `examples/00-monolith/SMELLS.md`'s smells #3
-and #4, and `examples/02-review-service`/`examples/03-notification-service`'s
-own `MIGRATION.md`/model docstrings for the shared-vs-owned contrast. The
-extraction this chapter plans is verified built and cut over in ch.19's own
-verification record.*
+This is a planning and analysis chapter with no new code of its own; every
+artifact it cites — `order/models.py::OrderItem`, its migration, and the
+prior services' own shared-vs-owned docs — is real, already-built code,
+confirmed via `manage.py migrate`/`sqlmigrate`. The extraction this chapter
+plans is verified built and cut over in ch.19's own verification record.*

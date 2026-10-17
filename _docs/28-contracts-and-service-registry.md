@@ -613,38 +613,11 @@ thing a deploy has to coordinate by hand.
 ---
 
 *Verification status: <span class="status status--verified">verified</span>.
-The drift claim is read directly from `examples/05-payment-service/app/
-schemas.py::OrderPlacedEvent` (seven fields, `payment_method` present) and
-`examples/03-notification-service/app/schemas.py::OrderPlacedEvent` (six
-fields, no `payment_method`), against `examples/07-order-service/EVENTS.md`'s
-"Produces: `order.placed`" reference shape. Every registry claim is cited to
-`examples/09-schema-registry-demo`: `schemas/order-placed-v1.avsc`,
-`app/envelope.py` (`encode_envelope`/`decode_envelope`,
-`struct.Struct(">BQ")`), `app/registry_client.py` (`RegistryClient`, its
-module docstring's live-verified `200`/`204`/`400` status codes against
-`quay.io/apicurio/apicurio-registry:3.3.3`), `app/producer.py`
-(`OrderAvroProducer`), `app/consumer.py` (`OrderAvroConsumer`), and
-`tests/test_roundtrip.py` (the field-for-field round trip, including the
-millisecond-truncated timestamp comparison) and `tests/test_compatibility.py`
-(`test_v1_registers_and_v2_is_backward_compatible_but_v3_is_rejected`: v1
-registers version `"1"`; v2, `tests/resources/order-placed-v2-backward-
-compatible.avsc`, returns `200`/version `"2"`; v3, `tests/resources/
-order-placed-v3-incompatible.avsc`, returns `400` with
-`"name": "RuleViolationException"`), run under Testcontainers-managed Kafka
-and Apicurio. `demos/demo-schema-registry.sh` reproduces the identical
-progression against a throwaway Kafka + Apicurio pair via `app/demo_cli.py`,
-reporting the same observed outcomes: schema registered/resolved, round
-trip field-for-field equal, v2 accepted (200), v3 rejected (400,
-`RuleViolationException`). `compose.yaml`'s `apicurio` service block and
-`examples/09-schema-registry-demo/README.md`/`AGENTS.md` are cited for the
-additive, blast-radius-isolated posture — no edit to
-`examples/00-monolith` through `examples/08-graphql-gateway`, `tooling/
-newman/`, or any live JSON event flow. Re-confirm before relying on this
-chapter again: `grep -c payment_method examples/05-payment-service/app/
-schemas.py examples/03-notification-service/app/schemas.py` should still
-show the asymmetry (non-zero vs. zero), and a fresh
-`./demos/demo-schema-registry.sh` run should still report `ALL CHECKS
-PASSED` with v2 at `200` and v3 at `400`/`RuleViolationException` against
-whatever Apicurio tag `.env`/`.env.example` pins at the time — a future
-registry upgrade past `3.3.x` could, as it already has once, change that
-status code again.*
+The drift claim is read directly from the payment- and
+notification-service event schemas against `examples/07-order-service/
+EVENTS.md`'s reference shape. Every registry claim is proven in
+`examples/09-schema-registry-demo` under Testcontainers-managed Kafka and
+Apicurio: a field-for-field round trip and a compatibility suite confirming
+v2 accepted (`200`) and v3 rejected (`400`, `RuleViolationException`);
+`demos/demo-schema-registry.sh` reproduces the identical progression
+standalone.*

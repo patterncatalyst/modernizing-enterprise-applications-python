@@ -712,18 +712,10 @@ chapter's notification-service was the first to opt entirely out of.
 ---
 
 *Verification status: <span class="status status--verified">verified</span>.
-`uv run pytest` passes 8/8 against a real, throwaway `postgres:18.6-alpine`
-(5 REST contract tests, 2 service-level idempotency unit tests) plus the
-Testcontainers integration test proving redelivery-yields-one-row against a
-real Kafka broker; `uv run ruff check .` passes clean; `alembic upgrade
-head` confirmed via `psql` to create the `notification` schema, table, and
-both indexes, and to no-op correctly on a second run. The full async
-cutover is verified live end to end in `tooling/newman/GOLDEN-BASELINE.md`'s
-r03 NEWMAN-ASYNC lane: 66/66 assertions green through the proxy in both
-flag states (byte-identical shape), bounded-wait resolution on attempt
-2/20 (~750ms) in both healthy runs, and the negative check (notification-
-service killed) failing strictly at 21/23 failed / exit code 1 after
-exhausting its ~15s budget, then recovering to 9/9 green on restart. The
-Phase A numbers in this chapter are a measured proxy, not a running
-server — Phase A code itself was never built, by design, matching
-`examples/02-review-service`'s precedent.*
+`uv run pytest` passes 8/8 against a real, throwaway Postgres container
+plus a Testcontainers integration test proving redelivery-yields-one-row
+against a real Kafka broker; `ruff check` is clean and `alembic upgrade
+head` creates the schema cleanly. The full async cutover is verified live
+end to end in `tooling/newman/GOLDEN-BASELINE.md`'s NEWMAN-ASYNC lane:
+66/66 assertions green in both flag states, and the negative check (service
+killed) fails strictly then recovers to green on restart.*

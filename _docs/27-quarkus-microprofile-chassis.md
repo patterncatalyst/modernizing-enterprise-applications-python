@@ -493,33 +493,12 @@ call whom, and with what guarantee the shape won't change underneath them.
 
 ---
 
-*Verification status: not applicable — conceptual chapter, no new runnable
-example. Cited: `examples/01-strangler-proxy/app/config.py` (`@dataclass(frozen=True, slots=True)`,
-module-level `settings = Settings.from_env()` singleton) and `app/main.py`
-(the `httpx.HTTPError` → 502 bridge, no `errors.py`, no `/health` route,
-confirmed by its own test file's `/health` 404 parametrization in
-`tests/test_routing.py`); `examples/02-review-service/app/db.py` (bare
-`os.environ.get("DATABASE_URL", ...)`, no `config.py` in the directory) and
-`app/main.py` (rotating-file logging present, no `/health` route);
-`examples/03-notification-service/`, `04-inventory-service/`,
-`05-payment-service/`, `06-shipping-service/`, `07-order-service/`, and
-`08-graphql-gateway/`'s `app/main.py` files (each with `GET /health` and
-identical `_configure_logging()` shapes) and `app/config.py` files (each a
-`@dataclass(frozen=True)` with a `from_env()` classmethod); `examples/02-
-review-service/` through `07-order-service/`'s `app/errors.py` (the
-`ApiError` hierarchy and `install_exception_handlers()`), and the confirmed
-absence of `app/errors.py` in `01-strangler-proxy/` and `08-graphql-
-gateway/`; `examples/06-shipping-service/app/enrich_client.py` (the
-`tenacity` `@retry` decorator, `_RETRYABLE_EXCEPTIONS`) and its
-`pyproject.toml` (the only `tenacity` dependency declaration in this
-project); `examples/07-order-service/app/schemas.py` and five sibling
-services' `app/schemas.py` (`pydantic.BaseModel` wire contracts); all eight
-`examples/*/Containerfile`; and `_plans/build-plan.md` (the "FastAPI +
-pydantic-settings" line this chapter corrects) and `_plans/backmatter-
-track-plan.md` (the real-state note this chapter is built from). Re-confirm
-before relying on this scorecard again: a fresh `grep -rl tenacity
-examples/*/pyproject.toml`, `grep -rli "opentelemetry\|prometheus"
-examples/*/app/`, and `grep -rl "pydantic_settings" examples/` should each
-still return exactly the same (narrow or empty) results, since an added
-dependency in any service's `pyproject.toml` would move a row in this
-scorecard from DEFERRED to PARTIAL or USED.*
+*Verification status: <span class="status status--unverified">unverified</span>.
+This is a conceptual chapter with no new runnable example; its scorecard is
+read directly from the services' own source (`config.py`/`main.py`/
+`errors.py` shapes and dependency declarations across all eight services)
+rather than produced by a run. Re-confirm with a fresh `grep -rl tenacity
+examples/*/pyproject.toml` (and the matching checks for OpenTelemetry/
+Prometheus and `pydantic_settings`) before citing this scorecard again,
+since an added dependency would move a row from DEFERRED to PARTIAL or
+USED.*

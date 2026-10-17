@@ -321,15 +321,9 @@ sound across a contract it can no longer verify in a single round trip.
 ---
 
 *Verification status: <span class="status status--verified">verified</span>.
-The synchronous-mode free-rollback claim is the same direct-query proof ch.19
-already recorded (`quantityOnHand` unchanged across a payment-declined and a
-shipping-failed checkout). The ACD-mode claims in this chapter —
-the PENDING window's real latency (attempt 2/20 on the bounded-wait poll),
-the stranded-payment deferral being reachable and reproducible (a
-`SHIPPING_FAILED` order with a captured, unrefunded payment), and the
-isolation-anomaly analogs (a status that legitimately differs across two
-polls of the same order) — are quoted from `tooling/newman/GOLDEN-BASELINE.md`'s
-r05 CUTOVER lane and from `order/services.py::handle_payment_captured`'s own
-docstring, not re-derived for this chapter. The PACELC framing is this
-chapter's own analysis of already-verified behavior, not an independent
-claim requiring a further run.*
+The synchronous-mode free-rollback claim is the same direct-query proof
+ch.19 already recorded. The ACD-mode claims — the PENDING window's real
+latency, the reachable stranded-payment deferral, and the isolation-anomaly
+analogs — are quoted from `tooling/newman/GOLDEN-BASELINE.md`'s r05
+CUTOVER lane and the order service's own docstring, not re-derived here;
+the PACELC framing is analysis of that already-verified behavior.*

@@ -615,25 +615,12 @@ event to the shape every future extraction in this book reuses.
 ---
 
 *Verification status: <span class="status status--verified">verified</span>.
-`uv run pytest` in `examples/04-inventory-service` passes 16/16 (5 REST
-contract tests, 11 gRPC servicer tests including the concurrency race test,
-confirmed stable across 5 repeated runs); `uv run ruff check .` passes
-clean; `uv run alembic upgrade head` confirmed via `psql` to create the
-`inventory` schema, table, and unique index, and to seed the 3 demo skus
-correctly, no-opping on a second run. The live container
-(`docker build -f Containerfile`) serves `GET /health` with
-`grpcServerListening: true` and the real seeded data. The full cutover is
-verified live end to end in `tooling/newman/GOLDEN-BASELINE.md`'s r04
-NEWMAN-GRPC lane: 71/71 assertions green in both the fully-gRPC and
-fully-local configurations (byte-identical shape), net-zero stock
-(`quantityOnHand: 96`) confirmed by direct query across both the
-payment-declined and shipping-failed scenarios, a no-flags control run at
-60/60 confirming no existing folder is stranded, and the negative check
-(inventory-service killed) failing strictly — 4/4 read assertions failed
-with real `502`s, 9/10 checkout assertions failed with a real `503
-INVENTORY_UNAVAILABLE` — before a full recovery back to green on restart.
-The Debezium CDC path (`infra/debezium/inventory-connector.json`,
-`scripts/register-debezium.sh`/`verify-debezium.sh`/`retire-debezium.sh`) is
-transition-only infrastructure, exercised manually against the compose
-stack rather than by the pytest/newman CI gates, which never set
-`INVENTORY_CDC_ENABLED` by design.*
+`uv run pytest` passes 16/16 in `examples/04-inventory-service` (REST and
+gRPC, including a concurrency race test stable across 5 repeated runs),
+`ruff check` is clean, and `alembic upgrade head` seeds correctly. The full
+cutover is verified live in `tooling/newman/GOLDEN-BASELINE.md`'s
+NEWMAN-GRPC lane: 71/71 assertions green across both configurations,
+net-zero stock confirmed by direct query, and a negative check that fails
+strictly then recovers on restart. The Debezium CDC path is transition-only
+infrastructure, exercised manually against the compose stack rather than by
+the pytest/Newman CI gates.*

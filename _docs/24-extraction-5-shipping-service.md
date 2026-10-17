@@ -498,22 +498,10 @@ modes and the resilience chassis.
 ---
 
 *Verification status: <span class="status status--verified">verified</span>.
-The full topology — monolith, inventory-service, payment-service,
-shipping-service, the strangler proxy, and a real single-node Kafka broker —
-was brought up live with `SHIPPING_MODE=orchestrated` and
-`PAYMENT_MODE=choreographed` for `tooling/newman/GOLDEN-BASELINE.md`'s r06
-CUTOVER lane. Figures quoted directly from that lane and from
-`examples/06-shipping-service/MIGRATION.md`/`CUTOVER.md`: a happy checkout
-reaching `PENDING → AWAITING_SHIPMENT → CONFIRMED` (poll attempt observed in
-the 2–5/40 range across runs, a real multi-hop Kafka round trip); a
-`SHIP-FAIL` checkout reaching `PENDING → AWAITING_SHIPMENT → SHIPPING_FAILED`
-with its captured payment reaching `REFUNDED`; reversibility to the
-synchronous/in-process contract with no data migration; the crash-resume
-proof reproduced against a live, restarted container
-(`resumedSagaCount: 1`, `enrich` not re-invoked); the negative
-check (shipping-service killed, a checkout stuck at `AWAITING_SHIPMENT`
-forever, Scenario 1 run alone RED); and **6 consecutive stable
-runs** of the fully-orchestrated suite, 0 failed every run, after the
-AWAITING_SHIPMENT poll-script fix ch.25 covers in detail. No application-code
-bug surfaced during this proof; the one bug found and fixed lived in the
-test harness, not the saga.*
+The full topology — monolith, inventory/payment/shipping services, the
+strangler proxy, and a real Kafka broker — was brought up live for
+`tooling/newman/GOLDEN-BASELINE.md`'s r06 CUTOVER lane: the happy and
+ship-fail paths resolve correctly, reversibility and crash-resume are
+reproduced against a live restarted container, and the negative check
+fails as required. 6 consecutive stable runs followed the poll-script fix
+ch.25 covers; no application-code bug surfaced, only a test-harness one.*

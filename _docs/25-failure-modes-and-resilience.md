@@ -451,21 +451,11 @@ system.
 ---
 
 *Verification status: <span class="status status--verified">verified</span>.
-Every mechanism this chapter inventories is cited against a live run already
-recorded in a prior chapter's or `CUTOVER.md`'s own evidence: the gRPC
-deadline and its 503 translation (ch.19's cutover lane), the two-layer
-outbox idempotency (ch.23's double-delivery proof, stock held at 94 across
-both redelivery paths), the proxy's 502 bridge (every "service X down"
-negative check in this book's equivalence suite since ch.14), and the saga
-crash-resume proof (ch.24's `resumedSagaCount: 1`, live container restart).
-The one new mechanism this chapter adds, `enrich_client.py`'s `tenacity`
-retry, is unit- and integration-tested
-(`tests/unit/test_orchestrator.py`, `tests/integration/test_shipping_saga.py`)
-but its retry-on-transient-failure branch specifically was not independently
-fault-injected against a live monolith made to fail on cue during this
-iteration — a real run that kills and restarts the monolith mid-`enrich`
-call, confirming the exponential-backoff retry actually absorbs a live
-blip rather than only a mocked one, remains the highest-value thing a future
-iteration should confirm. The `AWAITING_SHIPMENT` poll-script fix and its
-6-consecutive-run stability proof are cited directly from
-`tooling/newman/GOLDEN-BASELINE.md`'s r06 CUTOVER Phase-2 repair lane.*
+Every mechanism this chapter inventories is cited against a live run
+already recorded in a prior chapter or `tooling/newman/GOLDEN-BASELINE.md`:
+the gRPC deadline/503 translation, the two-layer outbox idempotency, the
+proxy's 502 bridge, and the saga crash-resume proof. The new `tenacity`
+retry in `enrich_client.py` is unit- and integration-tested, but its
+retry-on-transient-failure branch was not independently fault-injected
+against a live, killed-and-restarted monolith — that run remains the
+highest-value thing a future iteration should confirm.*

@@ -417,16 +417,9 @@ scaffolded, named and explained in their own right for the first time.
 
 *Verification status: <span class="status status--verified">verified</span>.
 Every artifact cited is real, already-shipped code exercised end to end in
-`tooling/newman/GOLDEN-BASELINE-r07.md`: the Step A reversibility proof
-(44 requests/117 assertions flag-on, 33/105 flag-off, both 0 failed, exit
-0), the flagless `examples/01-strangler-proxy` rewrite (29/29 tests green,
-`ruff check` clean), the `SMELLS.md` entries for smell #1 and smell #2
-marked `STRUCK (r07)` with their own cited evidence, the GraphQL contract
-query bug found and fixed against the live `examples/08-graphql-gateway`
-schema, the monolith-free contract suite (50 requests/133 assertions, 0
-failed, repeated 4 times across two stability windows), the three negative
-checks (consumer-down: 59/111 failed; compensation-disabled: 1/30 failed;
-projection-disabled: 1/53 failed — each restored to 0 failed), and
-`demos/demo-final-topology.sh` verified standalone at 50/133, 0 failed, with
-a clean teardown. Numbers are quoted directly from that evidence file's run
-output, not re-derived for this chapter.*
+`tooling/newman/GOLDEN-BASELINE-r07.md`: the reversibility proof, the
+flagless proxy rewrite, a GraphQL contract bug found and fixed, the
+monolith-free contract suite (50 requests/133 assertions, 0 failed,
+repeated across two stability windows), and three negative checks each
+restored to 0 failed. Numbers are quoted directly from that evidence file's
+run output, not re-derived for this chapter.*

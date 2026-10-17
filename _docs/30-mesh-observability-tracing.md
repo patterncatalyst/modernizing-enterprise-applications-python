@@ -503,53 +503,12 @@ the behavior described, on a cluster where they've been asked to.
 
 ---
 
-*Verification status: `headless-verified; live mesh capture DEFERRED
-(user-run, scheduled post-merge)`. This chapter's mesh, mTLS, and telemetry
-claims are verified against the committed manifests and scripts cited
-throughout — `deploy/
-k8s/istio/*.yaml`, `deploy/k8s/observability/*.yaml`,
-`deploy/k8s/overlays/minikube/kustomization.yaml`, `deploy/k8s/scripts/
-{setup-profile,install-istio,deploy}.sh` all render under `kubectl
-kustomize` and pass `kubeconform -strict -ignore-missing-schemas` headlessly
-— but the live-cluster facts only a running mesh can produce (the hero
-trace's actual span IDs and durations, `istioctl x describe pod`'s actual
-reported mTLS mode per pod, the actual `istio_requests_total` series in
-Mimir) come from a one-time live run against minikube + Istio + the LGTM
-stack, captured by the user and committed as evidence rather than
-reproduced here. Three evidence files are named and awaited, not yet
-present:
-`deploy/k8s/observability/evidence/ch30-hero-trace.json` (the captured
-trace, PLACEHOLDER — not yet committed),
-`deploy/k8s/observability/evidence/ch30-istioctl-mtls.txt` (the
-`istioctl x describe pod` output confirming STRICT/PERMISSIVE enforcement,
-PLACEHOLDER — not yet committed), and
-`deploy/k8s/observability/evidence/ch30-metrics.txt` (the golden-signal
-query results from Mimir, PLACEHOLDER — not yet committed). No trace ID,
-span count, mTLS confirmation line, or metric value in this chapter is
-drawn from any of those three files — once they're captured and committed,
-this footer's status updates to `verified-live (user-run)` with each
-claim re-pointed at the specific evidence file that backs it. Cited:
-`deploy/k8s/istio/{istio-install,peer-authentication,
-peer-authentication-edge,telemetry,kustomization}.yaml`;
-`deploy/k8s/observability/{lgtm-deployment,lgtm-service,
-otelcol-configmap,grafana-datasources-configmap,rbac,kustomization}.yaml`;
-`deploy/k8s/overlays/minikube/kustomization.yaml`; `deploy/k8s/scripts/
-{setup-profile,install-istio,deploy,teardown}.sh`; `deploy/k8s/README.md`'s
-bring-up sequence and mesh-verification sections;
-`examples/{01-strangler-proxy,07-order-service,04-inventory-service}/
-pyproject.toml` (the committed `opentelemetry-distro==0.66b1` /
-`opentelemetry-exporter-otlp-proto-grpc==1.45.0` pins and each service's
-own resolved `opentelemetry-instrumentation-*` set, including the
-`opentelemetry-instrumentation-sqlalchemy==0.66b1` / `sqlalchemy[asyncio]
-==2.1.4` version-skew confirmed directly in `07-order-service`'s and
-`04-inventory-service`'s own files); the matching three Containerfiles'
-`opentelemetry-instrument`-wrapped entrypoints; `deploy/k8s/base/
-app-config.yaml` (the `OTEL_SDK_DISABLED`/`OTEL_EXPORTER_OTLP_ENDPOINT`/
-`OTEL_EXPORTER_OTLP_PROTOCOL` active values) and `.env.example` (the
-no-op defaults); `_plans/r10-build-plan.md` section A.1/A.3 (the DRQ-096
-trio decision and its rejected alternative). Re-confirm the render +
-`kubeconform` results before relying on them again: a fresh `kubectl
-kustomize deploy/k8s/overlays/minikube | kubeconform -strict
--ignore-missing-schemas -summary` should report the same resource count
-and zero `Invalid`, since an added manifest or a tool-version bump would
-change it.*
+*Verification status: <span class="status status--unverified">unverified</span>.
+This chapter's mesh, mTLS, and telemetry claims are checked headlessly —
+the Istio and observability manifests all render with `kubectl kustomize`
+and pass `kubeconform -strict` — but the live-cluster facts only a running
+mesh can produce (the hero trace's span IDs, `istioctl x describe pod`'s
+reported mTLS mode, the actual metrics series in Mimir) require a one-time
+live run against minikube + Istio + the LGTM stack that is scheduled
+post-merge as a user-run capture, not yet performed. No trace ID, mTLS
+line, or metric value in this chapter is drawn from that future capture.*

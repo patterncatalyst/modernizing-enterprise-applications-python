@@ -370,13 +370,9 @@ cutover proven live against a real Kafka broker.
 ---
 
 *Verification status: <span class="status status--verified">verified</span>.
-`examples/01-strangler-proxy/tests/test_routing.py` (8 tests, including the
-two-flag independence case) and `uv run ruff check .` both pass; the live
-two-flag toggle was driven end to end with `curl` against the real stack
-(Postgres, the monolith, review-service, and notification-service). The
-full Kafka-backed cutover evidence for `STRANGLER_NOTIFICATION_ENABLED`
-specifically (66/66 assertions green in both flag states, the negative
-check, the bounded-wait timing) is ch.17's own verification record and
-`tooling/newman/GOLDEN-BASELINE.md`'s r03 NEWMAN-ASYNC lane — this
-chapter's own scope is the routing generalization and the ACL concept,
-confirmed above.*
+`tests/test_routing.py` (8 tests, including the two-flag independence case)
+and `ruff check` both pass, and the live two-flag toggle was driven end to
+end with `curl` against the real stack. The full Kafka-backed cutover
+evidence for the notification flag specifically is ch.17's own
+verification record; this chapter's own scope is the routing
+generalization and the ACL concept, confirmed above.*
