@@ -1,0 +1,111 @@
+# otelcol-configmap.yaml -- ported from
+# deploy/k8s/observability/otelcol-configmap.yaml (ch.30, minikube) --
+# unchanged except the mesh-metrics scrape's namespace filter, which targets
+# this project's one namespace the same way (left as `mea` since both paths
+# use that namespace name). See that file's own header for the full
+# exporter-port rationale (otel-lgtm 0.36.0's bundled Tempo/Mimir/Loki ports
+# are NOT the same as their query ports).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lgtm-otelcol-config
+  labels:
+    app.kubernetes.io/name: lgtm
+data:
+  otelcol-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+      prometheus/collector:
+        config:
+          scrape_configs:
+            - job_name: 'opentelemetry-collector'
+              static_configs:
+                - targets: ['127.0.0.1:8888']
+      # Mesh metrics (only populated once install-mesh.sh has run): Envoy's
+      # istio-proxy sidecar exposes Prometheus-format stats on
+      # :15090/stats/prometheus.
+      prometheus/istio-mesh:
+        config:
+          scrape_configs:
+            - job_name: 'istio-proxy'
+              metrics_path: /stats/prometheus
+              kubernetes_sd_configs:
+                - role: pod
+                  namespaces:
+                    names: ['mea']
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_pod_container_name]
+                  action: keep
+                  regex: istio-proxy
+                - source_labels: [__address__]
+                  action: replace
+                  regex: '([^:]+)(?::\d+)?'
+                  replacement: '$1:15090'
+                  target_label: __address__
+                - source_labels: [__meta_kubernetes_namespace]
+                  target_label: namespace
+                - source_labels: [__meta_kubernetes_pod_name]
+                  target_label: pod
+                - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+                  target_label: app
+
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+        path: "/ready"
+
+    processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 512
+        spike_limit_mib: 128
+      batch:
+        timeout: 200ms
+        send_batch_size: 8192
+      resource:
+        attributes:
+          - key: deployment.environment
+            value: openshift-crc
+            action: upsert
+
+    exporters:
+      otlp_http/traces:
+        endpoint: http://127.0.0.1:4418
+        tls:
+          insecure: true
+      otlp_http/metrics:
+        endpoint: http://127.0.0.1:9090/api/v1/otlp
+        tls:
+          insecure: true
+      otlp_http/logs:
+        endpoint: http://127.0.0.1:3100/otlp
+        tls:
+          insecure: true
+      debug:
+        verbosity: basic
+        sampling_initial: 5
+        sampling_thereafter: 100
+
+    service:
+      extensions: [health_check]
+      telemetry:
+        logs:
+          level: info
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [otlp_http/traces]
+        metrics:
+          receivers: [otlp, prometheus/collector, prometheus/istio-mesh]
+          processors: [memory_limiter, resource, batch]
+          exporters: [otlp_http/metrics]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [otlp_http/logs]

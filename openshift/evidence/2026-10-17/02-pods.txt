@@ -1,0 +1,13 @@
+POD                                     READY   RESTARTS   SCC             UID
+graphql-gateway-5c66dc654-75mj9         true    0          restricted-v2   1000660000
+inventory-service-779b86dcf9-f4jmb      true    0          restricted-v2   1000660000
+kafka-0                                 true    0          nonroot-v2      1000
+lgtm-ddd5c547c-6hqkn                    true    0          anyuid          0
+notification-service-5cd984bd98-nsqb2   true    0          restricted-v2   1000660000
+order-service-57dfbd664-pk5lg           true    0          restricted-v2   1000660000
+payment-service-9b85b8cb6-s2fqk         true    0          restricted-v2   1000660000
+postgres-0                              true    0          nonroot-v2      70
+review-service-74d7fc45c8-m4pwx         true    0          restricted-v2   1000660000
+shipping-service-7bfb8f4466-65kw6       true    0          restricted-v2   1000660000
+strangler-proxy-8d8fd567b-q5nqb         true    0          restricted-v2   1000660000
+namespace uid-range: 1000660000/10000

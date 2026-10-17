@@ -53,6 +53,9 @@ This file is the catalogue — one row per diagram, append-only.
 | `supply-chain-gate-pipeline` | ch.31 | Top band: the syft -> grype -> policy-as-code pipeline `examples/10-supply-chain/demo.sh` and `supply-chain.yml` both run, for order-service ("after", `gate: required`) and the frozen monolith ("before", `gate: reported`) side by side -- both produce the identical 265-match/35-High result from their shared UBI base layer; the `.grype.yaml` fixable-only ignore rule routes order-service's 35 not-fixed High findings out of the pass/fail decision, so it passes with 0 fixable High. Bottom band: the four separate, additive GitHub Actions workflows this repo ships (`code-ci.yml`/`contract-gate`, `schema-registry.yml`, `deploy-manifests.yml`, `supply-chain.yml`), each with its own `changes`/gate/`*-ok` summary job and no `paths:` filter, converging on one repository ruleset; `monolith-scan` hangs off `supply-chain.yml`'s `sbom-scan` job but is explicitly excluded from the required check. Source: `supply-chain-gate-pipeline.py`. |
 | `pattern-language-map` | ch.32 | The whole book's pattern language as one connected flow across two chapter-ordered rows (ch.14->24, ch.27->31), colored by verdict (earned vs adapted), with a dashed ghost row of five named-not-built horizons (full event sourcing, pybreaker/bulkhead, GitOps operator+canary, Loki log aggregation, Kafka saga-hop tracing), each linked by a dashed arrow to the pattern it would extend. Source: `pattern-language-map.py`. |
 | `book-pattern-scorecard` | ch.32 | Three stacked bands (earned / adapted / named-deferred, light fills matching ch.27's `chassis-scorecard`) with 19 cards total, matching build-plan §C exactly. Source: `book-pattern-scorecard.py`. |
+| `openshift-crc-topology` | ch.33 | The `mea` topology on OpenShift Local (CRC): 8 app pods under restricted-v2 (no fixed UID), postgres/kafka under nonroot-v2 via the `mea-infra` SA, otel-lgtm under anyuid (runAsUser 0 only), and the two edge Routes (strangler-proxy + graphql-gateway) as the only ingress. Source: `openshift-crc-topology.py`. |
+| `openshift-image-delivery` | ch.33 | Host `podman build` → push to the exposed internal registry → Deployment pulls by digest; `--mirror-infra` seeds postgres/kafka into the registry for the egress-less CRC VM, and the frozen monolith image feeds the review-service bootstrap Job. Source: `openshift-image-delivery.py`. |
+| `openshift-mesh-mtls-edge` | ch.33 | OSSM 3 STRICT mesh-wide mTLS with a PERMISSIVE carve-out per Route-facing service, Sail's `istio.io/rev` label injection (not the minikube annotation), and Kiali reading otel-lgtm's Prometheus; the Route is the edge (OSSM provisions no ingress gateway). Source: `openshift-mesh-mtls-edge.py`. |
 
 ## Regenerating
 
@@ -101,6 +104,9 @@ python3 -I mesh-mtls-topology.py
 python3 -I mesh-hero-trace-waterfall.py
 python3 -I pattern-language-map.py
 python3 -I book-pattern-scorecard.py
+python3 -I openshift-crc-topology.py
+python3 -I openshift-image-delivery.py
+python3 -I openshift-mesh-mtls-edge.py
 ```
 
 Each spec validates its own output on the way out (`generate_diagram.emit()`

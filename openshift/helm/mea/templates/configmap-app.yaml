@@ -1,0 +1,79 @@
+{{- $dns := include "mea.dns" . -}}
+# Shared env contract for all eight app Deployments -- the Helm port of
+# deploy/k8s/base/app-config.yaml. Every cross-service address is built from
+# the release namespace ({{ .Release.Namespace }}) so the chart is
+# namespace-portable. See that source manifest's header comment for why
+# there is exactly ONE DATABASE_URL (in secret-app.yaml, not here) rather
+# than one JDBC-style URL per service: every Python service's own code picks
+# its Postgres schema via search_path, not via the connection string.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mea-app-config
+  labels:
+    {{- include "mea.labels" . | nindent 4 }}
+data:
+  # -- shared by every Kafka consumer/producer (03/04/05/06/07) -----------
+  KAFKA_BOOTSTRAP_SERVERS: "kafka.{{ $dns }}:9092"
+
+  # -- shared Kafka topic names -- same env var name IS the same topic
+  # across every producer/consumer of it. ----------------------------------
+  ORDER_PLACED_TOPIC: "order.placed"
+  PAYMENT_CAPTURED_TOPIC: "payment.captured"
+  PAYMENT_DECLINED_TOPIC: "payment.declined"
+  PAYMENT_REFUNDED_TOPIC: "payment.refunded"
+  SHIPMENT_DISPATCHED_TOPIC: "shipment.dispatched"
+  SHIPMENT_FAILED_TOPIC: "shipment.failed"
+
+  # -- inventory-service's transition-only CDC consumer -- OFF here too,
+  # same as every other environment; this service's own Alembic migration
+  # seeds its schema directly. -------------------------------------------
+  INVENTORY_CDC_ENABLED: "false"
+
+  # -- inventory-service's gRPC target -- shared by order-service and
+  # graphql-gateway. inventory-service's Service exposes both :8084 (http)
+  # and :9004 (grpc). -------------------------------------------------------
+  INVENTORY_GRPC_TARGET: "inventory-service.{{ $dns }}:9004"
+
+  # -- strangler-proxy's six fixed backend targets (operator-configured,
+  # never derived from the inbound request -- an SSRF guard). -------------
+  STRANGLER_REVIEW_BASE_URL: "http://review-service.{{ $dns }}:8001"
+  STRANGLER_NOTIFICATION_BASE_URL: "http://notification-service.{{ $dns }}:8002"
+  STRANGLER_INVENTORY_BASE_URL: "http://inventory-service.{{ $dns }}:8084"
+  STRANGLER_PAYMENT_BASE_URL: "http://payment-service.{{ $dns }}:8085"
+  STRANGLER_SHIPPING_BASE_URL: "http://shipping-service.{{ $dns }}:8087"
+  STRANGLER_ORDER_BASE_URL: "http://order-service.{{ $dns }}:8088"
+
+  # -- shipping-service's saga enrich-step target. MONOLITH_BASE_URL (that
+  # service's documented operator-only fallback) is deliberately NOT set
+  # here: the frozen monolith has no Deployment/Service in this topology. -
+  ORDER_BASE_URL: "http://order-service.{{ $dns }}:8088"
+
+  # -- graphql-gateway's four downstream REST targets. ORDER_SERVICE_URL is
+  # a DIFFERENT env var than shipping-service's ORDER_BASE_URL above even
+  # though both point at order-service -- both are real property names in
+  # this project's code. ---------------------------------------------------
+  ORDER_SERVICE_URL: "http://order-service.{{ $dns }}:8088"
+  PAYMENT_SERVICE_URL: "http://payment-service.{{ $dns }}:8085"
+  SHIPPING_SERVICE_URL: "http://shipping-service.{{ $dns }}:8087"
+  REVIEW_SERVICE_URL: "http://review-service.{{ $dns }}:8001"
+
+  # -- payment-/shipping-/order-service's outbox relay poll interval. -----
+  OUTBOX_POLL_MS: "1000"
+
+  # -- OpenTelemetry (r10/ch.30 parity, DRQ-109) -- gated by
+  # observability.otlp.enabled (default off, matching the repo's
+  # .env.example no-op default). Only strangler-proxy/inventory-service/
+  # order-service are wrapped with `opentelemetry-instrument`; every other
+  # Deployment ignores these keys. OTEL_SERVICE_NAME is NOT here (it needs a
+  # different value per service) -- set directly in app-deployment.yaml for
+  # the three `otel: true` services instead. "lgtm" is the Service
+  # platform/observability/lgtm-service.yaml creates once
+  # install-observability.sh runs. -----------------------------------------
+  {{- if .Values.observability.otlp.enabled }}
+  OTEL_SDK_DISABLED: "false"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://lgtm.{{ $dns }}:4317"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+  {{- else }}
+  OTEL_SDK_DISABLED: "true"
+  {{- end }}
