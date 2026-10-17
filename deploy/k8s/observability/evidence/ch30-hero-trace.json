@@ -1,0 +1,4109 @@
+{
+  "batches": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "deployment.environment",
+            "value": {
+              "stringValue": "minikube"
+            }
+          },
+          {
+            "key": "telemetry.sdk.language",
+            "value": {
+              "stringValue": "cpp"
+            }
+          },
+          {
+            "key": "telemetry.sdk.name",
+            "value": {
+              "stringValue": "envoy"
+            }
+          },
+          {
+            "key": "telemetry.sdk.version",
+            "value": {
+              "stringValue": "8c7d15f0482424f4eea86580c745976377633b34/1.39.5-dev/Clean/RELEASE/BoringSSL"
+            }
+          },
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "inventory-service.mea"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "envoy",
+            "version": "8c7d15f0482424f4eea86580c745976377633b34/1.39.5-dev/Clean/RELEASE/BoringSSL"
+          },
+          "spans": [
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "uFY7cQddw0k=",
+              "parentSpanId": "QqYMaYxcBq8=",
+              "name": "inventory-service.mea.svc.cluster.local:9004/*",
+              "kind": "SPAN_KIND_SERVER",
+              "startTimeUnixNano": "1792246905421785000",
+              "endTimeUnixNano": "1792246905427359000",
+              "attributes": [
+                {
+                  "key": "node_id",
+                  "value": {
+                    "stringValue": "sidecar~10.244.0.6~inventory-service-9d64b956f-mxk26.mea~mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "zone",
+                  "value": {
+                    "stringValue": ""
+                  }
+                },
+                {
+                  "key": "guid:x-request-id",
+                  "value": {
+                    "stringValue": "371ee6d0-4df5-9af9-990e-04d74fbfb50f"
+                  }
+                },
+                {
+                  "key": "downstream_cluster",
+                  "value": {
+                    "stringValue": "-"
+                  }
+                },
+                {
+                  "key": "user_agent",
+                  "value": {
+                    "stringValue": "grpc-python-asyncio/1.84.0 grpc-c/56.0.0 (linux; chttp2)"
+                  }
+                },
+                {
+                  "key": "http.protocol",
+                  "value": {
+                    "stringValue": "HTTP/2"
+                  }
+                },
+                {
+                  "key": "peer.address",
+                  "value": {
+                    "stringValue": "10.244.0.9"
+                  }
+                },
+                {
+                  "key": "grpc.path",
+                  "value": {
+                    "stringValue": "/dev.patterncatalyst.inventory.v1.InventoryGrpcService/Reserve"
+                  }
+                },
+                {
+                  "key": "grpc.authority",
+                  "value": {
+                    "stringValue": "inventory-service.mea.svc.cluster.local:9004"
+                  }
+                },
+                {
+                  "key": "grpc.content_type",
+                  "value": {
+                    "stringValue": "application/grpc"
+                  }
+                },
+                {
+                  "key": "grpc.timeout",
+                  "value": {
+                    "stringValue": "5000m"
+                  }
+                },
+                {
+                  "key": "request_size",
+                  "value": {
+                    "stringValue": "23"
+                  }
+                },
+                {
+                  "key": "response_size",
+                  "value": {
+                    "stringValue": "25"
+                  }
+                },
+                {
+                  "key": "component",
+                  "value": {
+                    "stringValue": "proxy"
+                  }
+                },
+                {
+                  "key": "upstream_cluster",
+                  "value": {
+                    "stringValue": "inbound|9004||"
+                  }
+                },
+                {
+                  "key": "upstream_cluster.name",
+                  "value": {
+                    "stringValue": "inbound|9004||;"
+                  }
+                },
+                {
+                  "key": "http.status_code",
+                  "value": {
+                    "stringValue": "200"
+                  }
+                },
+                {
+                  "key": "response_flags",
+                  "value": {
+                    "stringValue": "-"
+                  }
+                },
+                {
+                  "key": "istio.mesh_id",
+                  "value": {
+                    "stringValue": "cluster.local"
+                  }
+                },
+                {
+                  "key": "istio.canonical_service",
+                  "value": {
+                    "stringValue": "inventory-service"
+                  }
+                },
+                {
+                  "key": "istio.cluster_id",
+                  "value": {
+                    "stringValue": "Kubernetes"
+                  }
+                },
+                {
+                  "key": "istio.canonical_revision",
+                  "value": {
+                    "stringValue": "latest"
+                  }
+                },
+                {
+                  "key": "istio.namespace",
+                  "value": {
+                    "stringValue": "mea"
+                  }
+                },
+                {
+                  "key": "grpc.status_code",
+                  "value": {
+                    "stringValue": "0"
+                  }
+                },
+                {
+                  "key": "grpc.message",
+                  "value": {
+                    "stringValue": ""
+                  }
+                },
+                {
+                  "key": "http.method",
+                  "value": {
+                    "stringValue": "POST"
+                  }
+                },
+                {
+                  "key": "http.url",
+                  "value": {
+                    "stringValue": "http://inventory-service.mea.svc.cluster.local:9004/dev.patterncatalyst.inventory.v1.InventoryGrpcService/Reserve"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "OFa8dQyz2OE=",
+              "parentSpanId": "pka9cK3S1OI=",
+              "name": "inventory-service.mea.svc.cluster.local:9004/*",
+              "kind": "SPAN_KIND_SERVER",
+              "startTimeUnixNano": "1792246905428935000",
+              "endTimeUnixNano": "1792246905431701000",
+              "attributes": [
+                {
+                  "key": "node_id",
+                  "value": {
+                    "stringValue": "sidecar~10.244.0.6~inventory-service-9d64b956f-mxk26.mea~mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "zone",
+                  "value": {
+                    "stringValue": ""
+                  }
+                },
+                {
+                  "key": "guid:x-request-id",
+                  "value": {
+                    "stringValue": "6867db11-31a9-999e-a68b-fc5457c484e6"
+                  }
+                },
+                {
+                  "key": "downstream_cluster",
+                  "value": {
+                    "stringValue": "-"
+                  }
+                },
+                {
+                  "key": "user_agent",
+                  "value": {
+                    "stringValue": "grpc-python-asyncio/1.84.0 grpc-c/56.0.0 (linux; chttp2)"
+                  }
+                },
+                {
+                  "key": "http.protocol",
+                  "value": {
+                    "stringValue": "HTTP/2"
+                  }
+                },
+                {
+                  "key": "peer.address",
+                  "value": {
+                    "stringValue": "10.244.0.9"
+                  }
+                },
+                {
+                  "key": "grpc.path",
+                  "value": {
+                    "stringValue": "/dev.patterncatalyst.inventory.v1.InventoryGrpcService/GetStock"
+                  }
+                },
+                {
+                  "key": "grpc.authority",
+                  "value": {
+                    "stringValue": "inventory-service.mea.svc.cluster.local:9004"
+                  }
+                },
+                {
+                  "key": "grpc.content_type",
+                  "value": {
+                    "stringValue": "application/grpc"
+                  }
+                },
+                {
+                  "key": "grpc.timeout",
+                  "value": {
+                    "stringValue": "5000m"
+                  }
+                },
+                {
+                  "key": "request_size",
+                  "value": {
+                    "stringValue": "21"
+                  }
+                },
+                {
+                  "key": "response_size",
+                  "value": {
+                    "stringValue": "45"
+                  }
+                },
+                {
+                  "key": "component",
+                  "value": {
+                    "stringValue": "proxy"
+                  }
+                },
+                {
+                  "key": "upstream_cluster",
+                  "value": {
+                    "stringValue": "inbound|9004||"
+                  }
+                },
+                {
+                  "key": "upstream_cluster.name",
+                  "value": {
+                    "stringValue": "inbound|9004||;"
+                  }
+                },
+                {
+                  "key": "http.status_code",
+                  "value": {
+                    "stringValue": "200"
+                  }
+                },
+                {
+                  "key": "response_flags",
+                  "value": {
+                    "stringValue": "-"
+                  }
+                },
+                {
+                  "key": "istio.mesh_id",
+                  "value": {
+                    "stringValue": "cluster.local"
+                  }
+                },
+                {
+                  "key": "istio.canonical_service",
+                  "value": {
+                    "stringValue": "inventory-service"
+                  }
+                },
+                {
+                  "key": "istio.cluster_id",
+                  "value": {
+                    "stringValue": "Kubernetes"
+                  }
+                },
+                {
+                  "key": "istio.canonical_revision",
+                  "value": {
+                    "stringValue": "latest"
+                  }
+                },
+                {
+                  "key": "istio.namespace",
+                  "value": {
+                    "stringValue": "mea"
+                  }
+                },
+                {
+                  "key": "grpc.status_code",
+                  "value": {
+                    "stringValue": "0"
+                  }
+                },
+                {
+                  "key": "grpc.message",
+                  "value": {
+                    "stringValue": ""
+                  }
+                },
+                {
+                  "key": "http.method",
+                  "value": {
+                    "stringValue": "POST"
+                  }
+                },
+                {
+                  "key": "http.url",
+                  "value": {
+                    "stringValue": "http://inventory-service.mea.svc.cluster.local:9004/dev.patterncatalyst.inventory.v1.InventoryGrpcService/GetStock"
+                  }
+                }
+              ],
+              "status": {}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "deployment.environment",
+            "value": {
+              "stringValue": "minikube"
+            }
+          },
+          {
+            "key": "telemetry.sdk.language",
+            "value": {
+              "stringValue": "cpp"
+            }
+          },
+          {
+            "key": "telemetry.sdk.name",
+            "value": {
+              "stringValue": "envoy"
+            }
+          },
+          {
+            "key": "telemetry.sdk.version",
+            "value": {
+              "stringValue": "8c7d15f0482424f4eea86580c745976377633b34/1.39.5-dev/Clean/RELEASE/BoringSSL"
+            }
+          },
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "order-service.mea"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "envoy",
+            "version": "8c7d15f0482424f4eea86580c745976377633b34/1.39.5-dev/Clean/RELEASE/BoringSSL"
+          },
+          "spans": [
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "QqYMaYxcBq8=",
+              "parentSpanId": "ns220tgZ1og=",
+              "name": "inventory-service.mea.svc.cluster.local:9004/*",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905421431000",
+              "endTimeUnixNano": "1792246905427695000",
+              "attributes": [
+                {
+                  "key": "node_id",
+                  "value": {
+                    "stringValue": "sidecar~10.244.0.9~order-service-7c6c75796-smt92.mea~mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "zone",
+                  "value": {
+                    "stringValue": ""
+                  }
+                },
+                {
+                  "key": "guid:x-request-id",
+                  "value": {
+                    "stringValue": "371ee6d0-4df5-9af9-990e-04d74fbfb50f"
+                  }
+                },
+                {
+                  "key": "downstream_cluster",
+                  "value": {
+                    "stringValue": "-"
+                  }
+                },
+                {
+                  "key": "user_agent",
+                  "value": {
+                    "stringValue": "grpc-python-asyncio/1.84.0 grpc-c/56.0.0 (linux; chttp2)"
+                  }
+                },
+                {
+                  "key": "http.protocol",
+                  "value": {
+                    "stringValue": "HTTP/2"
+                  }
+                },
+                {
+                  "key": "peer.address",
+                  "value": {
+                    "stringValue": "10.244.0.9"
+                  }
+                },
+                {
+                  "key": "grpc.path",
+                  "value": {
+                    "stringValue": "/dev.patterncatalyst.inventory.v1.InventoryGrpcService/Reserve"
+                  }
+                },
+                {
+                  "key": "grpc.authority",
+                  "value": {
+                    "stringValue": "inventory-service.mea.svc.cluster.local:9004"
+                  }
+                },
+                {
+                  "key": "grpc.content_type",
+                  "value": {
+                    "stringValue": "application/grpc"
+                  }
+                },
+                {
+                  "key": "grpc.timeout",
+                  "value": {
+                    "stringValue": "5000m"
+                  }
+                },
+                {
+                  "key": "request_size",
+                  "value": {
+                    "stringValue": "23"
+                  }
+                },
+                {
+                  "key": "response_size",
+                  "value": {
+                    "stringValue": "25"
+                  }
+                },
+                {
+                  "key": "component",
+                  "value": {
+                    "stringValue": "proxy"
+                  }
+                },
+                {
+                  "key": "upstream_cluster",
+                  "value": {
+                    "stringValue": "outbound|9004||inventory-service.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "upstream_cluster.name",
+                  "value": {
+                    "stringValue": "outbound|9004||inventory-service.mea.svc.cluster.local;"
+                  }
+                },
+                {
+                  "key": "http.status_code",
+                  "value": {
+                    "stringValue": "200"
+                  }
+                },
+                {
+                  "key": "response_flags",
+                  "value": {
+                    "stringValue": "-"
+                  }
+                },
+                {
+                  "key": "istio.canonical_revision",
+                  "value": {
+                    "stringValue": "latest"
+                  }
+                },
+                {
+                  "key": "istio.canonical_service",
+                  "value": {
+                    "stringValue": "order-service"
+                  }
+                },
+                {
+                  "key": "istio.cluster_id",
+                  "value": {
+                    "stringValue": "Kubernetes"
+                  }
+                },
+                {
+                  "key": "istio.namespace",
+                  "value": {
+                    "stringValue": "mea"
+                  }
+                },
+                {
+                  "key": "istio.mesh_id",
+                  "value": {
+                    "stringValue": "cluster.local"
+                  }
+                },
+                {
+                  "key": "grpc.status_code",
+                  "value": {
+                    "stringValue": "0"
+                  }
+                },
+                {
+                  "key": "grpc.message",
+                  "value": {
+                    "stringValue": ""
+                  }
+                },
+                {
+                  "key": "http.method",
+                  "value": {
+                    "stringValue": "POST"
+                  }
+                },
+                {
+                  "key": "http.url",
+                  "value": {
+                    "stringValue": "http://inventory-service.mea.svc.cluster.local:9004/dev.patterncatalyst.inventory.v1.InventoryGrpcService/Reserve"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "pka9cK3S1OI=",
+              "parentSpanId": "cC9OAf8reKY=",
+              "name": "inventory-service.mea.svc.cluster.local:9004/*",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905428672000",
+              "endTimeUnixNano": "1792246905432082000",
+              "attributes": [
+                {
+                  "key": "node_id",
+                  "value": {
+                    "stringValue": "sidecar~10.244.0.9~order-service-7c6c75796-smt92.mea~mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "zone",
+                  "value": {
+                    "stringValue": ""
+                  }
+                },
+                {
+                  "key": "guid:x-request-id",
+                  "value": {
+                    "stringValue": "6867db11-31a9-999e-a68b-fc5457c484e6"
+                  }
+                },
+                {
+                  "key": "downstream_cluster",
+                  "value": {
+                    "stringValue": "-"
+                  }
+                },
+                {
+                  "key": "user_agent",
+                  "value": {
+                    "stringValue": "grpc-python-asyncio/1.84.0 grpc-c/56.0.0 (linux; chttp2)"
+                  }
+                },
+                {
+                  "key": "http.protocol",
+                  "value": {
+                    "stringValue": "HTTP/2"
+                  }
+                },
+                {
+                  "key": "peer.address",
+                  "value": {
+                    "stringValue": "10.244.0.9"
+                  }
+                },
+                {
+                  "key": "grpc.path",
+                  "value": {
+                    "stringValue": "/dev.patterncatalyst.inventory.v1.InventoryGrpcService/GetStock"
+                  }
+                },
+                {
+                  "key": "grpc.authority",
+                  "value": {
+                    "stringValue": "inventory-service.mea.svc.cluster.local:9004"
+                  }
+                },
+                {
+                  "key": "grpc.content_type",
+                  "value": {
+                    "stringValue": "application/grpc"
+                  }
+                },
+                {
+                  "key": "grpc.timeout",
+                  "value": {
+                    "stringValue": "5000m"
+                  }
+                },
+                {
+                  "key": "request_size",
+                  "value": {
+                    "stringValue": "21"
+                  }
+                },
+                {
+                  "key": "response_size",
+                  "value": {
+                    "stringValue": "45"
+                  }
+                },
+                {
+                  "key": "component",
+                  "value": {
+                    "stringValue": "proxy"
+                  }
+                },
+                {
+                  "key": "upstream_cluster",
+                  "value": {
+                    "stringValue": "outbound|9004||inventory-service.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "upstream_cluster.name",
+                  "value": {
+                    "stringValue": "outbound|9004||inventory-service.mea.svc.cluster.local;"
+                  }
+                },
+                {
+                  "key": "http.status_code",
+                  "value": {
+                    "stringValue": "200"
+                  }
+                },
+                {
+                  "key": "response_flags",
+                  "value": {
+                    "stringValue": "-"
+                  }
+                },
+                {
+                  "key": "istio.canonical_revision",
+                  "value": {
+                    "stringValue": "latest"
+                  }
+                },
+                {
+                  "key": "istio.canonical_service",
+                  "value": {
+                    "stringValue": "order-service"
+                  }
+                },
+                {
+                  "key": "istio.cluster_id",
+                  "value": {
+                    "stringValue": "Kubernetes"
+                  }
+                },
+                {
+                  "key": "istio.namespace",
+                  "value": {
+                    "stringValue": "mea"
+                  }
+                },
+                {
+                  "key": "istio.mesh_id",
+                  "value": {
+                    "stringValue": "cluster.local"
+                  }
+                },
+                {
+                  "key": "grpc.status_code",
+                  "value": {
+                    "stringValue": "0"
+                  }
+                },
+                {
+                  "key": "grpc.message",
+                  "value": {
+                    "stringValue": ""
+                  }
+                },
+                {
+                  "key": "http.method",
+                  "value": {
+                    "stringValue": "POST"
+                  }
+                },
+                {
+                  "key": "http.url",
+                  "value": {
+                    "stringValue": "http://inventory-service.mea.svc.cluster.local:9004/dev.patterncatalyst.inventory.v1.InventoryGrpcService/GetStock"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "nDw9Nr+cOLE=",
+              "parentSpanId": "0juZqkyKHTk=",
+              "name": "order-service.mea.svc.cluster.local:8088/*",
+              "kind": "SPAN_KIND_SERVER",
+              "startTimeUnixNano": "1792246905412081000",
+              "endTimeUnixNano": "1792246905443516000",
+              "attributes": [
+                {
+                  "key": "node_id",
+                  "value": {
+                    "stringValue": "sidecar~10.244.0.9~order-service-7c6c75796-smt92.mea~mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "zone",
+                  "value": {
+                    "stringValue": ""
+                  }
+                },
+                {
+                  "key": "guid:x-request-id",
+                  "value": {
+                    "stringValue": "afc4fb33-7c77-99a5-9a0b-5a186b88c673"
+                  }
+                },
+                {
+                  "key": "downstream_cluster",
+                  "value": {
+                    "stringValue": "-"
+                  }
+                },
+                {
+                  "key": "user_agent",
+                  "value": {
+                    "stringValue": "curl/8.18.0"
+                  }
+                },
+                {
+                  "key": "http.protocol",
+                  "value": {
+                    "stringValue": "HTTP/1.1"
+                  }
+                },
+                {
+                  "key": "peer.address",
+                  "value": {
+                    "stringValue": "10.244.0.15"
+                  }
+                },
+                {
+                  "key": "request_size",
+                  "value": {
+                    "stringValue": "170"
+                  }
+                },
+                {
+                  "key": "response_size",
+                  "value": {
+                    "stringValue": "227"
+                  }
+                },
+                {
+                  "key": "component",
+                  "value": {
+                    "stringValue": "proxy"
+                  }
+                },
+                {
+                  "key": "upstream_cluster",
+                  "value": {
+                    "stringValue": "inbound|8088||"
+                  }
+                },
+                {
+                  "key": "upstream_cluster.name",
+                  "value": {
+                    "stringValue": "inbound|8088||;"
+                  }
+                },
+                {
+                  "key": "http.status_code",
+                  "value": {
+                    "stringValue": "202"
+                  }
+                },
+                {
+                  "key": "response_flags",
+                  "value": {
+                    "stringValue": "-"
+                  }
+                },
+                {
+                  "key": "istio.mesh_id",
+                  "value": {
+                    "stringValue": "cluster.local"
+                  }
+                },
+                {
+                  "key": "istio.canonical_revision",
+                  "value": {
+                    "stringValue": "latest"
+                  }
+                },
+                {
+                  "key": "istio.canonical_service",
+                  "value": {
+                    "stringValue": "order-service"
+                  }
+                },
+                {
+                  "key": "istio.cluster_id",
+                  "value": {
+                    "stringValue": "Kubernetes"
+                  }
+                },
+                {
+                  "key": "istio.namespace",
+                  "value": {
+                    "stringValue": "mea"
+                  }
+                },
+                {
+                  "key": "http.method",
+                  "value": {
+                    "stringValue": "POST"
+                  }
+                },
+                {
+                  "key": "http.url",
+                  "value": {
+                    "stringValue": "http://order-service.mea.svc.cluster.local:8088/api/orders"
+                  }
+                }
+              ],
+              "status": {}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "deployment.environment",
+            "value": {
+              "stringValue": "minikube"
+            }
+          },
+          {
+            "key": "service.instance.id",
+            "value": {
+              "stringValue": "3eb15563-e226-4f1e-a39e-b36501da0cd7"
+            }
+          },
+          {
+            "key": "telemetry.auto.version",
+            "value": {
+              "stringValue": "0.66b1"
+            }
+          },
+          {
+            "key": "telemetry.sdk.language",
+            "value": {
+              "stringValue": "python"
+            }
+          },
+          {
+            "key": "telemetry.sdk.name",
+            "value": {
+              "stringValue": "opentelemetry"
+            }
+          },
+          {
+            "key": "telemetry.sdk.version",
+            "value": {
+              "stringValue": "1.45.1"
+            }
+          },
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "order-service"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "opentelemetry.instrumentation.asyncpg",
+            "version": "0.66b1"
+          },
+          "spans": [
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "qFh6dmOOzZI=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "BEGIN;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905413167240",
+              "endTimeUnixNano": "1792246905413343860",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "BEGIN;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "UcCFIRiPpsI=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": ";",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905413390084",
+              "endTimeUnixNano": "1792246905413478511",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": ";"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "j/eofMvdAH0=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "ROLLBACK;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905413516608",
+              "endTimeUnixNano": "1792246905413605457",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "ROLLBACK;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "2cVi50XglMw=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "BEGIN;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905413790003",
+              "endTimeUnixNano": "1792246905413928791",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "BEGIN;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "WPd9c0aDK5A=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "SELECT",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905413968728",
+              "endTimeUnixNano": "1792246905414175157",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "SELECT order_svc.customers.id, order_svc.customers.name, order_svc.customers.email, order_svc.customers.created_at \nFROM order_svc.customers \nWHERE order_svc.customers.id = $1::BIGINT"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "gWQIB6ObQ+0=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "ROLLBACK;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905414426000",
+              "endTimeUnixNano": "1792246905414551212",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "ROLLBACK;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "zm2pywL3klg=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "BEGIN;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905433089930",
+              "endTimeUnixNano": "1792246905433458659",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "BEGIN;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "G6t4euhgdmc=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": ";",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905433599091",
+              "endTimeUnixNano": "1792246905433813371",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": ";"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "+h4S96puxi0=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "ROLLBACK;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905433918575",
+              "endTimeUnixNano": "1792246905434059191",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "ROLLBACK;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "qEUmI7KnZRI=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "BEGIN;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905434407732",
+              "endTimeUnixNano": "1792246905434553679",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "BEGIN;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "YzVxYaaBaFY=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "INSERT",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905434757542",
+              "endTimeUnixNano": "1792246905435227815",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "INSERT INTO order_svc.orders (customer_id, customer_email, status, total_cents, shipping_address, created_at) VALUES ($1::BIGINT, $2::VARCHAR, $3::VARCHAR, $4::BIGINT, $5::VARCHAR, $6::TIMESTAMP WITH TIME ZONE) RETURNING order_svc.orders.id"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "lFWu38GKjuk=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "INSERT",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905435972080",
+              "endTimeUnixNano": "1792246905436296110",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "INSERT INTO order_svc.order_items (order_id, sku, quantity, unit_price_cents) VALUES ($1::BIGINT, $2::VARCHAR, $3::INTEGER, $4::BIGINT) RETURNING order_svc.order_items.id"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "3ymXELJnwR4=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "INSERT",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905437119705",
+              "endTimeUnixNano": "1792246905437400753",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "INSERT INTO order_svc.order_view (order_id, customer_id, status, total_cents, shipping_address, created_at, items) VALUES ($1::BIGINT, $2::BIGINT, $3::VARCHAR, $4::BIGINT, $5::VARCHAR, $6::TIMESTAMP WITH TIME ZONE, $7::JSON)"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "n2ahe2Pf/Ac=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "INSERT",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905437699610",
+              "endTimeUnixNano": "1792246905438287750",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "INSERT INTO order_svc.outbox (aggregate_type, aggregate_id, event_type, payload, created_at, published_at) VALUES ($1::VARCHAR, $2::VARCHAR, $3::VARCHAR, $4::JSON, $5::TIMESTAMP WITH TIME ZONE, $6::TIMESTAMP WITH TIME ZONE) RETURNING order_svc.outbox.id"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "v1G6giaAqvQ=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "COMMIT;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905438625295",
+              "endTimeUnixNano": "1792246905439797718",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "COMMIT;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "V4OM4Vhf3ww=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "BEGIN;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905440782020",
+              "endTimeUnixNano": "1792246905441017399",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "BEGIN;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "1302gwUoiS8=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": ";",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905441130140",
+              "endTimeUnixNano": "1792246905441316102",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": ";"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "bMQUVszeD7Q=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "ROLLBACK;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905441402221",
+              "endTimeUnixNano": "1792246905441580777",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "ROLLBACK;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "Y3i9KUXBqQk=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "BEGIN;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905441880970",
+              "endTimeUnixNano": "1792246905442054067",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "BEGIN;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "pAivJ2t3BRE=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "SELECT",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905442152602",
+              "endTimeUnixNano": "1792246905442430552",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "SELECT order_svc.order_view.order_id, order_svc.order_view.customer_id, order_svc.order_view.status, order_svc.order_view.total_cents, order_svc.order_view.shipping_address, order_svc.order_view.created_at, order_svc.order_view.items \nFROM order_svc.order_view \nWHERE order_svc.order_view.order_id = $1::BIGINT"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "z+rLVAfto1g=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "ROLLBACK;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905442806976",
+              "endTimeUnixNano": "1792246905442973471",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "ROLLBACK;"
+                  }
+                }
+              ],
+              "status": {}
+            }
+          ]
+        },
+        {
+          "scope": {
+            "name": "opentelemetry.instrumentation.fastapi",
+            "version": "0.66b1"
+          },
+          "spans": [
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "dl1c3qPtU7A=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "POST /api/orders http receive",
+              "kind": "SPAN_KIND_INTERNAL",
+              "startTimeUnixNano": "1792246905412783128",
+              "endTimeUnixNano": "1792246905412794475",
+              "attributes": [
+                {
+                  "key": "asgi.event.type",
+                  "value": {
+                    "stringValue": "http.request"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "/TkW7lSWYn4=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "POST /api/orders http send",
+              "kind": "SPAN_KIND_INTERNAL",
+              "startTimeUnixNano": "1792246905443198905",
+              "endTimeUnixNano": "1792246905443217338",
+              "attributes": [
+                {
+                  "key": "asgi.event.type",
+                  "value": {
+                    "stringValue": "http.response.start"
+                  }
+                },
+                {
+                  "key": "http.status_code",
+                  "value": {
+                    "intValue": "202"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "1E+dknjcse8=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "POST /api/orders http send",
+              "kind": "SPAN_KIND_INTERNAL",
+              "startTimeUnixNano": "1792246905443368336",
+              "endTimeUnixNano": "1792246905443375269",
+              "attributes": [
+                {
+                  "key": "asgi.event.type",
+                  "value": {
+                    "stringValue": "http.response.body"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "Ficl3CAugUI=",
+              "parentSpanId": "nDw9Nr+cOLE=",
+              "name": "POST /api/orders",
+              "kind": "SPAN_KIND_SERVER",
+              "startTimeUnixNano": "1792246905412636933",
+              "endTimeUnixNano": "1792246905443402939",
+              "attributes": [
+                {
+                  "key": "http.scheme",
+                  "value": {
+                    "stringValue": "http"
+                  }
+                },
+                {
+                  "key": "http.host",
+                  "value": {
+                    "stringValue": "10.244.0.9:8088"
+                  }
+                },
+                {
+                  "key": "net.host.port",
+                  "value": {
+                    "intValue": "8088"
+                  }
+                },
+                {
+                  "key": "http.flavor",
+                  "value": {
+                    "stringValue": "1.1"
+                  }
+                },
+                {
+                  "key": "http.target",
+                  "value": {
+                    "stringValue": "/api/orders"
+                  }
+                },
+                {
+                  "key": "http.server_name",
+                  "value": {
+                    "stringValue": "order-service.mea.svc.cluster.local:8088"
+                  }
+                },
+                {
+                  "key": "http.user_agent",
+                  "value": {
+                    "stringValue": "curl/8.18.0"
+                  }
+                },
+                {
+                  "key": "net.peer.ip",
+                  "value": {
+                    "stringValue": "127.0.0.6"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "41145"
+                  }
+                },
+                {
+                  "key": "http.method",
+                  "value": {
+                    "stringValue": "POST"
+                  }
+                },
+                {
+                  "key": "http.url",
+                  "value": {
+                    "stringValue": "http://order-service.mea.svc.cluster.local:8088/api/orders"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/api/orders"
+                  }
+                },
+                {
+                  "key": "http.status_code",
+                  "value": {
+                    "intValue": "202"
+                  }
+                }
+              ],
+              "status": {}
+            }
+          ]
+        },
+        {
+          "scope": {
+            "name": "opentelemetry.instrumentation.grpc",
+            "version": "0.66b1"
+          },
+          "spans": [
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "ns220tgZ1og=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "/dev.patterncatalyst.inventory.v1.InventoryGrpcService/Reserve",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905415088422",
+              "endTimeUnixNano": "1792246905428121532",
+              "attributes": [
+                {
+                  "key": "rpc.system",
+                  "value": {
+                    "stringValue": "grpc"
+                  }
+                },
+                {
+                  "key": "rpc.method",
+                  "value": {
+                    "stringValue": "Reserve"
+                  }
+                },
+                {
+                  "key": "rpc.service",
+                  "value": {
+                    "stringValue": "dev.patterncatalyst.inventory.v1.InventoryGrpcService"
+                  }
+                },
+                {
+                  "key": "rpc.grpc.status_code",
+                  "value": {
+                    "intValue": "0"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "cC9OAf8reKY=",
+              "parentSpanId": "Ficl3CAugUI=",
+              "name": "/dev.patterncatalyst.inventory.v1.InventoryGrpcService/GetStock",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905428390414",
+              "endTimeUnixNano": "1792246905432388327",
+              "attributes": [
+                {
+                  "key": "rpc.system",
+                  "value": {
+                    "stringValue": "grpc"
+                  }
+                },
+                {
+                  "key": "rpc.method",
+                  "value": {
+                    "stringValue": "GetStock"
+                  }
+                },
+                {
+                  "key": "rpc.service",
+                  "value": {
+                    "stringValue": "dev.patterncatalyst.inventory.v1.InventoryGrpcService"
+                  }
+                },
+                {
+                  "key": "rpc.grpc.status_code",
+                  "value": {
+                    "intValue": "0"
+                  }
+                }
+              ],
+              "status": {}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "deployment.environment",
+            "value": {
+              "stringValue": "minikube"
+            }
+          },
+          {
+            "key": "service.instance.id",
+            "value": {
+              "stringValue": "5cda7230-4012-4721-a262-f26985470fe7"
+            }
+          },
+          {
+            "key": "telemetry.auto.version",
+            "value": {
+              "stringValue": "0.66b1"
+            }
+          },
+          {
+            "key": "telemetry.sdk.language",
+            "value": {
+              "stringValue": "python"
+            }
+          },
+          {
+            "key": "telemetry.sdk.name",
+            "value": {
+              "stringValue": "opentelemetry"
+            }
+          },
+          {
+            "key": "telemetry.sdk.version",
+            "value": {
+              "stringValue": "1.45.1"
+            }
+          },
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "strangler-proxy"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "opentelemetry.instrumentation.starlette",
+            "version": "0.66b1"
+          },
+          "spans": [
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "nmJbGJh5FKw=",
+              "parentSpanId": "7AHJZhlyKPk=",
+              "name": "POST /{path:path} http receive",
+              "kind": "SPAN_KIND_INTERNAL",
+              "startTimeUnixNano": "1792246905410964846",
+              "endTimeUnixNano": "1792246905410980163",
+              "attributes": [
+                {
+                  "key": "asgi.event.type",
+                  "value": {
+                    "stringValue": "http.request"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "vcTRhlyhLk4=",
+              "parentSpanId": "7AHJZhlyKPk=",
+              "name": "POST /{path:path} http send",
+              "kind": "SPAN_KIND_INTERNAL",
+              "startTimeUnixNano": "1792246905444566943",
+              "endTimeUnixNano": "1792246905444579296",
+              "attributes": [
+                {
+                  "key": "asgi.event.type",
+                  "value": {
+                    "stringValue": "http.response.start"
+                  }
+                },
+                {
+                  "key": "http.status_code",
+                  "value": {
+                    "intValue": "202"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "1g5dOrs5gbo=",
+              "parentSpanId": "7AHJZhlyKPk=",
+              "name": "POST /{path:path} http send",
+              "kind": "SPAN_KIND_INTERNAL",
+              "startTimeUnixNano": "1792246905444768606",
+              "endTimeUnixNano": "1792246905444775422",
+              "attributes": [
+                {
+                  "key": "asgi.event.type",
+                  "value": {
+                    "stringValue": "http.response.body"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "Q3qgOZAWUkU=",
+              "parentSpanId": "7AHJZhlyKPk=",
+              "name": "POST /{path:path} http send",
+              "kind": "SPAN_KIND_INTERNAL",
+              "startTimeUnixNano": "1792246905445076431",
+              "endTimeUnixNano": "1792246905445083096",
+              "attributes": [
+                {
+                  "key": "asgi.event.type",
+                  "value": {
+                    "stringValue": "http.response.body"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "7AHJZhlyKPk=",
+              "parentSpanId": "/Po/fbdaeVI=",
+              "name": "POST /{path:path}",
+              "kind": "SPAN_KIND_SERVER",
+              "startTimeUnixNano": "1792246905410785955",
+              "endTimeUnixNano": "1792246905445112644",
+              "attributes": [
+                {
+                  "key": "http.scheme",
+                  "value": {
+                    "stringValue": "http"
+                  }
+                },
+                {
+                  "key": "http.host",
+                  "value": {
+                    "stringValue": "10.244.0.15:8888"
+                  }
+                },
+                {
+                  "key": "net.host.port",
+                  "value": {
+                    "intValue": "8888"
+                  }
+                },
+                {
+                  "key": "http.flavor",
+                  "value": {
+                    "stringValue": "1.1"
+                  }
+                },
+                {
+                  "key": "http.target",
+                  "value": {
+                    "stringValue": "/api/orders"
+                  }
+                },
+                {
+                  "key": "http.server_name",
+                  "value": {
+                    "stringValue": "127.0.0.1:30888"
+                  }
+                },
+                {
+                  "key": "http.user_agent",
+                  "value": {
+                    "stringValue": "curl/8.18.0"
+                  }
+                },
+                {
+                  "key": "net.peer.ip",
+                  "value": {
+                    "stringValue": "127.0.0.6"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "40493"
+                  }
+                },
+                {
+                  "key": "http.method",
+                  "value": {
+                    "stringValue": "POST"
+                  }
+                },
+                {
+                  "key": "http.url",
+                  "value": {
+                    "stringValue": "http://127.0.0.1:30888/api/orders"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/{path:path}"
+                  }
+                },
+                {
+                  "key": "http.status_code",
+                  "value": {
+                    "intValue": "202"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "KbQK2gp1gJo=",
+              "parentSpanId": "7AHJZhlyKPk=",
+              "name": "POST /{path:path} http receive",
+              "kind": "SPAN_KIND_INTERNAL",
+              "startTimeUnixNano": "1792246905444514638",
+              "endTimeUnixNano": "1792246905445163653",
+              "attributes": [
+                {
+                  "key": "asgi.event.type",
+                  "value": {
+                    "stringValue": "http.disconnect"
+                  }
+                }
+              ],
+              "status": {}
+            }
+          ]
+        },
+        {
+          "scope": {
+            "name": "opentelemetry.instrumentation.httpx",
+            "version": "0.66b1"
+          },
+          "spans": [
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "zaDbK4ZmwZI=",
+              "parentSpanId": "7AHJZhlyKPk=",
+              "name": "POST",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905411325180",
+              "endTimeUnixNano": "1792246905444282550",
+              "attributes": [
+                {
+                  "key": "http.method",
+                  "value": {
+                    "stringValue": "POST"
+                  }
+                },
+                {
+                  "key": "http.url",
+                  "value": {
+                    "stringValue": "http://order-service.mea.svc.cluster.local:8088/api/orders"
+                  }
+                },
+                {
+                  "key": "http.status_code",
+                  "value": {
+                    "intValue": "202"
+                  }
+                }
+              ],
+              "status": {}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "deployment.environment",
+            "value": {
+              "stringValue": "minikube"
+            }
+          },
+          {
+            "key": "telemetry.sdk.language",
+            "value": {
+              "stringValue": "cpp"
+            }
+          },
+          {
+            "key": "telemetry.sdk.name",
+            "value": {
+              "stringValue": "envoy"
+            }
+          },
+          {
+            "key": "telemetry.sdk.version",
+            "value": {
+              "stringValue": "8c7d15f0482424f4eea86580c745976377633b34/1.39.5-dev/Clean/RELEASE/BoringSSL"
+            }
+          },
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "strangler-proxy.mea"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "envoy",
+            "version": "8c7d15f0482424f4eea86580c745976377633b34/1.39.5-dev/Clean/RELEASE/BoringSSL"
+          },
+          "spans": [
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "0juZqkyKHTk=",
+              "parentSpanId": "zaDbK4ZmwZI=",
+              "name": "order-service.mea.svc.cluster.local:8088/*",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905411872000",
+              "endTimeUnixNano": "1792246905443830000",
+              "attributes": [
+                {
+                  "key": "node_id",
+                  "value": {
+                    "stringValue": "sidecar~10.244.0.15~strangler-proxy-c64c7c5d9-rq69s.mea~mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "zone",
+                  "value": {
+                    "stringValue": ""
+                  }
+                },
+                {
+                  "key": "guid:x-request-id",
+                  "value": {
+                    "stringValue": "afc4fb33-7c77-99a5-9a0b-5a186b88c673"
+                  }
+                },
+                {
+                  "key": "downstream_cluster",
+                  "value": {
+                    "stringValue": "-"
+                  }
+                },
+                {
+                  "key": "user_agent",
+                  "value": {
+                    "stringValue": "curl/8.18.0"
+                  }
+                },
+                {
+                  "key": "http.protocol",
+                  "value": {
+                    "stringValue": "HTTP/1.1"
+                  }
+                },
+                {
+                  "key": "peer.address",
+                  "value": {
+                    "stringValue": "10.244.0.15"
+                  }
+                },
+                {
+                  "key": "request_size",
+                  "value": {
+                    "stringValue": "170"
+                  }
+                },
+                {
+                  "key": "response_size",
+                  "value": {
+                    "stringValue": "227"
+                  }
+                },
+                {
+                  "key": "component",
+                  "value": {
+                    "stringValue": "proxy"
+                  }
+                },
+                {
+                  "key": "upstream_cluster",
+                  "value": {
+                    "stringValue": "outbound|8088||order-service.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "upstream_cluster.name",
+                  "value": {
+                    "stringValue": "outbound|8088||order-service.mea.svc.cluster.local;"
+                  }
+                },
+                {
+                  "key": "http.status_code",
+                  "value": {
+                    "stringValue": "202"
+                  }
+                },
+                {
+                  "key": "response_flags",
+                  "value": {
+                    "stringValue": "-"
+                  }
+                },
+                {
+                  "key": "istio.namespace",
+                  "value": {
+                    "stringValue": "mea"
+                  }
+                },
+                {
+                  "key": "istio.cluster_id",
+                  "value": {
+                    "stringValue": "Kubernetes"
+                  }
+                },
+                {
+                  "key": "istio.canonical_revision",
+                  "value": {
+                    "stringValue": "latest"
+                  }
+                },
+                {
+                  "key": "istio.canonical_service",
+                  "value": {
+                    "stringValue": "strangler-proxy"
+                  }
+                },
+                {
+                  "key": "istio.mesh_id",
+                  "value": {
+                    "stringValue": "cluster.local"
+                  }
+                },
+                {
+                  "key": "http.method",
+                  "value": {
+                    "stringValue": "POST"
+                  }
+                },
+                {
+                  "key": "http.url",
+                  "value": {
+                    "stringValue": "http://order-service.mea.svc.cluster.local:8088/api/orders"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "/Po/fbdaeVI=",
+              "name": "strangler-proxy.mea.svc.cluster.local:8888/*",
+              "kind": "SPAN_KIND_SERVER",
+              "startTimeUnixNano": "1792246905410319000",
+              "endTimeUnixNano": "1792246905445135000",
+              "attributes": [
+                {
+                  "key": "node_id",
+                  "value": {
+                    "stringValue": "sidecar~10.244.0.15~strangler-proxy-c64c7c5d9-rq69s.mea~mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "zone",
+                  "value": {
+                    "stringValue": ""
+                  }
+                },
+                {
+                  "key": "guid:x-request-id",
+                  "value": {
+                    "stringValue": "afc4fb33-7c77-99a5-9a0b-5a186b88c673"
+                  }
+                },
+                {
+                  "key": "downstream_cluster",
+                  "value": {
+                    "stringValue": "-"
+                  }
+                },
+                {
+                  "key": "user_agent",
+                  "value": {
+                    "stringValue": "curl/8.18.0"
+                  }
+                },
+                {
+                  "key": "http.protocol",
+                  "value": {
+                    "stringValue": "HTTP/1.1"
+                  }
+                },
+                {
+                  "key": "peer.address",
+                  "value": {
+                    "stringValue": "10.244.0.1"
+                  }
+                },
+                {
+                  "key": "request_size",
+                  "value": {
+                    "stringValue": "170"
+                  }
+                },
+                {
+                  "key": "response_size",
+                  "value": {
+                    "stringValue": "227"
+                  }
+                },
+                {
+                  "key": "component",
+                  "value": {
+                    "stringValue": "proxy"
+                  }
+                },
+                {
+                  "key": "upstream_cluster",
+                  "value": {
+                    "stringValue": "inbound|8888||"
+                  }
+                },
+                {
+                  "key": "upstream_cluster.name",
+                  "value": {
+                    "stringValue": "inbound|8888||;"
+                  }
+                },
+                {
+                  "key": "http.status_code",
+                  "value": {
+                    "stringValue": "202"
+                  }
+                },
+                {
+                  "key": "response_flags",
+                  "value": {
+                    "stringValue": "-"
+                  }
+                },
+                {
+                  "key": "istio.canonical_service",
+                  "value": {
+                    "stringValue": "strangler-proxy"
+                  }
+                },
+                {
+                  "key": "istio.canonical_revision",
+                  "value": {
+                    "stringValue": "latest"
+                  }
+                },
+                {
+                  "key": "istio.cluster_id",
+                  "value": {
+                    "stringValue": "Kubernetes"
+                  }
+                },
+                {
+                  "key": "istio.namespace",
+                  "value": {
+                    "stringValue": "mea"
+                  }
+                },
+                {
+                  "key": "istio.mesh_id",
+                  "value": {
+                    "stringValue": "cluster.local"
+                  }
+                },
+                {
+                  "key": "http.method",
+                  "value": {
+                    "stringValue": "POST"
+                  }
+                },
+                {
+                  "key": "http.url",
+                  "value": {
+                    "stringValue": "http://127.0.0.1:30888/api/orders"
+                  }
+                }
+              ],
+              "status": {}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "deployment.environment",
+            "value": {
+              "stringValue": "minikube"
+            }
+          },
+          {
+            "key": "service.instance.id",
+            "value": {
+              "stringValue": "98ab32ec-a6ab-4b61-b1fc-be6c2165477c"
+            }
+          },
+          {
+            "key": "telemetry.auto.version",
+            "value": {
+              "stringValue": "0.66b1"
+            }
+          },
+          {
+            "key": "telemetry.sdk.language",
+            "value": {
+              "stringValue": "python"
+            }
+          },
+          {
+            "key": "telemetry.sdk.name",
+            "value": {
+              "stringValue": "opentelemetry"
+            }
+          },
+          {
+            "key": "telemetry.sdk.version",
+            "value": {
+              "stringValue": "1.45.1"
+            }
+          },
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "inventory-service"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "opentelemetry.instrumentation.asyncpg",
+            "version": "0.66b1"
+          },
+          "spans": [
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "HUylbhBKoFg=",
+              "parentSpanId": "7ZsCiAJFygM=",
+              "name": "BEGIN;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905423350428",
+              "endTimeUnixNano": "1792246905423594075",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "BEGIN;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "64T4VCnEs5w=",
+              "parentSpanId": "7ZsCiAJFygM=",
+              "name": ";",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905423646675",
+              "endTimeUnixNano": "1792246905423785828",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": ";"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "GMN1+QJ3IFQ=",
+              "parentSpanId": "7ZsCiAJFygM=",
+              "name": "ROLLBACK;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905423823977",
+              "endTimeUnixNano": "1792246905423897520",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "ROLLBACK;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "NWgQ9lReP3M=",
+              "parentSpanId": "7ZsCiAJFygM=",
+              "name": "BEGIN;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905424100171",
+              "endTimeUnixNano": "1792246905424169480",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "BEGIN;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "vlmd8be0o4U=",
+              "parentSpanId": "7ZsCiAJFygM=",
+              "name": "UPDATE",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905424209000",
+              "endTimeUnixNano": "1792246905424378365",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "UPDATE inventory.inventory_items SET quantity_on_hand=(inventory.inventory_items.quantity_on_hand - $1::INTEGER) WHERE inventory.inventory_items.sku = $2::VARCHAR AND inventory.inventory_items.quantity_on_hand >= $3::INTEGER"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "oNeUkf0UCGU=",
+              "parentSpanId": "7ZsCiAJFygM=",
+              "name": "COMMIT;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905424606819",
+              "endTimeUnixNano": "1792246905425716773",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "COMMIT;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "AjCKs23EsvU=",
+              "parentSpanId": "7ZsCiAJFygM=",
+              "name": "BEGIN;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905425977706",
+              "endTimeUnixNano": "1792246905426106660",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "BEGIN;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "gjC6RmrCt4k=",
+              "parentSpanId": "7ZsCiAJFygM=",
+              "name": ";",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905426144562",
+              "endTimeUnixNano": "1792246905426214462",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": ";"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "OloG1HHoyO8=",
+              "parentSpanId": "7ZsCiAJFygM=",
+              "name": "ROLLBACK;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905426249892",
+              "endTimeUnixNano": "1792246905426308432",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "ROLLBACK;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "QIZKR3Vvyxo=",
+              "parentSpanId": "7ZsCiAJFygM=",
+              "name": "BEGIN;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905426446068",
+              "endTimeUnixNano": "1792246905426509837",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "BEGIN;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "Xk19s+rk9go=",
+              "parentSpanId": "7ZsCiAJFygM=",
+              "name": "SELECT",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905426557494",
+              "endTimeUnixNano": "1792246905426679324",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "SELECT inventory.inventory_items.id, inventory.inventory_items.sku, inventory.inventory_items.name, inventory.inventory_items.price_cents, inventory.inventory_items.quantity_on_hand, inventory.inventory_items.updated_at \nFROM inventory.inventory_items \nWHERE inventory.inventory_items.sku = $1::VARCHAR"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "7zWdR36AHkY=",
+              "parentSpanId": "7ZsCiAJFygM=",
+              "name": "ROLLBACK;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905426908480",
+              "endTimeUnixNano": "1792246905427027775",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "ROLLBACK;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "igevl3z181A=",
+              "parentSpanId": "wCzIPFXls44=",
+              "name": "BEGIN;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905430104026",
+              "endTimeUnixNano": "1792246905430314825",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "BEGIN;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "nIhMdmOYCC0=",
+              "parentSpanId": "wCzIPFXls44=",
+              "name": ";",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905430393146",
+              "endTimeUnixNano": "1792246905430547838",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": ";"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "V25XHXIWJNs=",
+              "parentSpanId": "wCzIPFXls44=",
+              "name": "ROLLBACK;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905430636097",
+              "endTimeUnixNano": "1792246905430749456",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "ROLLBACK;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "g99tDOcb9yA=",
+              "parentSpanId": "wCzIPFXls44=",
+              "name": "BEGIN;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905430901657",
+              "endTimeUnixNano": "1792246905430979095",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "BEGIN;"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "Npo5sOgz8tY=",
+              "parentSpanId": "wCzIPFXls44=",
+              "name": "SELECT",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905431018631",
+              "endTimeUnixNano": "1792246905431146292",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "SELECT inventory.inventory_items.id, inventory.inventory_items.sku, inventory.inventory_items.name, inventory.inventory_items.price_cents, inventory.inventory_items.quantity_on_hand, inventory.inventory_items.updated_at \nFROM inventory.inventory_items \nWHERE inventory.inventory_items.sku = $1::VARCHAR"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "OdSZWRjto08=",
+              "parentSpanId": "wCzIPFXls44=",
+              "name": "ROLLBACK;",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1792246905431355262",
+              "endTimeUnixNano": "1792246905431460179",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": {
+                    "stringValue": "postgresql"
+                  }
+                },
+                {
+                  "key": "db.name",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "db.user",
+                  "value": {
+                    "stringValue": "monolith"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "postgres.mea.svc.cluster.local"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "5432"
+                  }
+                },
+                {
+                  "key": "net.transport",
+                  "value": {
+                    "stringValue": "ip_tcp"
+                  }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "ROLLBACK;"
+                  }
+                }
+              ],
+              "status": {}
+            }
+          ]
+        },
+        {
+          "scope": {
+            "name": "opentelemetry.instrumentation.grpc",
+            "version": "0.66b1"
+          },
+          "spans": [
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "7ZsCiAJFygM=",
+              "parentSpanId": "uFY7cQddw0k=",
+              "name": "/dev.patterncatalyst.inventory.v1.InventoryGrpcService/Reserve",
+              "kind": "SPAN_KIND_SERVER",
+              "startTimeUnixNano": "1792246905422821530",
+              "endTimeUnixNano": "1792246905427144227",
+              "attributes": [
+                {
+                  "key": "rpc.system",
+                  "value": {
+                    "stringValue": "grpc"
+                  }
+                },
+                {
+                  "key": "rpc.grpc.status_code",
+                  "value": {
+                    "intValue": "0"
+                  }
+                },
+                {
+                  "key": "rpc.method",
+                  "value": {
+                    "stringValue": "Reserve"
+                  }
+                },
+                {
+                  "key": "rpc.service",
+                  "value": {
+                    "stringValue": "dev.patterncatalyst.inventory.v1.InventoryGrpcService"
+                  }
+                },
+                {
+                  "key": "rpc.user_agent",
+                  "value": {
+                    "stringValue": "grpc-python-asyncio/1.84.0 grpc-c/56.0.0 (linux; chttp2)"
+                  }
+                },
+                {
+                  "key": "net.peer.ip",
+                  "value": {
+                    "stringValue": "127.0.0.6"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "stringValue": "49491"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "oQtGGKHUAalA9CZt/f5APQ==",
+              "spanId": "wCzIPFXls44=",
+              "parentSpanId": "OFa8dQyz2OE=",
+              "name": "/dev.patterncatalyst.inventory.v1.InventoryGrpcService/GetStock",
+              "kind": "SPAN_KIND_SERVER",
+              "startTimeUnixNano": "1792246905429735927",
+              "endTimeUnixNano": "1792246905431572209",
+              "attributes": [
+                {
+                  "key": "rpc.system",
+                  "value": {
+                    "stringValue": "grpc"
+                  }
+                },
+                {
+                  "key": "rpc.grpc.status_code",
+                  "value": {
+                    "intValue": "0"
+                  }
+                },
+                {
+                  "key": "rpc.method",
+                  "value": {
+                    "stringValue": "GetStock"
+                  }
+                },
+                {
+                  "key": "rpc.service",
+                  "value": {
+                    "stringValue": "dev.patterncatalyst.inventory.v1.InventoryGrpcService"
+                  }
+                },
+                {
+                  "key": "rpc.user_agent",
+                  "value": {
+                    "stringValue": "grpc-python-asyncio/1.84.0 grpc-c/56.0.0 (linux; chttp2)"
+                  }
+                },
+                {
+                  "key": "net.peer.ip",
+                  "value": {
+                    "stringValue": "127.0.0.6"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "stringValue": "49491"
+                  }
+                }
+              ],
+              "status": {}
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

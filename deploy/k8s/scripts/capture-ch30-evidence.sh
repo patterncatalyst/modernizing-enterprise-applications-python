@@ -63,30 +63,13 @@ missing() {
 }
 
 had_failure=0
-fwd_pids=()
 
-cleanup() {
-  for pid in "${fwd_pids[@]:-}"; do
-    kill "$pid" >/dev/null 2>&1 || true
-  done
-}
-trap cleanup EXIT
-
-start_port_forward() {
-  # start_port_forward <svc> <local-port>:<remote-port> <log-file> -- start a
-  # background `kubectl port-forward`, block until the local port accepts a
-  # connection (or fail), and record the pid for cleanup on exit.
-  local svc="$1" ports="$2" log="$3"
-  local local_port="${ports%%:*}"
-  kc -n "$NAMESPACE" port-forward "svc/${svc}" "$ports" >"$log" 2>&1 &
-  local pid=$!
-  fwd_pids+=("$pid")
-  for _ in $(seq 1 30); do
-    (exec 3<>"/dev/tcp/127.0.0.1/${local_port}") 2>/dev/null && { exec 3>&-; return 0; }
-    sleep 1
-  done
-  fail "port-forward svc/${svc} ${ports} never came up -- see ${log}"
-}
+# Query Tempo/Mimir from INSIDE the cluster -- NO port-forward. The lgtm pod
+# is unmeshed and carries curl; exec a curl there against its own localhost
+# (Tempo :3200, Mimir :9090). Args are passed straight to curl. The only
+# host-reachable endpoint this script uses is the strangler-proxy NodePort
+# (30888) for the checkouts; everything else is in-cluster exec.
+lgtm_exec() { kc -n "$NAMESPACE" exec "deploy/lgtm" -- curl -sS --max-time 20 "$@"; }
 
 mkdir -p "$EVIDENCE_DIR"
 
@@ -116,8 +99,8 @@ for i in $(seq 1 "$CHECKOUT_COUNT"); do
   echo "  checkout $i: HTTP $code"
 done
 
-step "Sleeping 10s so spans flush to Tempo and the otelcol scrape cycles for metrics"
-sleep 10
+step "Sleeping 30s so spans flush to Tempo (ingester -> queryable) and the otelcol scrape cycles for metrics"
+sleep 30
 
 step "Capturing mTLS evidence (istioctl + pod READY column)"
 order_pod="$(kc -n "$NAMESPACE" get pod -l app.kubernetes.io/name=order-service \
@@ -138,14 +121,12 @@ else
   ok "wrote $mtls_file"
 fi
 
-step "Capturing istio_requests_total from Mimir (svc/lgtm:9090)"
-start_port_forward lgtm 19090:9090 /tmp/mea-evidence-prometheus-portforward.log
-
+step "Capturing istio_requests_total from Mimir (in-cluster svc/lgtm:9090, no port-forward)"
 prom_query='istio_requests_total{destination_service=~"order-service.*|inventory-service.*"}'
 prom_response=""
 prom_path=""
 for path in "/prometheus/api/v1/query" "/api/v1/query"; do
-  resp="$(curl -sG "http://127.0.0.1:19090${path}" --data-urlencode "query=${prom_query}" || true)"
+  resp="$(lgtm_exec -G "http://localhost:9090${path}" --data-urlencode "query=${prom_query}" || true)"
   if [[ -n "$resp" ]] && jq -e '.status == "success"' >/dev/null 2>&1 <<<"$resp"; then
     prom_response="$resp"
     prom_path="$path"
@@ -157,7 +138,7 @@ if [[ -z "$prom_response" ]]; then
   missing "ch30-metrics" \
     "Neither /prometheus/api/v1/query nor /api/v1/query returned a successful response from svc/lgtm:9090." \
     "Confirm the otelcol prometheus/istio-mesh receiver has scraped at least once (it runs on an interval -- wait a minute and retry) and that lgtm-deployment.yaml's Mimir path prefix hasn't changed." \
-    "Manual check: kubectl --context $PROFILE -n $NAMESPACE port-forward svc/lgtm 9090:9090, then curl both path prefixes yourself."
+    "Manual check (no port-forward): kubectl --context $PROFILE -n $NAMESPACE exec deploy/lgtm -- curl -sG http://localhost:9090/prometheus/api/v1/query --data-urlencode 'query=${prom_query}'"
 else
   result_count="$(jq -r '.data.result | length' <<<"$prom_response")"
   if [[ "$result_count" == "0" ]]; then
@@ -174,23 +155,24 @@ else
   fi
 fi
 
-step "Capturing the hero trace from Tempo (svc/lgtm:3200)"
-start_port_forward lgtm 13200:3200 /tmp/mea-evidence-tempo-portforward.log
-
-search_response="$(curl -sG 'http://127.0.0.1:13200/api/search' \
-  --data-urlencode 'tags=service.name=order-service' \
+step "Capturing the hero trace from Tempo (in-cluster svc/lgtm:3200, no port-forward)"
+# The checkout trace is rooted at strangler-proxy's POST server span. A plain
+# recency/tag search is swamped by the OutboxRelay + SagaConsumer background
+# DB-op traces (each asyncpg poll is its own root trace), so target the request
+# trace directly with TraceQL, then keep the newest candidate that spans all
+# three services.
+search_response="$(lgtm_exec -G 'http://localhost:3200/api/search' \
+  --data-urlencode 'q={ name =~ "POST.*" && rootServiceName = "strangler-proxy.mea" }' \
   --data-urlencode 'limit=20' || true)"
 
 trace_id=""
 if [[ -n "$search_response" ]] && jq -e '.traces' >/dev/null 2>&1 <<<"$search_response"; then
-  # Walk candidate traces newest-first and keep the first one whose own
-  # trace payload shows spans from all three services in the synchronous
-  # path -- the search response alone doesn't carry per-trace span service
-  # names, so each candidate needs its own /api/traces/<id> fetch to check.
+  # Each candidate needs its own /api/traces/<id> fetch to confirm its span
+  # service set (the search response doesn't carry per-trace service names).
   candidate_ids="$(jq -r '.traces[].traceID' <<<"$search_response")"
   while read -r candidate; do
     [[ -z "$candidate" ]] && continue
-    candidate_trace="$(curl -s "http://127.0.0.1:13200/api/traces/${candidate}" || true)"
+    candidate_trace="$(lgtm_exec "http://localhost:3200/api/traces/${candidate}" || true)"
     [[ -z "$candidate_trace" ]] && continue
     # Recursive-descent extraction (rather than a fixed `.batches[]...` or
     # `.resourceSpans[]...` path) so this survives the OTLP-JSON shape
@@ -206,12 +188,11 @@ fi
 
 if [[ -z "$trace_id" ]]; then
   missing "ch30-hero-trace" \
-    "No trace found in the last 20 Tempo search results for service.name=order-service that also includes spans from strangler-proxy and inventory-service." \
-    "Tempo's search API response shape can differ by version -- inspect it by hand:" \
-    "  kubectl --context $PROFILE -n $NAMESPACE port-forward svc/lgtm 3200:3200" \
-    "  curl -sG 'http://127.0.0.1:3200/api/search' --data-urlencode 'tags=service.name=order-service' --data-urlencode 'limit=20' | jq ." \
-    "Then fetch the chosen trace: curl -s http://127.0.0.1:3200/api/traces/<traceID> | jq . > $trace_file" \
-    "If the result set is empty, the checkouts this script drove may not have flushed to Tempo yet -- wait and retry, or confirm OTEL_EXPORTER_OTLP_ENDPOINT points at svc/lgtm (base/app-config.yaml)."
+    "No POST trace rooted at strangler-proxy (also spanning order-service + inventory-service) found in Tempo." \
+    "The 3 instrumented services must export (OTEL_SDK_DISABLED=false, OTEL_EXPORTER_OTLP_ENDPOINT -> svc/lgtm:4317) and a checkout must have run and flushed (ingester -> queryable can lag ~30s)." \
+    "Manual check (no port-forward):" \
+    "  kubectl --context $PROFILE -n $NAMESPACE exec deploy/lgtm -- curl -sG 'http://localhost:3200/api/search' --data-urlencode 'q={ name =~ \"POST.*\" && rootServiceName = \"strangler-proxy.mea\" }' | jq ." \
+    "  then: kubectl ... exec deploy/lgtm -- curl -s http://localhost:3200/api/traces/<traceID> | jq . > $trace_file"
 fi
 
 step "Summary"

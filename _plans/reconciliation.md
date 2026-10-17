@@ -1809,13 +1809,16 @@ evidence is committed and the footer flips to `verified-live (user-run)`.
 
 **Verdict:** CLEAN on the headless tree (10/10 adversarial-validation criteria
 met; all required CI gates green on PR #10 after the deploy-manifests fix). The
-one outstanding item is ch.30's live-cluster evidence, named and deferred to the
-maintainer's separate run.
+one outstanding item was ch.30's live-cluster evidence — **now DONE: verified-live
+headless on minikube (2026-10-17)**, `capture-ch30-evidence.sh` green (8 pods 2/2
+meshed, STRICT mTLS, Mimir series, one connected proxy->order->inventory hero
+trace), evidence committed under `deploy/k8s/observability/evidence/`, footer
+flipped to `verified`. Three capture-script defects were found+fixed on the run
+(recency search -> TraceQL, 10s -> 30s flush, port-forward -> in-cluster exec).
 
 **Forward reference:** no further back-matter chapters remain. Future work
-(not A/B gates): front-matter ch.00-13, the 3 decks (101/201/201-fastapi), and
-ch.33 (OpenShift/CRC appendix); plus landing ch.30's live evidence when the
-maintainer's run completes.
+(not A/B gates): front-matter ch.00-13 and the 3 decks (101/201/201-fastapi).
+ch.33 (OpenShift/CRC) and ch.30's live evidence are both now landed.
 
 ## ch.33 — Appendix A: Deploying to OpenShift (r11, Part 11, appendix)
 
@@ -1893,7 +1896,7 @@ RHBOTel operators + namespaces was navigated by joining the existing compatible
 v1.30.5 control plane rather than installing a second one.
 
 **Forward reference:** ch.33 is the project's **final chapter** — no further
-back-matter or appendix chapters remain. What's left across the whole
-project: the front-matter chapters (ch.00–13), the three decks, and landing
-ch.30's live minikube/Istio/LGTM evidence (DRQ-095) once its own pending run
-completes.
+back-matter or appendix chapters remain. ch.30's live minikube/Istio/LGTM
+evidence (DRQ-095) has since been landed (verified-live, 2026-10-17), so what's
+left across the whole project is just the front-matter chapters (ch.00–13) and
+the three decks (101/201/201-fastapi).
