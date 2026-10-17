@@ -1,0 +1,231 @@
+# values.yaml -- the knobs for deploying the modernized system to OpenShift.
+#
+# The eight application workloads are described declaratively in `services`
+# below; templates/app-deployment.yaml and app-service.yaml range over this
+# map, so the whole topology is one template driven by data -- the same
+# idiom the deploy/k8s/base/ hand-written manifests spell out one file per
+# service. Field meanings:
+#   port        -- the one HTTP port every service listens on
+#   grpcPort    -- set only on inventory-service (its second, gRPC, surface)
+#   probe       -- "tcp" (no /health route: strangler-proxy, review-service)
+#                  or "http" (the other six)
+#   portEnv     -- the env var name this service's own Settings.from_env()
+#                  reads for its port, when it needs one set explicitly
+#                  (HTTP_PORT for 04-08, PORT for notification-service; unset
+#                  for strangler-proxy/review-service, which default in code)
+#   db          -- true if the service is one of the six DATABASE_URL
+#                  consumers (review-/notification-/inventory-/payment-/
+#                  shipping-/order-service)
+#   schema      -- the Postgres schema this service's OWN code selects via
+#                  search_path (documentation only -- see configmap-app.yaml's
+#                  header for why this is not an env var); "public" (shared,
+#                  monolith-seeded) for review-service
+#   kafka       -- true if this service runs a consumer group (wider
+#                  terminationGracePeriodSeconds so the group leaves cleanly)
+#   consumerGroup -- the CONSUMER_GROUP value, when kafka is true
+#   preStopSleep  -- seconds of preStop sleep before SIGTERM (order-service
+#                  only: the widest fan-in, four inbound channels + the
+#                  outbox relay, needs time to commit offsets)
+#   otel        -- true for the three services r10/ch.30 instruments
+#                  (strangler-proxy, inventory-service, order-service):
+#                  OTEL_SERVICE_NAME is set directly (it needs a different
+#                  value per Deployment; the other three OTEL_* keys are
+#                  shared, in configmap-app.yaml, gated by
+#                  observability.otlp.enabled)
+#   migrate     -- true if the container's own CMD runs `alembic upgrade
+#                  head` on start (documentation only, already baked into
+#                  each service's Containerfile; review-service runs none
+#                  of its own -- see templates/bootstrap-job.yaml)
+#   route       -- true exposes this service externally via an OpenShift
+#                  Route (strangler-proxy, the system's one REST edge;
+#                  graphql-gateway, its own front door)
+#   gracePeriodSeconds -- terminationGracePeriodSeconds, ported exactly from
+#                  the matching deploy/k8s/base/<svc>.yaml
+#   resources   -- requests/limits, ported exactly from the matching
+#                  deploy/k8s/base/<svc>.yaml (no size-tier rounding)
+
+# Container image settings. On OpenShift, images are pushed by
+# build-and-push.sh to the exposed internal registry
+# (default-route-openshift-image-registry.apps-crc.testing) under the
+# project namespace, and pulled in-cluster via the registry's Service DNS
+# (image-registry.openshift-image-registry.svc:5000/mea) -- what a
+# Deployment's imagePullPolicy actually resolves. `registry` below is the
+# in-cluster pull path; build-and-push.sh's `-r` flag is the external push
+# host. Override `registry` for an external registry (Quay, etc.) instead.
+image:
+  registry: "image-registry.openshift-image-registry.svc:5000/mea"
+  tag: "v1"
+  pullPolicy: IfNotPresent
+
+# The frozen monolith image (examples/00-monolith) -- not deployed as its
+# own workload, but built and pushed by build-and-push.sh so
+# templates/bootstrap-job.yaml can run its manage.py migrate/seed in-cluster
+# (DRQ-111): the one-time seed of the shared `public` schema
+# (reviews/customers/inventory_items/auth_user) review-service reads.
+monolith:
+  image: "image-registry.openshift-image-registry.svc:5000/mea/monolith:v1"
+
+# Dev-only Postgres credential, republished from
+# deploy/k8s/base/app-secret.yaml (same values as compose.yaml/.env.example:
+# POSTGRES_USER=monolith, POSTGRES_PASSWORD=monolith, POSTGRES_DB=monolith).
+# PRODUCTION: replace with a SealedSecret / ExternalSecret -- never
+# plaintext here.
+postgres:
+  username: "monolith"
+  password: "monolith"
+  database: "monolith"
+  # Mirrored into the internal registry with
+  # build-and-push.sh --mirror-infra (the CRC VM has no Docker Hub egress);
+  # matches deploy/k8s/base/infra/postgres-statefulset.yaml's upstream tag.
+  image: "image-registry.openshift-image-registry.svc:5000/mea/postgres:18.6-alpine"
+  storage: "2Gi"
+
+kafka:
+  # Mirrored like postgres above; matches
+  # deploy/k8s/base/infra/kafka-statefulset.yaml's upstream tag.
+  image: "image-registry.openshift-image-registry.svc:5000/mea/kafka:4.3.1"
+  clusterId: "MkU3OEVBNTcwNTJENDM2Qk"
+  storage: "2Gi"
+
+# ServiceAccount for the infra StatefulSets (postgres/kafka). Their upstream
+# images require specific non-root UIDs (70 / 1000), which OpenShift's
+# default `restricted-v2` SCC will not allow (it assigns a random UID from
+# the namespace range). Binding this SA to `nonroot-v2` lets those pods keep
+# their own UID. The application pods need no such grant: the UBI10
+# python-314-minimal images already run as USER 1001:0, which restricted-v2
+# accepts as-is (arbitrary assigned UID, group 0) -- so they use the default
+# SA with no runAsUser set at all (DRQ-107).
+infra:
+  serviceAccountName: "mea-infra"
+  scc: "nonroot-v2"
+
+# Opt-in platform flags, both DEFAULT OFF so a plain `helm install` renders
+# only the live-core topology (DRQ-105). Flipped on by
+# openshift/platform/install-mesh.sh and install-observability.sh.
+mesh:
+  # STRICT mesh-wide mTLS (templates/peerauthentication.yaml) + a PERMISSIVE
+  # carve-out for the two Route-facing services, which arrive as plaintext
+  # from outside the mesh (the router isn't a mesh member) -- same shape as
+  # deploy/k8s/istio/peer-authentication-edge.yaml on minikube, generalized
+  # to both Routes here (DRQ-109).
+  enabled: false
+observability:
+  otlp:
+    # Mirrors deploy/k8s/base/app-config.yaml's OTEL_SDK_DISABLED/_ENDPOINT/
+    # _PROTOCOL keys: false renders the same OTEL_SDK_DISABLED=true no-op
+    # posture as the repo's .env.example default; true points the three
+    # instrumented services (strangler-proxy/inventory-service/order-service)
+    # at the otel-lgtm backend openshift/platform/install-observability.sh
+    # deploys (platform/observability/lgtm-deployment.yaml), via
+    # lgtm.<namespace>.svc.cluster.local:4317.
+    enabled: false
+
+# Two external Routes: strangler-proxy (the system's permanent REST edge)
+# and graphql-gateway (its own front door). Every other service is
+# ClusterIP-only. Both get edge-TLS Routes with an HTTP->HTTPS redirect
+# (DRQ-106); OSSM 3 provisions no ingress gateway on OpenShift -- the Route
+# IS the edge.
+services:
+  strangler-proxy:
+    port: 8888
+    probe: tcp
+    db: false
+    route: true
+    otel: true
+    gracePeriodSeconds: 10
+    resources:
+      requests: { cpu: 50m, memory: 128Mi }
+      limits: { cpu: 250m, memory: 256Mi }
+  review-service:
+    port: 8001
+    probe: tcp
+    db: true
+    schema: "public"
+    migrate: false
+    route: false
+    gracePeriodSeconds: 10
+    resources:
+      requests: { cpu: 75m, memory: 192Mi }
+      limits: { cpu: 300m, memory: 384Mi }
+  notification-service:
+    port: 8002
+    portEnv: "PORT"
+    probe: http
+    db: true
+    schema: "notification"
+    migrate: true
+    kafka: true
+    consumerGroup: "notification-service"
+    route: false
+    gracePeriodSeconds: 30
+    resources:
+      requests: { cpu: 75m, memory: 192Mi }
+      limits: { cpu: 300m, memory: 384Mi }
+  inventory-service:
+    port: 8084
+    portEnv: "HTTP_PORT"
+    grpcPort: 9004
+    probe: http
+    db: true
+    schema: "inventory"
+    migrate: true
+    route: false
+    otel: true
+    gracePeriodSeconds: 20
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits: { cpu: 400m, memory: 512Mi }
+  payment-service:
+    port: 8085
+    portEnv: "HTTP_PORT"
+    probe: http
+    db: true
+    schema: "payment"
+    migrate: true
+    kafka: true
+    consumerGroup: "payment-service"
+    route: false
+    gracePeriodSeconds: 30
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits: { cpu: 400m, memory: 512Mi }
+  shipping-service:
+    port: 8087
+    portEnv: "HTTP_PORT"
+    probe: http
+    db: true
+    schema: "shipping"
+    migrate: true
+    kafka: true
+    consumerGroup: "shipping-service"
+    route: false
+    gracePeriodSeconds: 30
+    resources:
+      requests: { cpu: 125m, memory: 256Mi }
+      limits: { cpu: 500m, memory: 512Mi }
+  order-service:
+    port: 8088
+    portEnv: "HTTP_PORT"
+    probe: http
+    db: true
+    schema: "order_svc"
+    migrate: true
+    kafka: true
+    consumerGroup: "order-service"
+    preStopSleep: 15
+    route: false
+    otel: true
+    gracePeriodSeconds: 60
+    resources:
+      requests: { cpu: 150m, memory: 320Mi }
+      limits: { cpu: 600m, memory: 640Mi }
+  graphql-gateway:
+    port: 8090
+    portEnv: "HTTP_PORT"
+    probe: http
+    db: false
+    route: true
+    gracePeriodSeconds: 10
+    resources:
+      requests: { cpu: 75m, memory: 192Mi }
+      limits: { cpu: 300m, memory: 384Mi }

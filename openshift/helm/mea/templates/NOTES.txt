@@ -1,0 +1,35 @@
+The modernized system is deploying to namespace "{{ .Release.Namespace }}".
+
+Watch it come up:
+  oc get pods -n {{ .Release.Namespace }} -w
+
+Infrastructure (postgres, kafka) starts first; the eight app workloads become
+Ready once their probes pass; the mea-bootstrap-public-schema Job seeds
+review-service's shared public schema (idempotent -- a no-op on a database
+that already has it). The external entry points are Routes:
+{{- range $name, $svc := .Values.services }}
+{{- if $svc.route }}
+  {{ $name }}:  oc get route {{ $name }} -n {{ $.Release.Namespace }} -o jsonpath='{.spec.host}'
+{{- end }}
+{{- end }}
+
+The strangler-proxy Route is the system's REST edge; the graphql-gateway
+Route is the GraphQL API. Everything else is ClusterIP-only (reachable
+in-cluster, e.g. via `oc exec` into another pod).
+
+{{- if .Values.mesh.enabled }}
+
+mesh.enabled=true: every app pod carries the istio.io/rev=default label and
+runs under STRICT mTLS, with a PERMISSIVE carve-out for the two Route-facing
+services above. Check sidecars:
+  oc get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/part-of=mea \
+    -o custom-columns='POD:.metadata.name,REV:.metadata.labels.istio\.io/rev'
+{{- end }}
+
+{{- if .Values.observability.otlp.enabled }}
+
+observability.otlp.enabled=true: strangler-proxy, inventory-service and
+order-service export OTLP traces to
+lgtm.{{ .Release.Namespace }}.svc.cluster.local:4317 -- run
+openshift/platform/install-observability.sh first so that Service exists.
+{{- end }}

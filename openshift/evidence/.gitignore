@@ -1,0 +1,10 @@
+# This directory holds capture-evidence.sh's output, one dated subdirectory
+# per live run (openshift/evidence/YYYY-MM-DD/). It stays empty in version
+# control until a live run lands scrubbed evidence here (DRQ-104): ignore
+# everything by default, then allow back in only the committed run(s) this
+# project's maintainers have reviewed and scrubbed.
+*
+!.gitignore
+# To commit a scrubbed run, uncomment and name it explicitly, e.g.:
+#!2026-10-17/
+#!2026-10-17/**

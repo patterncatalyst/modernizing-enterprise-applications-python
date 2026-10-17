@@ -1,0 +1,55 @@
+# lgtm-service.yaml -- `lgtm` (ClusterIP): the in-cluster DNS name the 3
+# OTel-instrumented app services and Kiali's Prometheus pointer both target
+# (lgtm.mea.svc.cluster.local). `grafana` (edge-TLS Route): the UI, reached
+# the same way the two app Routes are (DRQ-106), instead of minikube's fixed
+# NodePort 30300.
+#
+# Port name "grpc-otlp", not "otlp-grpc": Istio's port-protocol
+# auto-detection keys off the port name's prefix (before the first "-")
+# being a recognized token (grpc, http, http2, tcp, tls, ...). "otlp" isn't
+# one, so Envoy would treat the port as opaque TCP.
+apiVersion: v1
+kind: Service
+metadata:
+  name: lgtm
+  labels:
+    app.kubernetes.io/name: lgtm
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: lgtm
+  ports:
+    - name: grpc-otlp
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+    - name: grafana
+      port: 3000
+      targetPort: 3000
+    - name: prometheus
+      port: 9090
+      targetPort: 9090
+    - name: loki
+      port: 3100
+      targetPort: 3100
+    - name: tempo
+      port: 3200
+      targetPort: 3200
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: grafana
+  labels:
+    app.kubernetes.io/name: lgtm
+spec:
+  to:
+    kind: Service
+    name: lgtm
+  port:
+    targetPort: grafana
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
