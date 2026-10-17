@@ -202,6 +202,19 @@ passlib 1.7.4, aiokafka 0.14.0, alembic 1.20.0, testcontainers 4.15.0.)
 | DRQ-109 | **OSSM 3 via the Sail operator, `Istio` CR `spec.version: v1.30.5` (exact), sidecar injection by the `istio.io/rev: default` pod-template LABEL** — not the classic `sidecar.istio.io/inject` annotation the minikube path uses, since Sail's revisioned webhook ignores that annotation. Namespace-wide **STRICT** `PeerAuthentication` plus a **PERMISSIVE** carve-out scoped to the two Route-facing services (strangler-proxy, graphql-gateway), which arrive as plaintext from outside the mesh and would otherwise 502. Kiali points at the redeployed `grafana/otel-lgtm:0.36.0` (no cluster Prometheus on CRC); the same 3 services instrumented in ch.30 keep their existing `opentelemetry-distro` wiring, re-pointed at the platform-tier otel-lgtm. | Accepted — reusing the minikube annotation on OpenShift would silently produce zero sidecars (the datamesh-python/lgtm-crc precedent's known gotcha); naming the label requirement here heads off the same mistake landing here too. | accepted |
 | DRQ-110 | **Headless CI gate: additive `openshift-chart.yml`** — `helm template openshift/helm/mea --set mesh.enabled=true --set observability.otlp.enabled=true \| kubeconform -strict -ignore-missing-schemas -summary`, with its own `openshift-chart-ok` summary job, no `paths:` filter, cluster-free. Mirrors `mesh-manifests.yml`'s shape (DRQ-101) exactly. `code-ci.yml`/`contract-gate`/`code-ci-ok`/`schema-registry.yml`/`deploy-manifests.yml`/`supply-chain.yml`/`mesh-manifests.yml` are untouched. | Accepted — extends the project's one-new-additive-gate-per-new-seam pattern (DRQ-091/DRQ-101) to the OpenShift seam; `-ignore-missing-schemas` lets Route/PeerAuthentication/Istio CRs through unchecked the same way the mesh gate already handles Istio CRDs. | accepted |
 | DRQ-111 | **review-service's shared-schema seed, bootstrapped in-cluster via an idempotent Job, not a host port-forward.** On minikube, `deploy.sh` runs the frozen monolith's `manage.py migrate`/seed from the host through a port-forward. On CRC the no-host-egress form is a `bootstrap-job.yaml` Job running the monolith image in-cluster against the in-cluster Postgres Service, guarded by the same `to_regclass('public.reviews')` idempotency check as the minikube path; `oc rsh`/port-forward is documented as the fallback, not the default. | Accepted — a host port-forward assumes host network reachability into the CRC VM that isn't guaranteed the same way across environments; an in-cluster Job needs nothing outside the cluster and reuses the exact idempotency guard already proven on minikube. | accepted |
+| DRQ-112 | **Front-matter figure strategy = Option B, full parity.** ch.00–13 ship ~33 new Python-native anchor figures in `assets/diagrams/` — at least one per chapter, not the planner's recommended ~10-figure curated set (Option A). Each figure is authored via `lgtm-diagram-generator` (paired `.svg`/`.excalidraw`/`.py`, light-box style) and registered in `assets/diagrams/README.md`. | Accepted — user decision, overriding `_plans/frontmatter-build-plan.md`'s recommended Option A; the on-ramp gets the same per-concept figure density as the Java sibling's front matter. | accepted — user |
+| DRQ-113 | **ch.08–10 verification posture = verified**, citing the runnable, frozen/break-glass `examples/00-monolith` (pytest + Newman, GOLDEN-BASELINE.md) as real, exercised code — the six Django apps + `common`, the 7 tagged `# SMELL[ch.NN]:` smells, and the equivalence-suite tests all run and pass. Every other front-matter chapter (00–07, 11–13) stays `unverified` — conceptual chapter, since no other on-ramp chapter runs code against a live example. | Accepted — user decision, confirming the planner's recommended posture over a blanket conceptual footer across all 14 chapters; ch.08–10 are the only front-matter chapters describing the one running example that already exists (`00-monolith`), so citing it is a verification claim the repo can back up, not a narrative one. | accepted — user |
+| DRQ-114 | **ch.07's worked ADLC loop uses a real Python-shaped defect** — the DRQ-026 chunked-body/empty-POST proxy bug, where the in-process `ASGITransport` test suite passed but a real socket run against the strangler proxy caught the defect — rather than re-narrating the Java sibling's native-image/Spring-specific bug at the same gate. | Accepted — the Java sibling's bug (a GraalVM native-image reflection gap under Spring) has no Python analog; DRQ-026's proxy bug already happened on this project's own branch history and demonstrates the identical lesson (a test double can pass while the real transport fails) without inventing a defect that never occurred. | accepted |
+| DRQ-115 | **ch.06 records there is no Quarkus-Agent/Camel-MCP equivalent for this stack.** In place of the Java sibling's Quarkus-Agent MCP server + Camel-MCP route tooling, ch.06 names the substitutes actually in use: `lgtm-python` scaffolds, manual reconnaissance (reading the monolith directly rather than an MCP-exposed runtime), the generic MCP tool surface (notion/atlassian/etc., not a framework-specific one), and the ASGI strangler proxy itself as the first-principles content-router analog to a Camel route. | Accepted — naming the gap explicitly (rather than silently omitting the Quarkus-Agent/Camel-MCP section the Java sibling has) keeps the two books' ch.06 comparable in structure while being accurate about what FastAPI/Python tooling actually offers today. | accepted |
+| DRQ-116 | **On-ramp word-target band: per-chapter targets, not a blanket floor.** Each of ch.00–13 is held to the per-chapter word target in `_plans/frontmatter-build-plan.md`'s table (2,200–3,000 depending on scope), rather than a uniform ≥2,000-word floor applied regardless of content — conceptual chapters run exactly as long as their scope warrants, with no padding to hit a number. | Accepted — matches the per-chapter table the planner already built from each chapter's actual scope; a blanket floor would pad short conceptual chapters (00/02) or artificially cap denser ones (04/07/13). | accepted |
+
+## Version matrix additions (front-matter — surveyed 2026-10-17)
+
+**None.** ch.00–13 introduce no new software pins — the on-ramp describes the
+same toolchain (uv, Python 3.14, Django 5.2 + DRF, FastAPI, pytest/Newman)
+already pinned in the r01–r04 matrices above. The only new artifacts are the
+33 front-matter figures in `assets/diagrams/` (DRQ-112), which carry no
+version dependencies of their own.
 
 ## Version matrix additions (r11 — surveyed 2026-10-17, pin exactly)
 
@@ -451,3 +464,21 @@ separate future work: the front-matter chapters (ch.00–13), the three
 decks, landing ch.33's live CRC evidence once its pending run completes,
 and landing ch.30's live minikube/Istio/LGTM evidence (DRQ-095) once its
 own pending run completes.
+
+**Front-matter close.** ch.00–13 (Parts 0–4, the on-ramp) are authored per
+`_plans/frontmatter-build-plan.md`, closing the project's last remaining
+chapter gap. Two gates were posed to the user at the plan's header and both
+are resolved: DRQ-112 (figure strategy — the user chose Option B, full
+~33-figure parity, over the planner's recommended ~10-figure curated set)
+and DRQ-113 (ch.08–10 verification posture — the user confirmed `verified`,
+citing the runnable, frozen/break-glass `examples/00-monolith`). Three
+further decisions were settled by the Phase-1 planner as synthesis defaults
+and recorded without a separate user gate: DRQ-114 (ch.07's worked loop uses
+the real DRQ-026 chunked-body/empty-POST proxy defect, not a replayed
+Java-specific bug), DRQ-115 (ch.06 names the absence of a Quarkus-Agent/
+Camel-MCP equivalent and its substitutes), and DRQ-116 (per-chapter word
+targets, not a blanket floor). With ch.00–13 landed, **the book is complete
+end-to-end: ch.00 through ch.33 are all authored, both the minikube and CRC
+cluster paths are verified-live, and the three decks (101/201/201-fastapi)
+are the only artifacts outside the chapter set.** No open chapter work
+remains in this ledger.
