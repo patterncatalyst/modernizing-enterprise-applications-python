@@ -1,0 +1,2 @@
+order-service  [after /required] components=5720 total(Critical=0  High=35 Medium=153) fixable(Critical=0  High=0  Medium=7 ) PASS
+monolith       [before/reported] components=5690 total(Critical=0  High=35 Medium=153) fixable(Critical=0  High=0  Medium=7 ) FAIL

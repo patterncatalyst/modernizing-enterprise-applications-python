@@ -1,0 +1,15 @@
+# demo.sh writes its canonical evidence set directly into this directory:
+#   order-service.sbom.cdx.json / order-service.grype.json
+#   monolith.sbom.cdx.json      / monolith.grype.json
+#   summary.txt
+# Those five files ARE committed, as point-in-time evidence (the grype DB
+# build date and the pinned base-image tag are the point-in-time anchors) --
+# re-running demo.sh against a newer vulnerability DB or a rebuilt image is
+# expected to produce a git diff on them, same as any other example's
+# captured-run evidence in this project.
+#
+# Anything else dropped here by an ad hoc or scratch invocation should not be
+# committed.
+*.tmp
+*.log
+/scratch/

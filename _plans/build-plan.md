@@ -242,6 +242,15 @@ up 1:1.
 **Part 9 — Operating the Modernized System**
 30. **29 Deployment Patterns** — rolling, breaking-schema-change, blue-green
     tied to the cutover; which fits synchronous vs event-driven services.
+    **Landed r09** — `deploy/k8s/` (kustomize `base` + a single
+    `overlays/minikube` overlay) for all 8 services, probes matching each
+    service's real `/health` posture (`tcpSocket` for the strangler proxy +
+    review-service, `httpGet /health` for the other six, DRQ-089), one
+    shared `DATABASE_URL` Secret with schema-per-service-in-code; renders
+    clean (`kubectl kustomize` → 23 resources per tree, `kubeconform -strict`
+    23/23 Valid); the headless-render limit (no server dry-run/admission
+    without a live cluster) is stated explicitly, deferred to the user's
+    minikube run at ch.30/r10.
 31. **30 Mesh, Observability & Distributed Tracing** — Istio, Kiali,
     OpenTelemetry + the LGTM stack — on minikube; Python auto-instrumentation.
 
@@ -249,7 +258,16 @@ up 1:1.
 32. **31 CI/CD, GitOps, Progressive Delivery & Supply Chain** — the actual
     GitHub Actions workflows (`code-ci.yml` and friends), the equivalence-gate
     job, UBI Python image builds, GitOps, feature-flag/canary cutover, SBOM +
-    CVE scan + policy-as-code.
+    CVE scan + policy-as-code. **Landed r09** — `examples/10-supply-chain/`
+    (syft→grype→policy, scanning container IMAGES, DRQ-090) scans
+    order-service "after" (hard-gated) and the frozen `00-monolith` "before"
+    (non-gating/reported, A/B-4=B, DRQ-088); the real finding was 35 High
+    CVEs on BOTH images, all `fix-state: not-fixed` in the shared UBI base
+    layer with **no patched tag to re-pin onto** (confirmed via `skopeo`) —
+    the chapter gates on **fixable findings only** (DRQ-094), surfacing the
+    35 unfixable Highs rather than hiding them; order-service = 0 fixable
+    Highs = a real PASS. New additive `supply-chain.yml` CI gate corrects the
+    Java sibling's `paths:`-filtered, `*-ok`-less shape (DRQ-092).
 33. **32 The Pattern Language, Revisited** — the pattern map re-walked with the
     completed migration; anti-patterns of over-decomposition; honestly-scoped
     "further horizons."
@@ -311,7 +329,7 @@ the "Runnable via" column changes to name the Python mechanism.
 | Idempotent Compensation (D) | ch.23 | inventory-service `idempotency_key` + `inventory.compensations` ledger (`ON CONFLICT DO NOTHING`), plus a client-side status-transition guard in `order_saga_listener` | **landed r05** — closes DRQ-043's explicit deferral; double-delivery proven at both layers (saga-listener guard + ledger), stock net-zero (94→94) under forced redelivery |
 | Circuit Breaker / Discovery / Health (E) | ch.25, ch.27, ch.30 | `tenacity`/`circuitbreaker` + FastAPI health routes | reframed off Netflix OSS, same as Java sibling; **ch.25 landed r06** — the gRPC deadline, compensating `Release`, outbox at-least-once + two-layer idempotency, and the orchestrator's own timeout/crash-resume are documented as the existing chassis, plus one new concrete mechanism (a `tenacity` retry-with-timeout on the shipping saga's `enrich` HTTP call, DRQ-068/069); `pybreaker` circuit breaker + bulkhead are named but deferred (no second failure mode yet forces them) |
 | Microservices Chassis (E) | ch.27, ch.32 | FastAPI + frozen `@dataclass`/`from_env()` config (**DRQ-083 corrects this row's earlier "pydantic-settings" claim** — no service ever adopted it) | **landed r08 (ch.27)** — honest per-service used/partial/deferred scorecard across all 8 services (config 7/8, schemas-via-pydantic 6/8, `/health` 6/8, `errors.py` 6/8, `tenacity` 1/8, OTel/metrics 0/8 deferred to ch.30); a shared chassis library is DEFERRED BY CHOICE, not built (DRQ-082) |
-| Fixed / Rolling / Breaking-Schema / Blue-Green (F) | ch.29 | manifests (unchanged) | Fixed demoted to a paragraph |
+| Fixed / Rolling / Breaking-Schema / Blue-Green (F) | ch.29 | manifests (unchanged) | Fixed demoted to a paragraph; **landed r09** — `deploy/k8s/` kustomize `base` + `overlays/minikube`, real per-service probes (`tcpSocket` proxy+review, `httpGet /health` the other six, DRQ-089), one shared `DATABASE_URL` Secret; renders clean, `kubeconform -strict` 23/23 Valid both trees; server-side admission/rolling-update behavior itself needs a live cluster, deferred to the user's minikube run at ch.30/r10 |
 | Service/Schema/API registry + requirements (G) | ch.28 | Apicurio (unchanged) | **landed r08** — `examples/09-schema-registry-demo/` on pure-Python fastavro + aiokafka + Apicurio v3 REST (no confluent-kafka, honoring DRQ-033), hand-rolled global-id envelope; v2 optional-field evolution ACCEPTED (200), v3 field-retype REJECTED (400 `RuleViolationException`), both verified live via Testcontainers against Apicurio 3.3.3; Apicurio added to `compose.yaml`/`.env.example` additively (`:8095`), scoped to this one demo (DRQ-084/DRQ-085); separate additive `schema-registry.yml` CI gate (DRQ-086) |
 | Service Mesh / Observability / Tracing (H) | ch.30 | Istio + OTel Python auto-instrumentation (minikube) | |
 | Caching (H) | App. H (Java-sourced, adapted) | demoted → appendix | generic; no migration driver |
@@ -330,7 +348,13 @@ from the Java sibling, Part 2); the FastAPI chassis as the concrete runtime
 Spring-compatibility-extension equivalent exists, so this is named honestly
 as its own topic rather than silently assumed); OpenTelemetry + LGTM (ch.30);
 GitOps + progressive delivery (ch.31); supply-chain/SBOM/CVE/policy-as-code
-(ch.31); explicit DDD + event storming (Part 4); a measured Django-vs-FastAPI
+(ch.31 — **landed r09**: `examples/10-supply-chain/` scans container images
+with syft→grype→policy, order-service hard-gated + the frozen monolith
+non-gating per DRQ-088; the gate blocks on fixable findings only after a
+re-pin was confirmed impossible against the shared UBI base layer's 35
+not-fixed Highs, DRQ-094; a separate additive `supply-chain.yml` corrects the
+Java sibling's `paths:`-filtered/`*-ok`-less shape, DRQ-092); explicit DDD +
+event storming (Part 4); a measured Django-vs-FastAPI
 comparison (the book's premise, analogous to the Java sibling's Quarkus-vs-
 Spring appendix).
 
@@ -591,7 +615,7 @@ shifted down by one iteration, for the same total of **10 iterations**.
 | **r06** | **Sagas — orchestrated + resilience — done** | Part 7 ch.24–25: **Shipping extraction (`examples/06-shipping-service/`, :8087) via the reused CNDP Python DB-backed saga orchestrator** (ch.24), crash-resumable (durability upgrade over the Java sibling's in-memory orchestrator), `AWAITING_SHIPMENT` lifecycle, orchestrated-vs-choreographed contrast with r05; **payment-service refund hop closes DRQ-054** (ship-fail now refunds a captured payment); ch.25 (failure-mode taxonomy + the one new `tenacity` enrich-retry mechanism, pybreaker/bulkhead deferred); two cutover flags (`STRANGLER_SHIPPING_ENABLED` + `SHIPPING_MODE`); Newman `shipping-equivalence-gate` green both ways + stuck-AWAITING_SHIPMENT negative (and a poll-script bug the live cutover caught and fixed — retry through `AWAITING_SHIPMENT`, not just `PENDING`) | Java r07 |
 | **r07** | **Order + GraphQL gateway — THE FINALE, strangler fig COMPLETE — done** | Part 8 ch.21/26: **Order extraction (`examples/07-order-service/`, :8088, CQRS from day one — same-DB two-table read model, same-tx projection, DRQ-072) + the additive Strawberry GraphQL gateway (`examples/08-graphql-gateway/`, :8090, own front door, DRQ-074)**; lifts the four saga reactions, own outbox → `order.placed`, customer FK→snapshot (owns `customers`, DRQ-073); monolith **decommissioned** — pre-cutover reversibility proof, then the one irreversible move (DRQ-077): flagless strangler proxy, monolith frozen-not-deleted + `reference/monolith-before` branch + `v0-monolith`/`stage/01..06` tags (DRQ-075); shipping's `enrich` re-pointed to order-service; **SMELL #1/#2 STRUCK, ACID→ACD for all six contexts** (DRQ-080); equivalence suite converted to a contract/acceptance suite, green ≥2× monolith-free plus 3 negatives incl. the CQRS projection-disabled check (DRQ-076/DRQ-079); ch.21 (Event Sourcing & CQRS, deferred from r05) + ch.26 authored | Java r08 |
 | **r08** | **Part 8: FastAPI chassis + contracts/registry — done** | ch.27 (FastAPI Chassis) authored as an honest per-service used/partial/deferred scorecard, correcting the plan's earlier pydantic-settings claim to the as-built frozen `@dataclass`/`from_env()` shape (DRQ-082/DRQ-083); ch.28 (Contracts & Service Registry) authored + `examples/09-schema-registry-demo/` built (pure-Python fastavro + aiokafka + Apicurio v3 REST, hand-rolled global-id envelope, honoring DRQ-033's rejection of confluent-kafka, DRQ-084); round-trip + schema-evolution compatibility (v2 ACCEPT-200 / v3 REJECT-400) verified live via Testcontainers; Apicurio added to `compose.yaml`/`.env.example` additively (`:8095`, DRQ-085), live JSON event flows untouched; new separate `schema-registry.yml` CI gate, `code-ci.yml`/`contract-gate`/`code-ci-ok` untouched (DRQ-086); new pins fastavro 1.13.1 + apicurio-registry 3.3.3 (DRQ-087). **Part 8 (ch.27–28) is now complete; ch.29–33 remain.** Per the approved `_plans/backmatter-track-plan.md` (which diverges from this table's original r08/r09/r10 grouping, as that plan itself notes), the remaining back-matter work is sequenced r09 = ch.29 (Deployment Patterns, `deploy/k8s/`) + ch.31 (CI/CD & Supply Chain, `examples/10-supply-chain/`), r10 = ch.30 (Mesh/Observability, live/user-run) + ch.32 (capstone). | Java r09 (regrouped per the back-matter track plan) |
-| **r09** | Deck + close | ch.32 conclusion; rebuild the companion deck (`lgtm-presentation`); cross-linking; final validation | Java r10 |
+| **r09** | **Part 9 (ch.29) + Part 10 (ch.31): Deployment Patterns + CI/CD & Supply Chain — done** | ch.29 (Deployment Patterns) authored + `deploy/k8s/` built — kustomize `base` + a single `overlays/minikube` overlay for all 8 services, probes matching each service's real `/health` posture (`tcpSocket` for proxy+review, `httpGet /health` the other six, DRQ-089), one shared `DATABASE_URL` Secret with schema-per-service-in-code, renders clean (`kubectl kustomize` 23/23 resources, `kubeconform -strict` Valid both trees), headless-render limit stated and deferred to r10's live minikube run; ch.31 (CI/CD & Supply Chain) authored + `examples/10-supply-chain/` built — syft→grype→policy on container IMAGES, A/B-4 resolved **B** (order-service hard-gated + frozen `00-monolith` non-gating, DRQ-088); the grype gate was red on both images (35 High, 0 Critical, all `fix-state: not-fixed` in the shared UBI base layer, no patched tag to re-pin onto per a `skopeo` check) — **gate on fixable findings only** (DRQ-094, correcting this plan's own "re-pin" risk-mitigation assumption), order-service = 0 fixable Highs = PASS; two new additive CI gates (`deploy-manifests.yml`, `supply-chain.yml` — the latter correcting the Java sibling's `paths:`-filtered/`*-ok`-less shape, DRQ-092); new pins DRQ-093. Per the approved `_plans/backmatter-track-plan.md` resequencing noted at the r08 row above, ch.30 (live minikube/Istio) + ch.32 (capstone) remain, grouped at r10. | Java r09 (Part 9/10 content, regrouped per the back-matter track plan — see r08 row) |
 | **r10** | OpenShift/CRC appendix + cross-sibling reconciliation | ch.33 built live on CRC (per standing OpenShift/CRC Appendix Standard); a dedicated drift sweep against the Java sibling's `reconciliation.md` | new — not present in the Java sibling's table; added so the 10-iteration count matches while giving the OpenShift appendix and a final reconciliation pass their own iteration rather than crowding r08 |
 
 **r01 boundary:** r01 ends at a green site build + green monolith + green

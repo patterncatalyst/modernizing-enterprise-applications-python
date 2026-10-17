@@ -1,0 +1,72 @@
+# Supply-chain policy-as-code for the modernized system (ch.31).
+#
+# This is the single source of truth the demo and the CI workflow both read:
+# the gate fails the build when a scanned artifact carries a vulnerability at
+# or above `fail-on`. Keeping the threshold in a committed file -- rather than
+# buried in a shell flag or a CI YAML step -- is the "policy-as-code" point:
+# the rule is reviewed, versioned, and diffable like any other code, and the
+# same rule runs on a developer laptop and in GitHub Actions.
+#
+# Unlike the Java sibling (which scans a built jar / runtime-closure
+# directory), every service here ships as a container image -- that's the
+# real deployable artifact (see deploy/k8s), and it's the only artifact shape
+# that also catches UBI base-layer CVEs, not just Python dependency CVEs that
+# a `uv.lock`-only scan would see. So the SBOM format is CycloneDX JSON, but
+# the thing syft points at is an image, not a jar/dir.
+#
+# Severities, most-to-least severe: Critical, High, Medium, Low, Negligible.
+fail-on: High          # fail the GATING target(s) on any High or Critical finding
+
+# gate-on: fixable -- a High/Critical finding only counts toward the
+# fail-on threshold above when it has a fix state other than `not-fixed`
+# (i.e. `fixed`, `wont-fix`, or `unknown` -- see .grype.yaml, which carries
+# the actual grype `ignore: [{fix-state: not-fixed}]` rule enforced by
+# demo.sh and supply-chain.yml). The reasoning: a CI gate should block on
+# what the team can actually remediate. A finding with no published upstream
+# fix cannot be resolved by any change available inside this repository --
+# re-pinning the base image tag, bumping a dependency, or anything else --
+# so blocking merges on it does not reduce risk, it just leaves the pipeline
+# permanently red until an upstream maintainer ships a patch. Findings that
+# DO have a fix path still gate the build at `fail-on: High`.
+#
+# This does not hide not-fixed findings: grype files them in a separate
+# `ignoredMatches` array rather than dropping them, so they remain in the
+# scan's JSON output and in the evidence/ snapshot demo.sh writes -- the
+# gate just doesn't block the pipeline on them. See README.md for the
+# current snapshot this was written against.
+gate-on: fixable
+
+# Artifacts the gate builds and scans. Each `gate` value decides whether a
+# breach blocks the pipeline:
+#
+#   gate: required -- hard-gated. A fixable High/Critical finding here (see
+#                      gate-on above) fails demo.sh (exit 1) and fails the
+#                      supply-chain.yml CI job.
+#   gate: reported  -- non-gating. Still built, scanned, and reported (and its
+#                      findings are written to evidence/ like any other
+#                      target), but a breach here is never allowed to block
+#                      the pipeline. It reports the FULL raw finding count
+#                      (every severity, including not-fixed) so readers see
+#                      total exposure on the frozen "before" image -- unlike
+#                      the gating decision on order-service, this report is
+#                      not filtered to fixable-only. The monolith is frozen
+#                      (see examples/00-monolith); this evidence is
+#                      comparative, not a defect to chase down.
+#
+# [A/B-4 = B, DRQ-088]: order-service (the "after") is the one artifact this
+# gate actually protects; the frozen 00-monolith (the "before") is scanned
+# and reported alongside it purely as comparative, non-blocking evidence.
+targets:
+  - name: order-service
+    kind: after
+    gate: required
+    buildfile: examples/07-order-service/Containerfile
+    context: examples/07-order-service
+    image: localhost/mea/order-service:supply-chain-demo
+
+  - name: monolith
+    kind: before
+    gate: reported
+    buildfile: examples/00-monolith/Dockerfile
+    context: examples/00-monolith
+    image: localhost/mea/monolith:supply-chain-demo

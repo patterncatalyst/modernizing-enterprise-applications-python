@@ -1,0 +1,165 @@
+# kafka-statefulset.yaml -- single-broker KRaft-mode Kafka (no ZooKeeper),
+# mirroring compose.yaml's `kafka` service: same image/tag
+# (docker.io/apache/kafka:4.3.1, .env.example's KAFKA_IMAGE_TAG), the same
+# KRaft broker+controller-combined-role env block, and the same topic
+# defaults (KAFKA_AUTO_CREATE_TOPICS_ENABLE=true, 3 partitions, replication
+# factor 1 -- a single-broker cluster can't replicate beyond 1 anyway). Two
+# differences from compose.yaml, both because this topology has only ONE
+# network (no host-vs-container-network split the way docker compose
+# needs): (1) a single PLAINTEXT listener (no separate DOCKER:9094 listener
+# -- every client, in-cluster, reaches this broker the same way, via the
+# `kafka` Service); (2) KAFKA_ADVERTISED_LISTENERS/KAFKA_CONTROLLER_QUORUM_
+# VOTERS point at Kubernetes DNS names instead of compose's `localhost`/
+# `kafka` container-network alias.
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: mea
+  labels:
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/part-of: mea
+spec:
+  clusterIP: None
+  # A headless Service only publishes DNS for READY endpoints by default,
+  # but a single KRaft node must resolve its own controller address
+  # (kafka-0.kafka...) to BECOME ready -- a startup deadlock without this.
+  publishNotReadyAddresses: true
+  selector:
+    app.kubernetes.io/name: kafka
+  ports:
+    - name: plaintext
+      port: 9092
+      targetPort: plaintext
+    - name: controller
+      port: 9093
+      targetPort: controller
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kafka
+  namespace: mea
+  labels:
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/part-of: mea
+spec:
+  serviceName: kafka
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kafka
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kafka
+        app.kubernetes.io/part-of: mea
+    spec:
+      # The apache/kafka image runs as uid 1000 by default; fsGroup so that
+      # user can write the mounted PVC data dir (the same class of fix
+      # postgres needs for its own PVC, via its own fsGroup above).
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: kafka
+          image: docker.io/apache/kafka:4.3.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: plaintext
+              containerPort: 9092
+            - name: controller
+              containerPort: 9093
+          env:
+            - name: KAFKA_NODE_ID
+              value: "1"
+            - name: KAFKA_PROCESS_ROLES
+              value: "broker,controller"
+            - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+              # The quorum voter must be the POD-stable DNS
+              # (kafka-0.kafka...), not the Service DNS -- a StatefulSet
+              # pod's per-pod record resolves at startup (with
+              # publishNotReadyAddresses above), the Service record does not
+              # until the pod is Ready.
+              value: "1@kafka-0.kafka.mea.svc.cluster.local:9093"
+            - name: KAFKA_LISTENERS
+              value: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: "PLAINTEXT://kafka.mea.svc.cluster.local:9092"
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
+            - name: KAFKA_CONTROLLER_LISTENER_NAMES
+              value: "CONTROLLER"
+            - name: KAFKA_INTER_BROKER_LISTENER_NAME
+              value: "PLAINTEXT"
+            - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
+              value: "true"
+            - name: KAFKA_NUM_PARTITIONS
+              value: "3"
+            - name: KAFKA_DEFAULT_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_MIN_INSYNC_REPLICAS
+              value: "1"
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
+            - name: KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS
+              value: "0"
+            # Matches .env.example's tracked default (KAFKA_CLUSTER_ID) --
+            # any base64-ish string works; only change it if kafka-data is
+            # destroyed and a fresh cluster identity is needed.
+            - name: CLUSTER_ID
+              value: "MkU3OEVBNTcwNTJENDM2Qk"
+            # Write broker state to the mounted PVC, not the image's
+            # ephemeral /tmp/kafka-logs default, so it survives restarts.
+            - name: KAFKA_LOG_DIRS
+              value: "/var/lib/kafka/data"
+          volumeMounts:
+            - name: kafka-data
+              mountPath: /var/lib/kafka/data
+          readinessProbe:
+            exec:
+              command: ["/opt/kafka/bin/kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9092"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 6
+            # The probe launches a JVM (kafka-*.sh), which cannot finish in
+            # the default 1s timeout -- give it a realistic one so a healthy
+            # broker is not killed by its own probe.
+            timeoutSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["/opt/kafka/bin/kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9092"]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 6
+            timeoutSeconds: 10
+          resources:
+            requests:
+              cpu: 250m
+              memory: 768Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          securityContext:
+            runAsNonRoot: true
+            # The apache/kafka image's USER is the non-numeric name
+            # "appuser", which kubelet cannot verify against runAsNonRoot
+            # (it needs a numeric UID) -- pin the image's real UID (1000)
+            # explicitly, or the pod fails with CreateContainerConfigError.
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+  volumeClaimTemplates:
+    - metadata:
+        name: kafka-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi

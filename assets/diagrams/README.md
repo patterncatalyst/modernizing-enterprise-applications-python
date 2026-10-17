@@ -47,6 +47,8 @@ This file is the catalogue — one row per diagram, append-only.
 | `hand-duplicated-vs-registry-schema` | ch.28 | Two panels: today's hand-authored `order.placed` copies (payment-service's 7-field `OrderPlacedEvent` with `paymentMethod`, notification-service's 6-field copy without it -- two independent understandings, no mechanism checking they still agree) versus ch.28's demonstrator, one `order-placed-v1.avsc` registered once with Apicurio and resolved by global id from both a producer and a consumer. Source: `hand-duplicated-vs-registry-schema.py`. |
 | `avro-wire-envelope-registry-flow` | ch.28 | The hand-rolled `[1-byte magic][8-byte global id][Avro bytes]` wire envelope (`app/envelope.py`, not Confluent's format -- DRQ-033's pure-Python lane has no serde to supply one) plus the full register/resolve/produce/consume flow against Apicurio's v3 REST API, including the consumer fetching the writer schema by global id rather than trusting its own local copy. Source: `avro-wire-envelope-registry-flow.py`. |
 | `avro-compatibility-evolution` | ch.28 | The BACKWARD compatibility proof: v1 registers, v2 (adds `giftMessage` with a default) is ACCEPTED (200), v3 (retypes `totalCents` long -> string) is REJECTED (400, `RuleViolationException`) -- the actual status live-verified against `apicurio-registry:3.3.3`. Source: `avro-compatibility-evolution.py`. |
+| `deploy-k8s-namespace-topology` | ch.29 | The `mea` namespace as rendered by `deploy/k8s/base` + `overlays/minikube`: 8 app Deployments/Services, one shared `postgres` StatefulSet (schema-per-service picked in each service's own code, not the connection string), one shared `kafka` StatefulSet, and `strangler-proxy` as the single NodePort (30888) edge -- every other Service, including `graphql-gateway`'s own front door, stays ClusterIP. Marks the probe split (`tcpSocket` on strangler-proxy + review-service, `httpGet /health` on the other six) and the two gRPC-client edges (order-service and graphql-gateway into inventory-service). Source: `deploy-k8s-namespace-topology.py`. |
+| `supply-chain-gate-pipeline` | ch.31 | Top band: the syft -> grype -> policy-as-code pipeline `examples/10-supply-chain/demo.sh` and `supply-chain.yml` both run, for order-service ("after", `gate: required`) and the frozen monolith ("before", `gate: reported`) side by side -- both produce the identical 265-match/35-High result from their shared UBI base layer; the `.grype.yaml` fixable-only ignore rule routes order-service's 35 not-fixed High findings out of the pass/fail decision, so it passes with 0 fixable High. Bottom band: the four separate, additive GitHub Actions workflows this repo ships (`code-ci.yml`/`contract-gate`, `schema-registry.yml`, `deploy-manifests.yml`, `supply-chain.yml`), each with its own `changes`/gate/`*-ok` summary job and no `paths:` filter, converging on one repository ruleset; `monolith-scan` hangs off `supply-chain.yml`'s `sbom-scan` job but is explicitly excluded from the required check. Source: `supply-chain-gate-pipeline.py`. |
 
 ## Regenerating
 
@@ -89,6 +91,8 @@ python3 -I chassis-scorecard.py
 python3 -I hand-duplicated-vs-registry-schema.py
 python3 -I avro-wire-envelope-registry-flow.py
 python3 -I avro-compatibility-evolution.py
+python3 -I deploy-k8s-namespace-topology.py
+python3 -I supply-chain-gate-pipeline.py
 ```
 
 Each spec validates its own output on the way out (`generate_diagram.emit()`
