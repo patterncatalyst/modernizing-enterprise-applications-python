@@ -51,6 +51,8 @@ This file is the catalogue — one row per diagram, append-only.
 | `mesh-mtls-topology` | ch.30 | The meshed `mea` namespace: 8 app pods carrying the `sidecar.istio.io/inject` label with Envoy sidecars and STRICT mTLS between them, one PERMISSIVE edge on strangler-proxy's NodePort, and postgres/kafka/lgtm left unmeshed; mesh-breadth (Envoy) vs app-OTLP-depth edges into the lgtm backend. Source: `mesh-mtls-topology.py`. |
 | `mesh-hero-trace-waterfall` | ch.30 | The synchronous hero trace as nested spans -- strangler-proxy -> order-service -> inventory-service (gRPC, crossing the ch.19 ACL seam) -- each mesh span wrapping the app span wrapping the asyncpg DB span; labeled as illustrative span nesting, not captured timing. Source: `mesh-hero-trace-waterfall.py`. |
 | `supply-chain-gate-pipeline` | ch.31 | Top band: the syft -> grype -> policy-as-code pipeline `examples/10-supply-chain/demo.sh` and `supply-chain.yml` both run, for order-service ("after", `gate: required`) and the frozen monolith ("before", `gate: reported`) side by side -- both produce the identical 265-match/35-High result from their shared UBI base layer; the `.grype.yaml` fixable-only ignore rule routes order-service's 35 not-fixed High findings out of the pass/fail decision, so it passes with 0 fixable High. Bottom band: the four separate, additive GitHub Actions workflows this repo ships (`code-ci.yml`/`contract-gate`, `schema-registry.yml`, `deploy-manifests.yml`, `supply-chain.yml`), each with its own `changes`/gate/`*-ok` summary job and no `paths:` filter, converging on one repository ruleset; `monolith-scan` hangs off `supply-chain.yml`'s `sbom-scan` job but is explicitly excluded from the required check. Source: `supply-chain-gate-pipeline.py`. |
+| `pattern-language-map` | ch.32 | The whole book's pattern language as one connected flow across two chapter-ordered rows (ch.14->24, ch.27->31), colored by verdict (earned vs adapted), with a dashed ghost row of five named-not-built horizons (full event sourcing, pybreaker/bulkhead, GitOps operator+canary, Loki log aggregation, Kafka saga-hop tracing), each linked by a dashed arrow to the pattern it would extend. Source: `pattern-language-map.py`. |
+| `book-pattern-scorecard` | ch.32 | Three stacked bands (earned / adapted / named-deferred, light fills matching ch.27's `chassis-scorecard`) with 19 cards total, matching build-plan §C exactly. Source: `book-pattern-scorecard.py`. |
 
 ## Regenerating
 
@@ -97,6 +99,8 @@ python3 -I deploy-k8s-namespace-topology.py
 python3 -I supply-chain-gate-pipeline.py
 python3 -I mesh-mtls-topology.py
 python3 -I mesh-hero-trace-waterfall.py
+python3 -I pattern-language-map.py
+python3 -I book-pattern-scorecard.py
 ```
 
 Each spec validates its own output on the way out (`generate_diagram.emit()`
