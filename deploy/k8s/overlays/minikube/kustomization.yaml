@@ -1,0 +1,121 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# ch.30 SEAM (wired in r10): Istio's namespace-scoped CRs (PeerAuthentication,
+# Telemetry) and the LGTM observability backend would compose here as sibling
+# overlays on top of ../../base -- e.g.:
+#
+#   resources:
+#     - ../../base
+#     - ../../istio
+#     - ../../observability
+#
+# Neither ../../istio nor ../../observability exists at r09 -- this overlay
+# renders against ../../base alone so `kubectl kustomize` has no dangling
+# resource reference today. See deploy/k8s/README.md.
+resources:
+  - ../../base
+
+# Images: built on the host (`docker build -f examples/<dir>/Containerfile`)
+# and copied into minikube's containerd with `minikube -p mea image load
+# mea/<svc>:1.0` -- scripts/build-images.sh does both. There is no shared
+# image store and no in-cluster registry, so `imagePullPolicy: Never` is set
+# on every app Deployment below (ErrImageNeverPull names a missing load
+# instead of a confusing pull attempt from docker.io/mea/...). The tag is a
+# fixed `1.0`, not `latest`; rebuild + reload + `kubectl rollout restart` to
+# pick up a new build.
+images:
+  - name: mea/strangler-proxy
+    newTag: "1.0"
+  - name: mea/review-service
+    newTag: "1.0"
+  - name: mea/notification-service
+    newTag: "1.0"
+  - name: mea/inventory-service
+    newTag: "1.0"
+  - name: mea/payment-service
+    newTag: "1.0"
+  - name: mea/shipping-service
+    newTag: "1.0"
+  - name: mea/order-service
+    newTag: "1.0"
+  - name: mea/graphql-gateway
+    newTag: "1.0"
+
+patches:
+  # strangler-proxy is the system's single REST edge router (every client
+  # request enters here) -- the one Service this overlay exposes off-cluster,
+  # via a fixed NodePort instead of base's ClusterIP. Every other Service
+  # stays ClusterIP-only, reachable only from inside the cluster, matching
+  # the real topology: nothing but the edge router is meant to be dialed
+  # directly from outside.
+  - target:
+      kind: Service
+      name: strangler-proxy
+    patch: |-
+      - op: replace
+        path: /spec/type
+        value: NodePort
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 30888
+
+  # imagePullPolicy: Never on every app Deployment -- see the images: note
+  # above. The ch.30 seam (sidecar.istio.io/inject pod-template labels) is
+  # NOT added here; it lands with the ../../istio sibling overlay at r10.
+  - target:
+      kind: Deployment
+      name: strangler-proxy
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target:
+      kind: Deployment
+      name: review-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target:
+      kind: Deployment
+      name: notification-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target:
+      kind: Deployment
+      name: inventory-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target:
+      kind: Deployment
+      name: payment-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target:
+      kind: Deployment
+      name: shipping-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target:
+      kind: Deployment
+      name: order-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target:
+      kind: Deployment
+      name: graphql-gateway
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never

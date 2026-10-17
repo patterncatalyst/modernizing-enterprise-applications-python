@@ -1,0 +1,13 @@
+# namespace.yaml -- the single namespace this topology lives in: "mea".
+#
+# One namespace, schema-per-service on one shared Postgres instance (see
+# app-config.yaml / app-secret.yaml) -- not a namespace per bounded context.
+# ch.30's Istio sidecar injection keys off a pod-template LABEL, not a
+# namespace label, so this namespace stays unlabeled for mesh purposes until
+# that overlay lands (see overlays/minikube/kustomization.yaml's seam).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mea
+  labels:
+    app.kubernetes.io/part-of: mea

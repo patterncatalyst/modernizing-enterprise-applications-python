@@ -1,0 +1,119 @@
+# shipping-service -- owns its own `shipping` Postgres schema (examples/06-
+# shipping-service). A DB-backed saga orchestrator: consumes
+# `payment.captured` (the trigger), runs a 4-step saga
+# (enrich -> dispatch -> book_carrier -> emit) with compensation on failure,
+# produces `shipment.dispatched`/`shipment.failed` via its own outbox +
+# relay, and calls OUT over HTTP to order-service's read surface
+# (`ORDER_BASE_URL`, the `enrich` step) with `tenacity` retry/timeout.
+# `alembic upgrade head` runs as the container's own startup command; the
+# crash-resume scan (`app/orchestrator.py::resume_running_sagas`) then runs
+# in `app/main.py`'s lifespan before uvicorn reports ready.
+#
+# HTTP_PORT/CONSUMER_GROUP set directly (see notification-service.yaml's
+# comment). ORDER_BASE_URL/OUTBOX_POLL_MS come from the shared ConfigMap.
+#
+# Health: `/health` reports consumer partition-assignment + the
+# resume-complete flag -- httpGet probes.
+#
+# Graceful shutdown: one inbound Kafka channel + the outbox relay's outgoing
+# producer, same shape as payment-service.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shipping-service
+  namespace: mea
+  labels:
+    app.kubernetes.io/name: shipping-service
+    app.kubernetes.io/part-of: mea
+    app.kubernetes.io/component: bounded-context
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: shipping-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: shipping-service
+        app.kubernetes.io/part-of: mea
+        app.kubernetes.io/component: bounded-context
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: shipping-service
+          image: mea/shipping-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8087
+          envFrom:
+            - configMapRef:
+                name: mea-app-config
+          env:
+            - name: HTTP_PORT
+              value: "8087"
+            - name: CONSUMER_GROUP
+              value: "shipping-service"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: mea-postgres-app
+                  key: database-url
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 125m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shipping-service
+  namespace: mea
+  labels:
+    app.kubernetes.io/name: shipping-service
+    app.kubernetes.io/part-of: mea
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: shipping-service
+  ports:
+    - name: http
+      port: 8087
+      targetPort: http

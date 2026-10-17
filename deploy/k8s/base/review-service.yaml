@@ -1,0 +1,109 @@
+# review-service -- stays in the monolith's SHARED `public` Postgres schema
+# (ch.15 Phase B, examples/02-review-service): reads/writes the existing
+# `reviews` table plus read-only `customers`/`inventory_items`/`auth_user`
+# lookups. UNLIKE the other five DB-backed services, its `app/db.py` sets NO
+# `search_path` override and its models carry no `schema=...` -- it is the
+# one service for which the shared `DATABASE_URL` (app-secret.yaml) already
+# points at exactly the right place with no further configuration. This
+# service never runs a migration of its own: `public.reviews`/`customers`/
+# `inventory_items`/`auth_user` are created and seeded by the (frozen,
+# not-deployed-here) monolith's own `manage.py migrate`/`manage.py seed` --
+# see scripts/deploy.sh's bootstrap step and examples/02-review-service/
+# README.md.
+#
+# Health: this service carries no `/health` route (confirmed:
+# examples/02-review-service/app/main.py has no such route). Probes use
+# `tcpSocket` on the HTTP port instead of `httpGet`.
+#
+# Not a Kafka consumer, no background task -- default termination grace is
+# enough.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: review-service
+  namespace: mea
+  labels:
+    app.kubernetes.io/name: review-service
+    app.kubernetes.io/part-of: mea
+    app.kubernetes.io/component: bounded-context
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: review-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: review-service
+        app.kubernetes.io/part-of: mea
+        app.kubernetes.io/component: bounded-context
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: review-service
+          image: mea/review-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8001
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: mea-postgres-app
+                  key: database-url
+          startupProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 75m
+              memory: 192Mi
+            limits:
+              cpu: 300m
+              memory: 384Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: review-service
+  namespace: mea
+  labels:
+    app.kubernetes.io/name: review-service
+    app.kubernetes.io/part-of: mea
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: review-service
+  ports:
+    - name: http
+      port: 8001
+      targetPort: http

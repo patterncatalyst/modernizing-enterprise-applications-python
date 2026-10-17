@@ -1,0 +1,121 @@
+# notification-service -- owns its own `notification` Postgres schema
+# (examples/03-notification-service), consumes `order.placed` on its own
+# consumer group, no outbox (read surface + a Kafka consumer only -- it
+# never publishes). `alembic upgrade head` runs as the container's own
+# startup command before uvicorn binds (see its Containerfile's CMD).
+#
+# PORT NAME: this service's `app/config.py::Settings.from_env()` reads
+# `PORT`, not `HTTP_PORT` like 04-07 below -- the one inconsistency across
+# this project's otherwise-uniform `HTTP_PORT` convention. Set directly
+# here, not in the shared ConfigMap (a shared `PORT`/`HTTP_PORT` key would
+# force every service onto the same port).
+#
+# CONSUMER_GROUP likewise set directly (its default, `notification-service`,
+# already matches app/config.py -- set explicitly here for visibility in
+# cluster config rather than left implicit).
+#
+# Health: `/health` reports consumer partition-assignment (a CI readiness
+# signal) -- httpGet probes apply.
+#
+# Graceful shutdown: one inbound Kafka channel; main.py cancels the consumer
+# task on shutdown.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: mea
+  labels:
+    app.kubernetes.io/name: notification-service
+    app.kubernetes.io/part-of: mea
+    app.kubernetes.io/component: bounded-context
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: notification-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: notification-service
+        app.kubernetes.io/part-of: mea
+        app.kubernetes.io/component: bounded-context
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: notification-service
+          image: mea/notification-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8002
+          envFrom:
+            - configMapRef:
+                name: mea-app-config
+          env:
+            - name: PORT
+              value: "8002"
+            - name: CONSUMER_GROUP
+              value: "notification-service"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: mea-postgres-app
+                  key: database-url
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 75m
+              memory: 192Mi
+            limits:
+              cpu: 300m
+              memory: 384Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: mea
+  labels:
+    app.kubernetes.io/name: notification-service
+    app.kubernetes.io/part-of: mea
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: notification-service
+  ports:
+    - name: http
+      port: 8002
+      targetPort: http

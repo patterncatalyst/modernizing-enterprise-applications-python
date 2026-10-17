@@ -1,0 +1,142 @@
+# postgres-statefulset.yaml -- the ONE shared Postgres server every DB-backed
+# service in this topology connects to (db `monolith`), each owning its own
+# schema except review-service (shared `public` schema -- see
+# ../review-service.yaml). Mirrors compose.yaml's `postgres` service: same
+# image/tag (docker.io/library/postgres:18.6-alpine, .env.example's
+# POSTGRES_IMAGE_TAG), same POSTGRES_DB/USER/PASSWORD values (sourced here
+# from the mea-postgres-app Secret instead of compose's plain env), and the
+# same logical-replication flags compose.yaml's `command:` sets
+# (wal_level=logical, max_replication_slots=4, max_wal_senders=4) --
+# inherited from the r04 CDC transition window (infra/debezium/ in compose's
+# tree); kept here even though no Kafka Connect/Debezium deployment exists
+# in this manifest-only topology, so a future Connect deployment would not
+# need a Postgres restart to enable it. `args`, not `command`: in Kubernetes
+# `command` replaces the image's own ENTRYPOINT (docker-entrypoint.sh),
+# which would skip initdb/POSTGRES_* handling entirely; `args` keeps the
+# entrypoint and appends these flags to its `postgres` CMD.
+#
+# Schema bootstrap: unlike the Java sibling (Flyway auto-creates each
+# service's schema on first migrate), every Python service's own Alembic
+# migration already issues its own `CREATE SCHEMA IF NOT EXISTS` (see e.g.
+# examples/04-inventory-service/migrations/versions/0001_*.py) as part of
+# `alembic upgrade head`, which runs as each container's own startup
+# command -- there is no separate schema-bootstrap ConfigMap needed here the
+# way the Java StatefulSet carries one. review-service's shared `public`
+# schema is the one exception: it is NOT created by any of the 8 running
+# services' own migrations (review-service runs no Alembic of its own) --
+# see scripts/deploy.sh's bootstrap step, which applies the (frozen,
+# not-deployed-here) monolith's `manage.py migrate`/`manage.py seed` once,
+# against this StatefulSet's Postgres.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: mea
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: mea
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: mea
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: mea
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postgres
+        app.kubernetes.io/part-of: mea
+    spec:
+      # The official postgres:18.6-alpine image owns its data directory as
+      # uid 70 ("postgres") -- the app Deployments' runAsUser: 1001 does not
+      # apply here. fsGroup lets the kubelet chown the PVC mount to that
+      # group on attach so the non-root postgres process can write to it.
+      securityContext:
+        fsGroup: 70
+      containers:
+        - name: postgres
+          image: docker.io/library/postgres:18.6-alpine
+          imagePullPolicy: IfNotPresent
+          args: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=4", "-c", "max_wal_senders=4"]
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            # The PVC mount point (/var/lib/postgresql) is owned by root;
+            # fsGroup only sets the GROUP, not the owner, so PGDATA must be a
+            # subdirectory the postgres user (uid 70) creates itself on
+            # first start. Postgres 18's own default data path already is
+            # one; set explicitly so it is visible here.
+            - name: PGDATA
+              value: "/var/lib/postgresql/18/docker"
+            - name: POSTGRES_DB
+              value: "monolith"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mea-postgres-app
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mea-postgres-app
+                  key: password
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql
+          readinessProbe:
+            exec:
+              # -h 127.0.0.1: TCP, not the Unix socket (compose.yaml's own
+              # healthcheck comment -- initdb runs a temporary server on the
+              # socket only, which can report ready before the real server
+              # listens).
+              command: ["pg_isready", "-h", "127.0.0.1", "-U", "monolith", "-d", "monolith"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-h", "127.0.0.1", "-U", "monolith", "-d", "monolith"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 70
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi
