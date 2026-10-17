@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 720" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="20" y="60" width="720" height="250" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="80" font-size="12" font-weight="700" fill="#1d1d1d">Local toolchain -- managed by uv</text>
+<rect x="760" y="60" width="720" height="250" rx="12" fill="#eaf4ec" stroke="#ddd"/>
+<text x="772" y="80" font-size="12" font-weight="700" fill="#1d1d1d">Compose stack -- compose.yaml (docker compose)</text>
+<rect x="20" y="350" width="1460" height="250" rx="12" fill="#ffffff" stroke="#ddd"/>
+<text x="32" y="370" font-size="12" font-weight="700" fill="#1d1d1d">Repository layout -- repo root</text>
+<rect x="40" y="110" width="330" height="85" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="205.0" y="143.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">uv</text>
+<text x="205.0" y="160.0" font-size="11.5" fill="#555555" text-anchor="middle">installs Python 3.14, venv, lockfile</text>
+<text x="205.0" y="175.0" font-size="11.5" fill="#555555" text-anchor="middle">required</text>
+<rect x="390" y="110" width="330" height="85" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="555.0" y="143.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">ruff + pytest</text>
+<text x="555.0" y="160.0" font-size="11.5" fill="#555555" text-anchor="middle">uv sync --group dev</text>
+<text x="555.0" y="175.0" font-size="11.5" fill="#555555" text-anchor="middle">required, every service</text>
+<rect x="40" y="205" width="330" height="85" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="205.0" y="238.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">grpcio-tools</text>
+<text x="205.0" y="255.0" font-size="11.5" fill="#555555" text-anchor="middle">scripts/gen-proto.sh</text>
+<text x="205.0" y="270.0" font-size="11.5" fill="#555555" text-anchor="middle">scoped to Part 3 (ch.19) onward</text>
+<rect x="390" y="205" width="330" height="85" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="555.0" y="238.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">check-proto-drift.sh</text>
+<text x="555.0" y="255.0" font-size="11.5" fill="#555555" text-anchor="middle">buf-style breaking-change check</text>
+<text x="555.0" y="270.0" font-size="11.5" fill="#555555" text-anchor="middle">scoped to Part 3 (ch.19) onward</text>
+<rect x="780" y="110" width="213" height="95" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="886.5" y="155.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Postgres</text>
+<text x="886.5" y="172.5" font-size="11.5" fill="#555555" text-anchor="middle">monolith + review DB (shared)</text>
+<rect x="1013" y="110" width="213" height="95" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1119.5" y="155.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Kafka -- KRaft mode</text>
+<text x="1119.5" y="172.5" font-size="11.5" fill="#555555" text-anchor="middle">single broker, no ZooKeeper</text>
+<rect x="1246" y="110" width="213" height="95" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1352.5" y="148.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Grafana LGTM bundle</text>
+<text x="1352.5" y="165.0" font-size="11.5" fill="#555555" text-anchor="middle">Loki + Tempo + Mimir</text>
+<text x="1352.5" y="180.0" font-size="11.5" fill="#555555" text-anchor="middle">+ OTel Collector</text>
+<rect x="780" y="215" width="320" height="85" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="940.0" y="255.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Debezium Connect</text>
+<text x="940.0" y="272.5" font-size="11.5" fill="#555555" text-anchor="middle">CDC source connectors</text>
+<rect x="1120" y="215" width="339" height="85" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="1289.5" y="255.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Apicurio schema registry</text>
+<text x="1289.5" y="272.5" font-size="11.5" fill="#555555" text-anchor="middle">Avro wire-envelope resolution</text>
+<rect x="40" y="410" width="220" height="130" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="150.0" y="465.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">examples/</text>
+<text x="150.0" y="482.5" font-size="11.5" fill="#555555" text-anchor="middle">00-monolith, 01-strangler-proxy,</text>
+<text x="150.0" y="497.5" font-size="11.5" fill="#555555" text-anchor="middle">02-review-service, ...</text>
+<rect x="280" y="410" width="220" height="130" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="390.0" y="465.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">tooling/</text>
+<text x="390.0" y="482.5" font-size="11.5" fill="#555555" text-anchor="middle">tooling/newman/ -- behavior-</text>
+<text x="390.0" y="497.5" font-size="11.5" fill="#555555" text-anchor="middle">equivalence collection</text>
+<rect x="520" y="410" width="220" height="130" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="630.0" y="465.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">demos/</text>
+<text x="630.0" y="482.5" font-size="11.5" fill="#555555" text-anchor="middle">demo-final-topology.sh,</text>
+<text x="630.0" y="497.5" font-size="11.5" fill="#555555" text-anchor="middle">demo-payment-cutover.sh</text>
+<rect x="760" y="410" width="220" height="130" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="870.0" y="465.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">infra/</text>
+<text x="870.0" y="482.5" font-size="11.5" fill="#555555" text-anchor="middle">db/, debezium/, grafana/,</text>
+<text x="870.0" y="497.5" font-size="11.5" fill="#555555" text-anchor="middle">otelcol/</text>
+<rect x="1000" y="410" width="220" height="130" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1110.0" y="473.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">scripts/</text>
+<text x="1110.0" y="490.0" font-size="11.5" fill="#555555" text-anchor="middle">stack-up.sh / stack-down.sh</text>
+<rect x="1240" y="410" width="220" height="130" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="1350.0" y="465.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">_docs/</text>
+<text x="1350.0" y="482.5" font-size="11.5" fill="#555555" text-anchor="middle">the chapters --</text>
+<text x="1350.0" y="497.5" font-size="11.5" fill="#555555" text-anchor="middle">01-prerequisites.md is here</text>
+<path d="M370,152.5 L726,152.5" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M726,152.5 L726,385" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M726,385 L150.0,385" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="444.0" y="379.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">runs &amp; tests -- uv run / uv run pytest, per service</text>
+<text x="444.0" y="379.0" font-size="11" fill="#2f5f3d" text-anchor="middle">runs &amp; tests -- uv run / uv run pytest, per service</text>
+<path d="M150.0,385 L150.0,410" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M1111.9448818897638,410.0 L1118.0787401574803,205.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="1121.0118110236222" y="301.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">stack-up.sh / stack-down.sh</text>
+<text x="1121.0118110236222" y="301.5" font-size="11" fill="#2f5f3d" text-anchor="middle">stack-up.sh / stack-down.sh</text>
+<text x="750.0" y="32" font-size="16" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.01 -- Toolchain and repo layout: what you install, and where it lands</text>
+<text x="750.0" y="52" font-size="11.5" fill="#555555" text-anchor="middle">uv-managed Python tooling and the docker compose stack both build and back the examples/ tree checked into this repository</text>
+<text x="20" y="632" font-size="10.5" fill="#555555" text-anchor="start">Required for every chapter: uv (manages Python 3.14, the venv, and the lockfile) plus ruff and pytest via uv sync --group dev.</text>
+<text x="20" y="648" font-size="10.5" fill="#555555" text-anchor="start">grpcio-tools / proto-drift checking and Debezium Connect / Apicurio are real, but scoped to later parts (ch.19 gRPC seam, ch.28 schema registry).</text>
+<text x="20" y="684" font-size="10" fill="#777777" text-anchor="start">Sourced from _plans/build-plan.md (&quot;A. Approach&quot;), _plans/decisions.md (r01 version matrix), compose.yaml.</text>
+</svg>

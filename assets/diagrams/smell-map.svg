@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1540 900" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="20" y="70" width="1500" height="210" rx="12" fill="#ffffff" stroke="#ddd"/>
+<text x="32" y="90" font-size="12" font-weight="700" fill="#1d1d1d">Django monolith — one deployable</text>
+<rect x="40" y="300" width="1460" height="80" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="52" y="320" font-size="12" font-weight="700" fill="#1d1d1d">PostgreSQL — one shared schema</text>
+<rect x="70" y="150" width="200" height="100" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="170.0" y="205.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">order</text>
+<rect x="294" y="150" width="200" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="394.0" y="205.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">inventory</text>
+<rect x="518" y="150" width="200" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="618.0" y="205.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">payment</text>
+<rect x="742" y="150" width="200" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="842.0" y="205.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">shipping</text>
+<rect x="966" y="150" width="200" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1066.0" y="205.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">notification</text>
+<rect x="1190" y="150" width="200" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1290.0" y="205.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">review</text>
+<rect x="610.0" y="322" width="320" height="40" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="770.0" y="347.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">9 tables, cross-context FKs</text>
+<rect x="30" y="500" width="200" height="190" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="130.0" y="585.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">#1 God checkout function</text>
+<text x="130.0" y="602.5" font-size="11.5" fill="#555555" text-anchor="middle">order/services.py::place_order() reaches directly into inventory/payment/shipping&#x27;s services/models</text>
+<text x="130.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">cures: ch.26 (hardest, last)</text>
+<rect x="244" y="500" width="200" height="190" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="344.0" y="585.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">#2 One ACID txn, five contexts</text>
+<text x="344.0" y="602.5" font-size="11.5" fill="#555555" text-anchor="middle">_place_order_local&#x27;s transaction.atomic() — free rollback across order+inventory+payment+shipping+outbox</text>
+<text x="344.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">cures: ch.22 (ACID-&gt;ACD), ch.23/24 (sagas)</text>
+<rect x="458" y="500" width="200" height="190" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="558.0" y="585.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">#3 Shared single schema/DB</text>
+<text x="558.0" y="602.5" font-size="11.5" fill="#555555" text-anchor="middle">config/settings.py — one Postgres schema, one set of Django migrations, all six apps deploy together</text>
+<text x="558.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">cures: ch.18 (owned data)</text>
+<rect x="672" y="500" width="200" height="190" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="772.0" y="585.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">#4 Cross-context FKs</text>
+<text x="772.0" y="602.5" font-size="11.5" fill="#555555" text-anchor="middle">orders-&gt;customers, payments/shipments/notifications-&gt;orders, reviews-&gt;customers+inventory_items</text>
+<text x="772.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">cures: ch.18, ch.19 (CDC)</text>
+<rect x="886" y="500" width="200" height="190" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="986.0" y="585.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">#5 Sync notification — CURED</text>
+<text x="986.0" y="602.5" font-size="11.5" fill="#555555" text-anchor="middle">place_order() used to call notification/services.py in-process; now it only writes an OutboxEvent row</text>
+<text x="986.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">ch.17 — cured at r03</text>
+<rect x="1100" y="500" width="200" height="190" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="1200.0" y="585.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">#6 Dual-write hazard — CURED</text>
+<text x="1200.0" y="602.5" font-size="11.5" fill="#555555" text-anchor="middle">DB row + provider call were two independent writes; outbox_relay now publishes at-least-once</text>
+<text x="1200.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">ch.17 — cured at r03</text>
+<rect x="1314" y="500" width="200" height="190" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="1414.0" y="585.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">#7 Review tangled in shared auth</text>
+<text x="1414.0" y="602.5" font-size="11.5" fill="#555555" text-anchor="middle">review/views.py gates POST with HTTP Basic auth against the shared django.contrib.auth table</text>
+<text x="1414.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">cures: ch.15 — review&#x27;s own auth config</text>
+<path d="M270.0,223.66666666666666 L685.4929577464789,322.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M494.0,237.7659574468085 L717.0422535211268,322.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M671.5211267605633,250.0 L748.5915492957746,322.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M816.6478873239437,250.0 L780.1408450704225,322.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M966.0,247.97297297297297 L811.6901408450705,322.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1190.0,227.30769230769232 L843.2394366197183,322.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M170.0,132 L842.0,132" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<text x="512.0" y="126.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">SMELL #2 — one transaction.atomic() spans these four contexts</text>
+<text x="512.0" y="126.0" font-size="11" fill="#2f5f3d" text-anchor="middle">SMELL #2 — one transaction.atomic() spans these four contexts</text>
+<path d="M170.0,132 L170.0,146" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M842.0,132 L842.0,146" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M130.0,500 L130.0,460" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M130.0,460 L170.0,460" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M170.0,460 L170.0,250" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M344.0,500 L344.0,460" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M344.0,460 L506.0,460" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M506.0,460 L506.0,132" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M558.0,500 L558.0,460" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M558.0,460 L770.0,460" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M770.0,460 L770.0,362" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M772.0,500 L772.0,460" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M772.0,460 L710.0,460" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M710.0,460 L710.0,362" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M986.0,500 L986.0,460" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M986.0,460 L1066.0,460" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M1066.0,460 L1066.0,250" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M1200.0,500 L1200.0,460" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M1200.0,460 L1086.0,460" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M1086.0,460 L1086.0,250" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M1414.0,500 L1414.0,460" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M1414.0,460 L1290.0,460" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<path d="M1290.0,460 L1290.0,250" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<text x="770.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.09 — The seven deliberate smells, mapped onto the monolith&#x27;s structure</text>
+<text x="770.0" y="56" font-size="12" fill="#555555" text-anchor="middle">the visual form of SMELLS.md — five smells still standing, two already cured</text>
+<text x="40" y="884" font-size="10.5" fill="#555555" text-anchor="start">Sourced from examples/00-monolith/SMELLS.md (grep &#x27;SMELL\[ch\.&#x27; for every in-code tag).</text>
+</svg>

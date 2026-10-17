@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 970" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="70" y="118" width="32" height="96" rx="12" fill="#f4b183" stroke="#ddd"/>
+<rect x="70" y="228" width="32" height="96" rx="12" fill="#9dc3f0" stroke="#ddd"/>
+<rect x="70" y="338" width="32" height="96" rx="12" fill="#f5ea8a" stroke="#ddd"/>
+<rect x="70" y="448" width="32" height="96" rx="12" fill="#f0d64a" stroke="#ddd"/>
+<rect x="70" y="558" width="32" height="96" rx="12" fill="#cdb3e8" stroke="#ddd"/>
+<rect x="70" y="668" width="32" height="96" rx="12" fill="#a8d9ad" stroke="#ddd"/>
+<rect x="70" y="778" width="32" height="96" rx="12" fill="#f0a8c4" stroke="#ddd"/>
+<rect x="118" y="118" width="960" height="96" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="598.0" y="156.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Domain event</text>
+<text x="598.0" y="173.5" font-size="11.5" fill="#555555" text-anchor="middle">orange sticky -- a past-tense fact</text>
+<text x="598.0" y="188.5" font-size="11.5" fill="#555555" text-anchor="middle">e.g. OrderPlaced, StockReserved, PaymentCaptured</text>
+<rect x="118" y="228" width="960" height="96" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="598.0" y="266.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Command</text>
+<text x="598.0" y="283.5" font-size="11.5" fill="#555555" text-anchor="middle">blue sticky -- the imperative that triggered the fact</text>
+<text x="598.0" y="298.5" font-size="11.5" fill="#555555" text-anchor="middle">e.g. Place Order, reserve stock, capture payment</text>
+<rect x="118" y="338" width="960" height="96" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="598.0" y="376.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Actor</text>
+<text x="598.0" y="393.5" font-size="11.5" fill="#555555" text-anchor="middle">small yellow figure, left of its command -- who/what issued it</text>
+<text x="598.0" y="408.5" font-size="11.5" fill="#555555" text-anchor="middle">e.g. Customer; or a job, webhook, or policy</text>
+<rect x="118" y="448" width="960" height="96" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="598.0" y="486.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Aggregate</text>
+<text x="598.0" y="503.5" font-size="11.5" fill="#555555" text-anchor="middle">large yellow sticky -- the data cluster enforcing an invariant</text>
+<text x="598.0" y="518.5" font-size="11.5" fill="#555555" text-anchor="middle">e.g. Order (is place_order() well-formed?), InventoryItem (enough stock?)</text>
+<rect x="118" y="558" width="960" height="96" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="598.0" y="596.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Policy / reaction</text>
+<text x="598.0" y="613.5" font-size="11.5" fill="#555555" text-anchor="middle">lilac sticky -- &quot;whenever X, then issue command Y&quot;, no human actor</text>
+<text x="598.0" y="628.5" font-size="11.5" fill="#555555" text-anchor="middle">e.g. whenever OrderPlaced, then reserve stock</text>
+<rect x="118" y="668" width="960" height="96" rx="9" fill="#f4f4f4" stroke="#888888" stroke-width="1.5"/>
+<text x="598.0" y="706.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Read model</text>
+<text x="598.0" y="723.5" font-size="11.5" fill="#555555" text-anchor="middle">green sticky -- a view projected forward from events</text>
+<text x="598.0" y="738.5" font-size="11.5" fill="#555555" text-anchor="middle">e.g. Order Status, fed by OrderPlaced/PaymentCaptured/ShipmentDispatched/OrderConfirmed</text>
+<rect x="118" y="778" width="960" height="96" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="598.0" y="816.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">External system</text>
+<text x="598.0" y="833.5" font-size="11.5" fill="#555555" text-anchor="middle">pink sticky -- outside the team&#x27;s control, called through a policy</text>
+<text x="598.0" y="848.5" font-size="11.5" fill="#555555" text-anchor="middle">e.g. the Payment Gateway stand-in, a carrier&#x27;s dispatch API</text>
+<text x="590.0" y="34" font-size="18" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.12 -- Event-storming note-type legend: the wall&#x27;s color grammar</text>
+<text x="590.0" y="60" font-size="12" fill="#555555" text-anchor="middle">in the order a session adds them -- each sticky color named the way the grammar is usually taught, mapped onto this book&#x27;s house-style box types</text>
+<text x="86.0" y="225" font-size="9" fill="#777777" text-anchor="middle">1</text>
+<text x="86.0" y="335" font-size="9" fill="#777777" text-anchor="middle">2</text>
+<text x="86.0" y="445" font-size="9" fill="#777777" text-anchor="middle">3</text>
+<text x="86.0" y="555" font-size="9" fill="#777777" text-anchor="middle">4</text>
+<text x="86.0" y="665" font-size="9" fill="#777777" text-anchor="middle">5</text>
+<text x="86.0" y="775" font-size="9" fill="#777777" text-anchor="middle">6</text>
+<text x="86.0" y="885" font-size="9" fill="#777777" text-anchor="middle">7</text>
+<text x="118" y="906" font-size="10" fill="#555555" text-anchor="start">Style key: ACCENT=domain event * USER=command * SUB=actor/external system * BOX=aggregate * GHOST(dashed)=policy/reaction * KERNEL=read model</text>
+<text x="118" y="922" font-size="10" fill="#555555" text-anchor="start">-- the same mapping event-storm-checkout.py (Figure 12.1) already uses.</text>
+<text x="118" y="950" font-size="10" fill="#777777" text-anchor="start">Sourced from this project&#x27;s own event-storm-checkout.py reading of order/services.py::_place_order_local.</text>
+</svg>

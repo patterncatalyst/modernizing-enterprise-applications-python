@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 660" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="340" y="90" width="240" height="536" rx="12" fill="#eaf4ec" stroke="#ddd"/>
+<text x="352" y="110" font-size="12" font-weight="700" fill="#1d1d1d">local</text>
+<rect x="680" y="90" width="240" height="536" rx="12" fill="#eef4fb" stroke="#ddd"/>
+<text x="692" y="110" font-size="12" font-weight="700" fill="#1d1d1d">hosted</text>
+<rect x="60" y="45" width="200" height="76" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="160.0" y="81.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">1. Express intent</text>
+<text x="160.0" y="98.0" font-size="11.5" fill="#555555" text-anchor="middle">(Minutes)</text>
+<rect x="60" y="250" width="200" height="76" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="160.0" y="286.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">8. Learn &amp; iterate</text>
+<text x="160.0" y="303.0" font-size="11.5" fill="#555555" text-anchor="middle">(Ongoing)</text>
+<rect x="60" y="390" width="200" height="76" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="160.0" y="426.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">7. Monitoring &amp; observability</text>
+<text x="160.0" y="443.0" font-size="11.5" fill="#555555" text-anchor="middle">(Continuous)</text>
+<rect x="60" y="530" width="200" height="76" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="160.0" y="566.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">6. Deploy &amp; ship</text>
+<text x="160.0" y="583.0" font-size="11.5" fill="#555555" text-anchor="middle">(Minutes)</text>
+<rect x="360" y="110" width="200" height="76" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="460.0" y="146.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">2. Agent understands</text>
+<text x="460.0" y="163.0" font-size="11.5" fill="#555555" text-anchor="middle">local coding agent</text>
+<rect x="360" y="250" width="200" height="76" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="460.0" y="286.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">3. Agent implements</text>
+<text x="460.0" y="303.0" font-size="11.5" fill="#555555" text-anchor="middle">uv + local coding agent</text>
+<rect x="360" y="390" width="200" height="76" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="460.0" y="426.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">4. Agent tests + docs</text>
+<text x="460.0" y="443.0" font-size="11.5" fill="#555555" text-anchor="middle">pytest + Testcontainers</text>
+<rect x="360" y="530" width="200" height="76" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="460.0" y="566.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">5. Human review</text>
+<text x="460.0" y="583.0" font-size="11.5" fill="#555555" text-anchor="middle">local diff + Docker Engine</text>
+<rect x="700" y="110" width="200" height="76" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="800.0" y="146.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">2. Agent understands</text>
+<text x="800.0" y="163.0" font-size="11.5" fill="#555555" text-anchor="middle">hosted AI platform</text>
+<rect x="700" y="250" width="200" height="76" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="800.0" y="286.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">3. Agent implements</text>
+<text x="800.0" y="303.0" font-size="11.5" fill="#555555" text-anchor="middle">hosted AI platform</text>
+<rect x="700" y="390" width="200" height="76" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="800.0" y="426.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">4. Agent tests + docs</text>
+<text x="800.0" y="443.0" font-size="11.5" fill="#555555" text-anchor="middle">GitHub Actions code-ci.yml</text>
+<rect x="700" y="530" width="200" height="76" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="800.0" y="566.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">5. Human review</text>
+<text x="800.0" y="583.0" font-size="11.5" fill="#555555" text-anchor="middle">PR + hosted AI platform</text>
+<path d="M260,95 L360,140" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M260,60 L700,118" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M460.0,186.0 L460.0,250.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M460.0,326.0 L460.0,390.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M460.0,466.0 L460.0,530.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M800.0,186.0 L800.0,250.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M800.0,326.0 L800.0,390.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M800.0,466.0 L800.0,530.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M360.0,568.0 L260.0,568.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M700,606 L260,598" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M160.0,530.0 L160.0,466.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M160.0,390.0 L160.0,326.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M160.0,250.0 L160.0,121.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="166.0" y="179.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">cycle repeats</text>
+<text x="166.0" y="179.5" font-size="11" fill="#555" text-anchor="middle">cycle repeats</text>
+<text x="490" y="20" font-size="18" fill="#1d1d1d" text-anchor="middle" font-weight="700">The Agentic Loop: Local vs. Hosted Execution</text>
+</svg>
