@@ -23,8 +23,9 @@ MINIKUBE_MIN="v1.33.0"
 CONTAINER_ENGINE="${CONTAINER_ENGINE:-docker}"
 
 # NodePorts published to the host on 127.0.0.1 at profile creation. Keep in
-# sync with deploy/k8s/overlays/minikube/kustomization.yaml (strangler-proxy).
-NODE_PORTS=(30888)   # strangler-proxy REST edge
+# sync with deploy/k8s/overlays/minikube/kustomization.yaml (strangler-proxy)
+# and deploy/k8s/observability/lgtm-service.yaml (lgtm-grafana, ch.30).
+NODE_PORTS=(30888 30300)   # strangler-proxy REST edge, Grafana UI
 
 # The eight workloads: <service name>:<examples/ directory>.
 SERVICES=(

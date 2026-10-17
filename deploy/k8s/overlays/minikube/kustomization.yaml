@@ -1,20 +1,16 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# ch.30 SEAM (wired in r10): Istio's namespace-scoped CRs (PeerAuthentication,
-# Telemetry) and the LGTM observability backend would compose here as sibling
-# overlays on top of ../../base -- e.g.:
-#
-#   resources:
-#     - ../../base
-#     - ../../istio
-#     - ../../observability
-#
-# Neither ../../istio nor ../../observability exists at r09 -- this overlay
-# renders against ../../base alone so `kubectl kustomize` has no dangling
-# resource reference today. See deploy/k8s/README.md.
+# ch.30 SEAM ACTIVATED (r10): Istio's namespace-scoped CRs (PeerAuthentication,
+# Telemetry) and the LGTM observability backend compose here as sibling
+# overlays on top of ../../base. See deploy/k8s/README.md for the bring-up
+# sequence (setup-profile.sh -> install-istio.sh -> build-images.sh ->
+# deploy.sh) and deploy/k8s/istio/istio-install.yaml's header for why the
+# IstioOperator install itself is NOT listed here.
 resources:
   - ../../base
+  - ../../istio
+  - ../../observability
 
 # Images: built on the host (`docker build -f examples/<dir>/Containerfile`)
 # and copied into minikube's containerd with `minikube -p mea image load
@@ -61,8 +57,19 @@ patches:
         value: 30888
 
   # imagePullPolicy: Never on every app Deployment -- see the images: note
-  # above. The ch.30 seam (sidecar.istio.io/inject pod-template labels) is
-  # NOT added here; it lands with the ../../istio sibling overlay at r10.
+  # above. ch.30 (r10) adds a second op to each of these same 8 patches: a
+  # `sidecar.istio.io/inject: "true"` pod-template LABEL (JSON-pointer
+  # /spec/template/metadata/labels/sidecar.istio.io~1inject, "~1" escaping
+  # the "/" in the key per RFC 6901) -- this is the actual per-Deployment
+  # mesh opt-in. LABEL, not annotation: Istio's sidecar-injection webhook's
+  # `objectSelector` matches a label on the admitted pod template, so an
+  # annotation form silently injects nothing (hard-won gotcha, datamesh
+  # reference arch). The `mea` Namespace itself stays unlabelled (see
+  # base/namespace.yaml) -- injection is opt-in per Deployment, not
+  # namespace-wide. postgres + kafka (../../base/infra, StatefulSets) are
+  # deliberately given NO such patch and carry no inject label: meshing a
+  # stateful workload's own TLS would collide with the injected sidecar's
+  # mTLS wrapping.
   - target:
       kind: Deployment
       name: strangler-proxy
@@ -70,6 +77,9 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: Never
+      - op: add
+        path: /spec/template/metadata/labels/sidecar.istio.io~1inject
+        value: "true"
   - target:
       kind: Deployment
       name: review-service
@@ -77,6 +87,9 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: Never
+      - op: add
+        path: /spec/template/metadata/labels/sidecar.istio.io~1inject
+        value: "true"
   - target:
       kind: Deployment
       name: notification-service
@@ -84,6 +97,9 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: Never
+      - op: add
+        path: /spec/template/metadata/labels/sidecar.istio.io~1inject
+        value: "true"
   - target:
       kind: Deployment
       name: inventory-service
@@ -91,6 +107,9 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: Never
+      - op: add
+        path: /spec/template/metadata/labels/sidecar.istio.io~1inject
+        value: "true"
   - target:
       kind: Deployment
       name: payment-service
@@ -98,6 +117,9 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: Never
+      - op: add
+        path: /spec/template/metadata/labels/sidecar.istio.io~1inject
+        value: "true"
   - target:
       kind: Deployment
       name: shipping-service
@@ -105,6 +127,9 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: Never
+      - op: add
+        path: /spec/template/metadata/labels/sidecar.istio.io~1inject
+        value: "true"
   - target:
       kind: Deployment
       name: order-service
@@ -112,6 +137,9 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: Never
+      - op: add
+        path: /spec/template/metadata/labels/sidecar.istio.io~1inject
+        value: "true"
   - target:
       kind: Deployment
       name: graphql-gateway
@@ -119,3 +147,6 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: Never
+      - op: add
+        path: /spec/template/metadata/labels/sidecar.istio.io~1inject
+        value: "true"

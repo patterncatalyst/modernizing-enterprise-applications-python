@@ -1,0 +1,21 @@
+# deploy/k8s/istio/kustomization.yaml -- ch.30 (additive)
+#
+# Bundles ONLY the three namespace-scoped CRs that are ordinary
+# kubectl-apply-able objects (PeerAuthentication x2, Telemetry). The
+# IstioOperator install (istio-install.yaml) is applied separately via
+# `istioctl install -f`, not `kubectl apply -k` -- it is NOT
+# listed here (see that file's own header) and NOT kubeconform-validated:
+# cluster-only, operator-reconciled, not a plain apply.
+#
+# The per-Deployment `sidecar.istio.io/inject: "true"` LABEL patches (the
+# actual mesh opt-in for the 8 app Deployments) live in
+# deploy/k8s/overlays/minikube/kustomization.yaml itself, not here --
+# mirroring that overlay's existing image/NodePort patches rather than
+# introducing a second patch location.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - peer-authentication.yaml
+  - peer-authentication-edge.yaml
+  - telemetry.yaml

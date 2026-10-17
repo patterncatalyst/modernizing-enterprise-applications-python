@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
 # deploy/k8s/scripts/deploy.sh -- apply the minikube overlay to the `mea`
 # profile, wait for every workload to roll out, and bootstrap
-# review-service's shared `public` schema. Run setup-profile.sh and
-# build-images.sh first.
+# review-service's shared `public` schema.
+#
+# ch.30 bring-up order: run setup-profile.sh, THEN install-istio.sh, THEN
+# build-images.sh, THEN this script. The activated overlay
+# (overlays/minikube) now composes ../../istio (PeerAuthentication,
+# Telemetry -- CRDs owned by the Istio control plane) and
+# ../../observability (the LGTM backend) alongside ../../base, so `kubectl
+# apply -k` fails at the Istio CRs' CRD lookup if install-istio.sh hasn't
+# run yet on this cluster. This script checks for istiod first and fails
+# with that exact instruction rather than a confusing CRD-not-found error.
 set -euo pipefail
 # shellcheck source=lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
@@ -10,8 +18,16 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 require_tool kubectl ""
 require_profile_running
 
+step "Checking Istio is installed (ch.30 CRs need its CRDs)"
+kc -n istio-system get deployment istiod >/dev/null 2>&1 \
+  || fail "Istio is not installed on profile $PROFILE. Run deploy/k8s/scripts/install-istio.sh first."
+ok "istiod found in istio-system"
+
 step "kubectl --context $PROFILE apply -k deploy/k8s/overlays/minikube"
 kc apply -k "$REPO_ROOT/deploy/k8s/overlays/minikube"
+
+step "Waiting for the LGTM observability backend"
+kc -n "$NAMESPACE" rollout status deployment/lgtm --timeout=300s
 
 step "Waiting for infra (Postgres + Kafka StatefulSets)"
 kc -n "$NAMESPACE" rollout status statefulset/postgres --timeout=300s
@@ -59,3 +75,5 @@ done
 kc -n "$NAMESPACE" get pods
 printf '\nEdge router: curl -s http://127.0.0.1:30888/api/inventory\n'
 printf 'GraphQL gateway (in-cluster only, no NodePort): kubectl --context %s -n %s port-forward svc/graphql-gateway 8090:8090\n' "$PROFILE" "$NAMESPACE"
+printf 'Grafana (LGTM): http://127.0.0.1:30300\n'
+printf 'Mesh verification: istioctl x describe pod -n %s <pod-name>\n' "$NAMESPACE"

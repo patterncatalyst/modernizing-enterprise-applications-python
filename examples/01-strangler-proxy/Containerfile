@@ -49,4 +49,9 @@ USER 1001:0
 
 EXPOSE 8888
 
-ENTRYPOINT ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8888"]
+# r10/ch.30 -- wrapped with `opentelemetry-instrument` (opentelemetry-distro,
+# zero-code auto-instrumentation: starlette server spans + httpx client
+# spans). NO-OP by default: `OTEL_SDK_DISABLED=true` in .env.example means
+# this wrapper does not attempt OTLP export in compose/CI; only
+# `deploy/k8s/base/app-config.yaml` flips it active, in-cluster only.
+ENTRYPOINT ["opentelemetry-instrument", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8888"]

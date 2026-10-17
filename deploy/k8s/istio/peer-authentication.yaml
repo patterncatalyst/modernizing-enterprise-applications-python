@@ -1,0 +1,23 @@
+# peer-authentication.yaml -- ch.30 (additive, DRQ-098)
+#
+# Namespace-wide PeerAuthentication for `mea`, named `default` -- the name
+# Istio requires for a namespace-scoped default policy to take effect.
+#
+# STRICT mesh-wide: every meshed workload (the 8 app Deployments carrying
+# the `sidecar.istio.io/inject` pod-template label, see
+# overlays/minikube/kustomization.yaml) rejects plaintext from another
+# meshed sidecar. PeerAuthentication is enforced by the RECEIVING Envoy
+# sidecar, not the API server, so postgres/kafka (no sidecar, no inject
+# label) are unaffected -- they keep accepting their own plaintext exactly
+# as before. The one exception to STRICT is the strangler-proxy's plaintext
+# NodePort edge, scoped out via peer-authentication-edge.yaml's workload-level
+# PERMISSIVE override (Istio resolves the most specific PeerAuthentication
+# that applies to a given workload).
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: mea
+spec:
+  mtls:
+    mode: STRICT

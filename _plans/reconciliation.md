@@ -1374,7 +1374,7 @@ unexplained drift for ch.21/26.
 
 ---
 
-## CAPSTONE
+## FINAL PROJECT
 
 **The strangler-fig is complete — the Django monolith is decommissioned;
 six FastAPI services plus a GraphQL gateway sit behind a flagless edge
@@ -1747,4 +1747,72 @@ exceeding. No unexplained drift for ch.29/31.
 (Mesh, Observability & Distributed Tracing — Istio, Kiali, OpenTelemetry +
 the LGTM stack, live on minikube, user-run, per track-plan USER DECISION
 A/B-2 still open at r09 close) and ch.32 (The Pattern Language, Revisited —
-the capstone)**, per `_plans/backmatter-track-plan.md`'s grouping.
+the final project)**, per `_plans/backmatter-track-plan.md`'s grouping.
+
+## ch.30/32 — Mesh, Observability & Tracing + The Pattern Language, Revisited (r10, Part 9 + Part 10, non-extraction)
+
+**What shipped (headless, merged):** ch.30 (4,395 words, 2 figures) activates the
+ch.29 Istio seam — `deploy/k8s/istio/` (PeerAuthentication STRICT mesh-wide + a
+PERMISSIVE edge exception scoped to strangler-proxy, Telemetry → the `otel`
+provider, and an `IstioOperator` applied via `istioctl install -f`, kept out of
+every kustomization as a cluster-only object) and `deploy/k8s/observability/`
+(one `grafana/otel-lgtm:0.36.0` all-in-one, unmeshed, with an `otelcol` config
+that adds a Kubernetes-pod-SD scrape of the Envoy sidecars' `:15090` stats).
+The minikube overlay activates sidecar injection as a pod-template **label**
+(not an annotation — the datamesh webhook-objectSelector gotcha) on exactly the
+8 app Deployments; postgres, kafka, and lgtm stay unmeshed. OpenTelemetry is
+added additively to exactly 3 services (strangler-proxy, order-service,
+inventory-service — the synchronous hero-trace path, DRQ-096=A) via
+`opentelemetry-distro`, no-op by default (`OTEL_SDK_DISABLED=true`) and active
+only through the k8s ConfigMap. ch.32 (5,326 words, 2 figures) re-walks the
+whole pattern language as the book's final project and reconciles build-plan §C.
+A new headless `mesh-manifests.yml` gate validates the istio + observability
+overlays with `kubeconform -strict -ignore-missing-schemas`.
+
+**Decisions:** A/B-2 resolved **A** (ch.30 verified by a user-run live capture,
+DRQ-095); OTel trio **A** (DRQ-096, so the conditional outbox-traceparent work
+DRQ-103 never triggered); label injection (DRQ-097); STRICT + edge-PERMISSIVE
+mTLS (DRQ-098); the LGTM overlay shape (DRQ-099); r10 pins (DRQ-100 — Istio/
+istioctl 1.31.2, opentelemetry-distro 0.66b1, exporter-otlp-proto-grpc 1.45.0,
+reusing grafana/otel-lgtm 0.36.0 / k8s v1.37.1 / kubeconform v0.8.0); the mesh
+gate (DRQ-101); §C reconciliation + final-project framing (DRQ-102).
+
+**Drift found and corrected (CLEAN after fix):**
+1. *Instrumentor version skew (named, not worked around).* `opentelemetry-
+   instrumentation-sqlalchemy==0.66b1` requires `sqlalchemy<2.1.0`, but
+   order/inventory pin `sqlalchemy[asyncio]==2.1.4`; the ORM instrumentor
+   declines to patch. sqlalchemy stays at 2.1.4 (prefer-newer-versions); DB
+   spans come from the compatible `asyncpg` instrumentor. Named in ch.30, not
+   presented as full coverage.
+2. *The activated seam broke the r09 `deploy-manifests` gate.* Adding the Istio
+   CRs to the minikube overlay made that gate's `kubeconform -strict` (no
+   `-ignore-missing-schemas`) error on the 3 schemaless CRs. Caught on live CI
+   on PR #10, fixed by giving the overlay render `-ignore-missing-schemas` (base
+   stays strict). This is the render-vs-cluster gap ch.29/30 describe, surfacing
+   as a real cross-gate interaction rather than a hypothetical.
+
+**Terminology + driver sweeps:** "capstone" → "final project" across `_plans`
+(and the `lgtm-professional-voice` skill's preferred replacement updated from the
+interim "complete project"); the podman minikube-driver opt-in removed from
+`deploy/k8s` so docker + containerd is the only documented driver (`CONTAINER_
+ENGINE=podman` remains a separate image-build knob).
+
+**Live verification — DEFERRED (user-run, post-merge).** The maintainer chose to
+merge the headless-complete tree and run the live minikube+Istio+LGTM capture
+separately. ch.30's footer therefore reads `headless-verified; live mesh capture
+DEFERRED (user-run, scheduled post-merge)` with three named, not-yet-present
+evidence files (`deploy/k8s/observability/evidence/ch30-{hero-trace.json,
+istioctl-mtls.txt,metrics.txt}`) produced by `capture-ch30-evidence.sh`. Every
+trace ID, span count, mTLS line, and metric value is left for the captured
+evidence; none is drawn from an uncaptured file. When the capture lands, the
+evidence is committed and the footer flips to `verified-live (user-run)`.
+
+**Verdict:** CLEAN on the headless tree (10/10 adversarial-validation criteria
+met; all required CI gates green on PR #10 after the deploy-manifests fix). The
+one outstanding item is ch.30's live-cluster evidence, named and deferred to the
+maintainer's separate run.
+
+**Forward reference:** no further back-matter chapters remain. Future work
+(not A/B gates): front-matter ch.00-13, the 3 decks (101/201/201-fastapi), and
+ch.33 (OpenShift/CRC appendix); plus landing ch.30's live evidence when the
+maintainer's run completes.

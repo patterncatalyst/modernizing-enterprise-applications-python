@@ -1,0 +1,11 @@
+# deploy/k8s/observability/evidence/.gitignore -- ch.30 evidence capture.
+#
+# Ignore everything by default (port-forward logs, half-written MISSING
+# notes from a retried run, anything scratch capture-ch30-evidence.sh
+# leaves behind), then explicitly allow back in the 3 files it's meant to
+# produce plus this file itself.
+*
+!.gitignore
+!ch30-hero-trace.json
+!ch30-istioctl-mtls.txt
+!ch30-metrics.txt

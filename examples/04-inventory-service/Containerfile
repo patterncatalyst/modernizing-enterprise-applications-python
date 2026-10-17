@@ -51,4 +51,11 @@ EXPOSE 8084 9004
 # don't already exist, a no-op otherwise) before the server starts -- there
 # is no separate init-container story in this project's compose/CRC stacks,
 # so the container's own startup is the migration trigger.
-CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8084"]
+#
+# r10/ch.30 -- the server process (not the migration step) is wrapped with
+# `opentelemetry-instrument` (opentelemetry-distro, zero-code: fastapi server
+# spans, asyncpg/sqlalchemy DB spans, grpc server spans, aiokafka spans).
+# NO-OP by default: `OTEL_SDK_DISABLED=true` in .env.example means this
+# wrapper does not attempt OTLP export in compose/CI; only
+# `deploy/k8s/base/app-config.yaml` flips it active, in-cluster only.
+CMD ["sh", "-c", "alembic upgrade head && exec opentelemetry-instrument uvicorn app.main:app --host 0.0.0.0 --port 8084"]

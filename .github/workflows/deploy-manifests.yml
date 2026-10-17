@@ -106,7 +106,12 @@ jobs:
       - name: Render + validate deploy/k8s/overlays/minikube
         run: |
           kubectl kustomize deploy/k8s/overlays/minikube > /tmp/minikube.yaml
-          kubeconform -strict -summary /tmp/minikube.yaml
+          # r10 activated the ch.30 Istio seam in this overlay: it now carries
+          # PeerAuthentication/Telemetry CRs that have no published OpenAPI
+          # schema. `-ignore-missing-schemas` skips those (reported Skipped, not
+          # Invalid) while still strictly validating every base k8s object. The
+          # mesh-manifests.yml gate validates the Istio overlay the same way.
+          kubeconform -strict -ignore-missing-schemas -summary /tmp/minikube.yaml
 
   # The one check a ruleset would require for this workflow. Passes when
   # every needed job succeeded or was skipped by `changes`.

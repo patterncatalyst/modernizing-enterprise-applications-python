@@ -1,0 +1,103 @@
+# lgtm-deployment.yaml -- ch.30 (additive, DRQ-099)
+#
+# The all-in-one grafana/otel-lgtm image (Collector + Tempo + Loki + Mimir +
+# Grafana in one container), same shape as compose.yaml's `lgtm` service,
+# ported to a single-replica Deployment. ConfigMaps from this directory
+# (otelcol-configmap.yaml, grafana-datasources-configmap.yaml) are mounted
+# at the exact paths compose.yaml's `lgtm` service bind-mounts
+# (infra/otelcol/config.yaml, infra/grafana/datasources.yaml) so the
+# container's own startup script picks them up identically.
+#
+# serviceAccountName: lgtm (rbac.yaml) -- needed for the otelcol
+# `prometheus/istio-mesh` receiver's Kubernetes pod service-discovery.
+#
+# NO `sidecar.istio.io/inject` label on the pod template --
+# this is the observability backend, unmeshed (DRQ-099), same reasoning as
+# postgres/kafka (see overlays/minikube/kustomization.yaml): a meshed
+# observability backend would wrap its own OTLP ingest in mTLS and collide
+# with both the app-level OTel exporters and Istio's own `otel`
+# extensionProvider, both of which dial it in plaintext.
+#
+# mem request/limit: compose.yaml's `mem_limit: 2g` becomes the limit
+# ceiling here, with a 1Gi request floor and headroom for the added
+# istio-proxy scrape target set (DRQ-100).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lgtm
+  namespace: mea
+  labels:
+    app.kubernetes.io/name: lgtm
+    app.kubernetes.io/part-of: mea
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: lgtm
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: lgtm
+        app.kubernetes.io/part-of: mea
+        # No sidecar.istio.io/inject label -- unmeshed by design (DRQ-099).
+    spec:
+      serviceAccountName: lgtm
+      containers:
+        - name: lgtm
+          image: docker.io/grafana/otel-lgtm:0.36.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: "true"
+            - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+              value: "Admin"
+            - name: GF_AUTH_DISABLE_LOGIN_FORM
+              value: "true"
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+            - name: grafana
+              containerPort: 3000
+            - name: prometheus
+              containerPort: 9090
+            - name: loki
+              containerPort: 3100
+            - name: tempo
+              containerPort: 3200
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "2"
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            failureThreshold: 20
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 6
+          volumeMounts:
+            - name: otelcol-config
+              mountPath: /otel-lgtm/otelcol-config.yaml
+              subPath: otelcol-config.yaml
+            - name: grafana-datasources
+              mountPath: /otel-lgtm/grafana/conf/provisioning/datasources/grafana-datasources.yaml
+              subPath: datasources.yaml
+      volumes:
+        - name: otelcol-config
+          configMap:
+            name: lgtm-otelcol-config
+        - name: grafana-datasources
+          configMap:
+            name: lgtm-grafana-datasources

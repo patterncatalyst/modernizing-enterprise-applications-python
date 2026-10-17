@@ -1,0 +1,45 @@
+# rbac.yaml -- ch.30 (additive)
+#
+# The `lgtm` Pod's otelcol-internal Prometheus receiver
+# (`prometheus/istio-mesh` in otelcol-configmap.yaml) does Kubernetes
+# service-discovery (`kubernetes_sd_configs: role: pod`) to find istio-proxy
+# sidecars to scrape. That requires the Pod's ServiceAccount to be able to
+# list/watch pods (and endpoints/services, for completeness) via the
+# Kubernetes API, scoped to the `mea` namespace via the RoleBinding's
+# namespace (the ClusterRole itself grants no namespace by default -- it is
+# namespace-scoped here via a RoleBinding, not a ClusterRoleBinding, so the
+# `lgtm` ServiceAccount cannot list pods outside `mea`).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: lgtm
+  namespace: mea
+  labels:
+    app.kubernetes.io/name: lgtm
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: mea-lgtm-prometheus-sd
+  labels:
+    app.kubernetes.io/name: lgtm
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "endpoints", "services"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mea-lgtm-prometheus-sd
+  namespace: mea
+  labels:
+    app.kubernetes.io/name: lgtm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: mea-lgtm-prometheus-sd
+subjects:
+  - kind: ServiceAccount
+    name: lgtm
+    namespace: mea
