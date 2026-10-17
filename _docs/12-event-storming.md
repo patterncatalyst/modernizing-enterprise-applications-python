@@ -100,7 +100,7 @@ implementation happens to be wired.
 
 Nothing about this chapter asks you to adopt new tooling to get that
 artifact; the timeline this chapter builds is written in prose and a
-diagram, the same way the rest of this book records decisions.
+diagram, the same way the other chapters in this book record decisions.
 
 ## The grammar of a session
 
@@ -194,7 +194,7 @@ ORDER_PLACED_TOPIC = "order.placed"
 ```
 
 The next policy on the wall is *whenever OrderPlaced, then reserve stock* —
-and here storming earns its keep by naming something a straight code read
+and here storming pays off by naming something a straight code read
 tends to blur past. `_place_order_local` persists the `Order` row as
 `PENDING` first, then loops over the checkout lines reserving each one:
 
@@ -209,7 +209,7 @@ for line in items:
 ```
 
 Read as code, that sequence already gets the business order right: the
-`Order` row — the fact that a customer's intent to buy exists — is persisted
+`Order` row — the fact of a customer's intent to buy — is persisted
 *before* any reservation is attempted. What the code doesn't do is *name*
 that moment as a fact anything else could react to. No event fires when the
 `Order` row commits; the only thing this function ever publishes is a single
@@ -219,8 +219,8 @@ event's own payload may already read `"confirmed"` rather than `"placed"`
 (`order/services.py::_write_order_placed_outbox_event` sets `confirmed =
 order.status == Order.Status.CONFIRMED` and picks the verb from that). The
 wall needs two separate stickies where the code has one: **OrderPlaced**,
-the fact that belongs right after the `Order` row commits, and
-**OrderConfirmed**, the fact that belongs at checkout's actual end — and
+the fact belonging right after the `Order` row commits, and
+**OrderConfirmed**, the fact belonging at checkout's actual end — and
 naming that gap is exactly the kind of thing a storm catches that a code
 read, following call-stack order, tends to paper over.
 
@@ -280,7 +280,7 @@ system, happens later, independently, driven by
 `notification.management.commands.order_placed_consumer` reacting to that
 same outbox row once a separate relay process has published it. Storming
 this policy doesn't surface a gap to close — it surfaces a cure already
-shipped, which is worth noticing precisely because it proves the method:
+shipped, which proves the method:
 this book didn't have to wait for notification to become its own deployable
 (Chapter 17) before cutting the behavioral seam first, inside the monolith,
 where the cost of being wrong was cheapest. An **Order Status** read model,
@@ -365,14 +365,14 @@ and 24 each do, one boundary at a time, before Chapter 26 ever touches
   already cured behaviorally inside the still-single-deployable monolith,
   proof that a seam can be cut before a service boundary is, and that
   "where" (this chapter) and "in what order to cut" (the next one) are
-  genuinely separate questions.
+  separate questions, not restatements of each other.
 - Each remaining event boundary maps directly onto a later chapter's
   extraction seam — inventory (ch.19), payment's choreographed saga (ch.23),
   shipping's orchestrated saga (ch.24) — but the wall only answers *where*
   to cut; *in what order* is Chapter 13's question.
 
-Chapter 13 takes this wall and asks the question it deliberately leaves
-open: given several candidate seams, which is safest to cut first, measured
+Chapter 13 takes this wall and asks the question left open here: given
+several candidate seams, which is safest to cut first, measured
 by how strongly coupled it is to everything around it — and which, measured
 the same way, might be better left uncut.
 

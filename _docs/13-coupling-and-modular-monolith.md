@@ -349,7 +349,7 @@ tooling and convention instead:
   rung this chapter scored — `get_by_sku()`/`reserve()` handing back a live
   `InventoryItem` — from a runtime discovery into a *build failure*: the
   moment `order` tries to import `inventory.models.InventoryItem` instead of
-  a contract type `inventory` publishes on purpose, the build stops, which
+  a contract type `inventory` designates as its public interface, the build stops, which
   is strictly earlier and cheaper feedback than discovering the coupling
   during an incident three deploys later.
 - **No cross-module model references**, meaning the `ForeignKey` pattern
@@ -442,7 +442,7 @@ answer actually held, rather than discovering in production that it didn't.
 ## Part 4, consolidated: the extraction plan
 
 Part 4 has now supplied three lenses, in this order, and here is how they
-combine into the one plan the rest of the book runs. Chapter 11's
+combine into the one plan the extraction chapters that follow carry out. Chapter 11's
 domain-driven design gave you *where the conceptual boundaries are* — the
 bounded contexts, the aggregates, the rule that keeps the ORM out of the
 domain core so a later extraction is mechanical rather than a rewrite.

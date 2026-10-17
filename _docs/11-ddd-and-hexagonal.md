@@ -150,7 +150,7 @@ bespoke contract and is better off just accepting the vendor's shape. That is
 not this situation. `order` and `inventory` are sibling Django apps in the
 same codebase, owned by (eventually) the same organization, heading toward
 being two independently deployable services that absolutely could negotiate
-a contract. Conformism chosen deliberately, with eyes open, is a strategy.
+a contract. Conformism chosen as a trade-off, with the cost understood, is a strategy.
 Conformism that happens because nobody built the alternative and the live
 `InventoryItem` instance was sitting right there, returned by
 `get_by_sku()`, is what Chapter 9 calls a smell, and what this chapter can
@@ -203,8 +203,8 @@ An **aggregate** is a cluster of objects treated as one consistency unit:
 the boundary inside which invariants must hold together, and the unit a
 single transaction commits as a whole. `Order` and its `OrderItem`s are the
 monolith's clearest aggregate, and the way `OrderItem` is shaped today
-already shows good tactical instincts worth calling out before this chapter
-names what's still missing. `OrderItem` does not hold a live reference to
+already shows good tactical instincts, which this chapter names before
+turning to what's still missing. `OrderItem` does not hold a live reference to
 another aggregate's root object — it holds `sku`, `item_name`, and
 `unit_price_cents` as its own plain columns, copied once at checkout time:
 
@@ -387,8 +387,8 @@ endpoint *does* still borrow something from its siblings — Django's shared
 `auth_user` table, gated per-view with HTTP Basic auth, even though nothing
 about reviewing a product requires authenticating against the same user
 store `order` would use if it ever needed login. `examples/02-review-service`
-keeps that exact coupling on purpose — its own `README.md` calls this
-"Option B," a deliberate, named deferral, not an oversight: the service
+keeps that exact coupling as a named trade-off — its own `README.md` calls
+this "Option B," a scoped deferral, not an oversight: the service
 still reaches the shared Postgres schema for `Customer` and `InventoryItem`
 reads, and still verifies Basic-auth credentials against the same
 `auth_user` rows the monolith seeds, via `passlib`'s
@@ -432,7 +432,8 @@ negotiated boundaries of their own to be cut *against*.
 That is the method this chapter hands you, and it generalizes past this one
 monolith. Classify each area of the system by value and rate of change. Draw
 a context map and ask, for every integration point, which of the possible
-relationships actually exists today and whether anyone chose it on purpose.
+relationships actually exists today and whether anyone chose it or it just
+accumulated.
 Check what each call site hands across a boundary — a value snapshot of
 what it needs, or a live reference to something it doesn't own. Count a
 module's outbound edges before you judge how hard it will be to cut free,
@@ -469,7 +470,7 @@ never shipped a `SMELLS.md` file telling you where to look.
   SQLAlchemy with almost no change to request handling — precisely because
   review had zero outbound edges to sibling business logic, the one
   property that mattered more than any port's literal shape. Its still-live
-  dependency on the shared `auth_user` table is the honest reminder that a
+  dependency on the shared `auth_user` table is the reminder that a
   low coupling score on one axis doesn't mean zero coupling on every axis.
 
 Chapter 12, "Event Storming the Monolith," takes a complementary approach to
