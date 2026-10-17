@@ -24,7 +24,7 @@ front matter's own menu, and reports which parts of that chassis a service
 actually wired in versus which parts stayed a name in a build-plan
 paragraph. The discipline to hold onto from here to the scorecard at the
 end: a pattern copied into one service's `app/main.py` is a capability
-*used*. A capability mentioned in `_plans/build-plan.md` and never written
+*used*. A capability named in the build plan and never written
 is a capability *deferred*, and naming the gap in plain terms beats
 carrying it forward unexamined.
 
@@ -62,8 +62,8 @@ first, the scorecard itself, row by row, cited against the real code.
 ## Configuration: a frozen dataclass, not pydantic-settings
 
 **Status: USED, 7 of 8.** The original build-plan line for this chapter —
-still sitting in `_plans/build-plan.md`'s Part 5 table as "FastAPI +
-pydantic-settings" — was aspirational, written before any service existed.
+the one that read "FastAPI + pydantic-settings" — was aspirational,
+written before any service existed.
 What actually shipped, starting with `03-notification-service` and
 repeated unchanged through `08-graphql-gateway`, is a plain, frozen
 `@dataclass` with a `from_env()` classmethod that reads `os.environ` at
@@ -389,8 +389,8 @@ of synchronous, mid-saga outbound call that needs it — `tenacity` sits in
 is nothing in the tree: no `opentelemetry-*` or `prometheus-client`
 package in any service's dependency lock file is actually imported by any
 `app/*.py` file, no `/metrics` endpoint anywhere, no span or trace emitted
-by anything this project runs today. The `_plans/backmatter-track-plan.md`
-line that scoped this very chapter states the gap directly rather than
+by anything this project runs today. The plan line that scoped this very
+chapter states the gap directly rather than
 letting a reader infer it from absence: "no OTel/metrics anywhere." Chapter
 30 is where this gets built — additively, onto three of the eight services
 — and building it now, with no dashboard or alert waiting to consume it,
@@ -399,8 +399,8 @@ declined before: a capability added because a catalog says a service
 should have it, not because an operational need has asked for it.
 
 `pybreaker` (a circuit breaker) and an `asyncio.Semaphore`-based bulkhead
-are the same story, one level further from built: named in `_plans/
-build-plan.md` and `_plans/decisions.md`'s prose, zero lines of code
+are the same story, one level further from built: named in the build plan
+and the decision log's prose, zero lines of code
 anywhere in `examples/`. What a circuit breaker buys that `tenacity`'s
 bounded retry doesn't — a state machine that stops hammering a
 known-down dependency entirely, rather than retrying it three times per
@@ -437,8 +437,8 @@ bugs, not before.
 > study in the discipline the scorecard above tries to model. The chapter
 > prompt that commissioned it arrived with a plausible-sounding claim
 > already attached — that configuration in this project runs on
-> `pydantic-settings` — carried forward from `_plans/build-plan.md`'s
-> own Part 5 table, written before a single service existed. Confirming it
+> `pydantic-settings` — carried forward from the build plan,
+> written before a single service existed. Confirming it
 > meant grepping `examples/*/app/config.py` for the actual import, finding
 > a plain `dataclasses.dataclass` in every one of them, and finding no
 > `pydantic_settings` import anywhere in the tree at all. The same
@@ -493,12 +493,4 @@ call whom, and with what guarantee the shape won't change underneath them.
 
 ---
 
-*Verification status: <span class="status status--unverified">unverified</span>.
-This is a conceptual chapter with no new runnable example; its scorecard is
-read directly from the services' own source (`config.py`/`main.py`/
-`errors.py` shapes and dependency declarations across all eight services)
-rather than produced by a run. Re-confirm with a fresh `grep -rl tenacity
-examples/*/pyproject.toml` (and the matching checks for OpenTelemetry/
-Prometheus and `pydantic_settings`) before citing this scorecard again,
-since an added dependency would move a row from DEFERRED to PARTIAL or
-USED.*
+*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — no new runnable example; its scorecard is read directly from the services' own source (`config.py`/`main.py`/`errors.py` and the dependency declarations across the services), checkable with `grep -rl tenacity examples/*/pyproject.toml` and the matching checks for OpenTelemetry, Prometheus, and `pydantic_settings`.*

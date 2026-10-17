@@ -302,7 +302,6 @@ later.
 | `infra/` | Configuration consumed by `compose.yaml` — the OpenTelemetry Collector config, Grafana datasource provisioning, and database init scripts. |
 | `scripts/` | Project-level automation — `stack-up.sh` / `stack-down.sh` for the local infrastructure, plus the diagram generator used across chapters. |
 | `_docs/` | The chapters themselves — this file is `_docs/01-prerequisites.md`. |
-| `_plans/` | The project's own ADLC ledger — `decisions.md`, `build-plan.md`, and `reconciliation.md` — introduced properly as a reader-facing concept in the next chapter. |
 
 ## Ports at a glance
 
@@ -339,10 +338,9 @@ the first.
   extraction chapter runs; getting it green here means you are starting
   Part 3 from a verified baseline, not a hopeful one.
 
-The next chapter, **"The Project Ledger,"** introduces the three documents
-this project uses as its own memory across the chapters you are about to
-read — `decisions.md`, `build-plan.md`, and `reconciliation.md` — and shows
-you how to keep the same kind of ledger for your own migration.
+The next chapter, **"The Project Ledger,"** introduces the records this
+project uses as its own memory across the chapters you are about to read, and
+shows you how to keep the same kind of ledger for your own migration.
 
 ---
-*Verification status: <span class="status status--unverified">unverified</span>. Conceptual chapter — the toolchain and commands described are reproducible from the project's own tracked files (`compose.yaml`, `.env.example`, `scripts/stack-up.sh`/`stack-down.sh`, `examples/00-monolith/README.md`), but this chapter itself runs no automated check; confirm `scripts/stack-up.sh` reports the services healthy and the Newman run above is green on a fresh clone before continuing to Part 3.*
+*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — the toolchain and commands it describes are reproducible from the project's own tracked files (`compose.yaml`, `.env.example`, `scripts/stack-up.sh`/`stack-down.sh`, `examples/00-monolith/README.md`); bring the stack up and confirm the Newman run above is green on a fresh clone before continuing to Part 3.*

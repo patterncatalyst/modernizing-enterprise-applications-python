@@ -195,10 +195,10 @@ print('requests:', sum(len(f['item']) for f in d['item']))"
 ```
 
 The first two numbers match the table above exactly; the third confirms the
-collection has grown since the frozen r01 baseline — later forward-ref
+collection has grown since the frozen baseline — later forward-ref
 context-contract folders and the staged GraphQL folder already live in the
 same file this chapter describes, even though this chapter's own scope is
-the r01 Smoke/Scenario/contract shape the baseline run captured. That habit
+the Smoke/Scenario/contract shape the baseline run captured. That habit
 — checking a chapter's claims against the artifact it describes, not just
 against memory of having read it once — is the same discipline this whole
 book asks of every extraction starting in Part 5.

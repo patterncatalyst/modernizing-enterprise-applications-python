@@ -21,7 +21,7 @@ accurate answer to "did this order succeed" is "not yet."
 The code is in `examples/05-payment-service/` (the new FastAPI choreography
 participant) and `examples/00-monolith/order/` (the choreographed checkout
 path and its saga listener). `CUTOVER.md` in the service directory and
-`tooling/newman/GOLDEN-BASELINE.md`'s r05 CUTOVER section record the measured
+`tooling/newman/GOLDEN-BASELINE.md`'s cutover section record the measured
 numbers cited throughout this chapter.
 
 ## ACID gives way to ACD: SMELL #3 paid off, for payment
@@ -71,7 +71,7 @@ single line, because the only contract between them is the shape of two
 Kafka topics.
 
 This is a design choice, and a temporary one for
-this *specific* seam, not a verdict on orchestration as inferior. r06's
+this *specific* seam, not a verdict on orchestration as inferior. Chapter 24's
 shipping extraction is positioned as this book's orchestrated contrast — a
 central coordinator calling shipping synchronously and deciding the next
 step based on its answer — precisely so a reader sees both shapes solve
@@ -250,16 +250,16 @@ order.save(update_fields=["status"])
 return order
 ```
 
-This is Option A from the r05 planning gate: shipping dispatch moves
+This is Option A from the planning gate: shipping dispatch moves
 *into* the `payment.captured` reaction, meaning shipping now happens after
 payment captures rather than before, and a shipping failure here
 compensates inventory but — as ch.22 already named — leaves the captured
-payment unrefunded, a documented deferral to r06's orchestrated saga rather
-than a silent gap.
+payment unrefunded, a documented deferral to Chapter 24's orchestrated saga
+rather than a silent gap.
 
 ## Idempotency: at-least-once delivery, exactly-once effect
 
-Closing DRQ-043 — the gap ch.19 explicitly deferred, "idempotency of
+Closing the gap ch.19 explicitly deferred — "idempotency of
 `Release` and over-restore protection... to the saga chapters" — required
 two layers, not one, and the reason for two is itself instructive: a
 client-side check can never see a crash window on the server it's calling.
@@ -329,9 +329,9 @@ stops *that* second call from over-restoring stock, because it checks the
 RPC's own idempotency key, not the caller's belief about what it already
 did.
 
-{% include excalidraw.html file="idempotent-compensation-two-layers" alt="A compensating Release survives redelivery at both the Kafka-event layer (the saga's status-transition guard) and the RPC layer (inventory-service's compensations ledger, INSERT ... ON CONFLICT DO NOTHING)" caption="Figure 23.3 — DRQ-043 closed: idempotent at the event layer, idempotent at the RPC layer, independently" %}
+{% include excalidraw.html file="idempotent-compensation-two-layers" alt="A compensating Release survives redelivery at both the Kafka-event layer (the saga's status-transition guard) and the RPC layer (inventory-service's compensations ledger, INSERT ... ON CONFLICT DO NOTHING)" caption="Figure 23.3 — The deferred idempotency gap closed: idempotent at the event layer, idempotent at the RPC layer, independently" %}
 
-`tooling/newman/GOLDEN-BASELINE.md`'s r05 CUTOVER lane proved both layers
+`tooling/newman/GOLDEN-BASELINE.md`'s cutover lane proved both layers
 live, independently, against the same already-resolved order. The exact
 `payment.declined` event payment-service had published was re-published to
 Kafka by hand; `order_saga_listener.log` recorded `payment.declined
@@ -412,8 +412,8 @@ property of an at-least-once pipeline with an idempotent consumer on both
 ends.
 
 > **ADLC in Action** — Converting the equivalence suite's shape was planned,
-> not improvised: `_plans/r05-build-plan.md` named the bounded-wait
-> conversion (DRQ-056) and its required non-vacuity baseline (green against
+> not improvised: the iteration's build plan named the bounded-wait
+> conversion and its required non-vacuity baseline (green against
 > the unmodified synchronous monolith, before trusting it against the new
 > topology) as an explicit acceptance criterion before the saga listener
 > was written. Two rejected alternatives — a forked async-only collection,
@@ -439,7 +439,7 @@ ends.
   original reservation; `_release_order_lines` recovers what to release
   from persisted snapshot rows, not from in-memory state that no longer
   exists by the time the reaction runs.
-- Closing a compensation idempotency gap (DRQ-043) took two independent
+- Closing a compensation idempotency gap took two independent
   layers, not one: a cheap client-side status-transition guard for the
   common redelivery case, and a server-side ledger
   (`INSERT ... ON CONFLICT DO NOTHING`) for the crash window the client-side
@@ -458,13 +458,4 @@ chapter both named and left open.
 
 ---
 
-*Verification status: <span class="status status--verified">verified</span>.
-The full choreographed topology — monolith, payment/inventory/review/
-notification services, the strangler proxy, and a real Kafka broker — was
-brought up live for `tooling/newman/GOLDEN-BASELINE.md`'s r05 CUTOVER lane:
-95/95 and 89/89 assertions green across the forward and reversed runs, the
-negative check fails strictly then self-heals on restart, and
-double-delivery idempotency is proven independently at both the saga and
-inventory layers. No integration bug surfaced; the known
-stranded-payment-on-ship-fail gap (ch.22) remains open by design, deferred
-to r06.*
+*Verification status: <span class="status status--verified">verified</span>. The full choreographed topology — monolith, payment/inventory/review/notification services, the strangler proxy, and a real Kafka broker — was brought up live for the cutover run in `tooling/newman/`: 95/95 and 89/89 assertions green across the forward and reversed runs, the negative check fails strictly then self-heals on restart, and double-delivery idempotency is proven independently at both the saga and inventory layers. No integration bug surfaced; the known stranded-payment-on-ship-fail gap (ch.22) remains open by design, deferred to the next extraction (ch.24).*
