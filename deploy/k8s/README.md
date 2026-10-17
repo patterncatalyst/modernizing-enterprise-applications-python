@@ -130,6 +130,27 @@ see `overlays/minikube/kustomization.yaml`'s header) and that it was
 created or restarted AFTER `install-istio.sh` completed (the injection
 webhook only acts on admission, not retroactively).
 
+### Capturing ch.30 evidence
+
+Once `deploy.sh` reports every pod 2/2, one command drives a few checkouts
+through `strangler-proxy` and pulls the 3 files ch.30's footer cites --
+a distributed trace, an mTLS check, and a set of mesh request metrics --
+into `deploy/k8s/observability/evidence/`:
+
+```bash
+deploy/k8s/scripts/capture-ch30-evidence.sh
+```
+
+It writes `ch30-hero-trace.json` (one trace from Tempo spanning
+`strangler-proxy` -> `order-service` -> `inventory-service`),
+`ch30-istioctl-mtls.txt` (`istioctl x describe pod` plus the pod READY
+column), and `ch30-metrics.txt` (`istio_requests_total` from Mimir, via
+`svc/lgtm`). Each capture either produces a real file or, if the cluster
+hasn't produced the data yet (no trace indexed, an empty metrics result),
+writes a `*.MISSING.txt` note describing what to retry and exits non-zero --
+it never substitutes placeholder content. Pass the resulting 3 files back
+so they can be committed and wired into ch.30.
+
 ### review-service's shared schema
 
 `review-service` runs no Alembic migration of its own -- it reads the
