@@ -1,0 +1,109 @@
+# schema-registry.yml -- ch.28 (DRQ-038 follow-up, DRQ-076/DRQ-033) Avro +
+# Apicurio Schema Registry DEMONSTRATOR gate.
+#
+# A SEPARATE, ADDITIVE workflow: never edits, depends on, or shares a job
+# with code-ci.yml / code-ci-ok, and never touches tooling/newman/ -- the
+# contract gate stays exactly as it was. See
+# examples/09-schema-registry-demo's own README.md/AGENTS.md for what this
+# module is (and deliberately is not): a teaching surface for Avro +
+# Apicurio, publishing to its OWN order.events.avro.demo topic, with no
+# effect on the live JSON event flows code-ci.yml's contract-gate exercises.
+#
+# Summary-job gate pattern (see
+# ~/.claude/skills/lgtm-github/references/branch-protection.md), same shape
+# as code-ci.yml: a cheap `changes` job decides whether the heavy job runs;
+# `schema-registry-gate` does the real work; `schema-registry-ok` is the
+# single required check, `if: always()`, and passes when every needed job is
+# success-or-skipped. No `paths:` filter on `on:` -- a path-filtered-out run
+# of a workflow with a required summary job reports nothing, which would
+# wedge a ruleset that requires this check.
+#
+# SELF-CONTAINED, no `services:` block: examples/09-schema-registry-demo's
+# own pytest suite (tests/conftest.py) provisions its own Kafka + Apicurio
+# pair via Testcontainers -- the same posture the Java sibling's
+# schema-registry-gate takes against Quarkus Dev Services. This job only
+# needs a working Docker daemon (already present on ubuntu-latest runners),
+# not a pre-started broker/registry.
+
+name: Schema Registry
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # Decides whether the heavy job runs. The workflow always runs (no
+  # `paths:` filter on `on:` above), so the required summary job always
+  # reports.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.diff.outputs.run }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - id: diff
+        run: |
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          if ! files="$(git diff --name-only "$base" "${{ github.sha }}" 2>/dev/null)"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"   # cannot diff: run everything
+          elif grep -qE '^(examples/09-schema-registry-demo/|compose\.yaml$|\.env\.example$|\.github/workflows/schema-registry\.yml$)' <<<"$files"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # THE GATE: `uv run ruff check .` + `uv run pytest` (Testcontainers-backed
+  # Kafka + Apicurio), proving the round trip (tests/test_roundtrip.py) and
+  # the BACKWARD-compatibility evolution (tests/test_compatibility.py: v2
+  # accepted, v3 rejected) against a LIVE, pinned
+  # quay.io/apicurio/apicurio-registry:3.3.3 container -- not mocked.
+  schema-registry-gate:
+    name: schema-registry-gate
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v7
+
+      - name: Install uv (pinned) + Python 3.14
+        uses: astral-sh/setup-uv@v10.3.0   # no floating v10 tag; pin exact
+        with:
+          version: "0.13.1"            # decisions.md version matrix: uv 0.13.1
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: examples/09-schema-registry-demo/uv.lock
+
+      - name: uv sync (schema-registry-demo)
+        working-directory: examples/09-schema-registry-demo
+        run: uv sync --locked --group dev
+
+      - name: ruff check
+        working-directory: examples/09-schema-registry-demo
+        run: uv run ruff check .
+
+      - name: pytest -- round trip + BACKWARD-compatibility evolution (Testcontainers-managed Kafka + Apicurio)
+        working-directory: examples/09-schema-registry-demo
+        run: uv run pytest -v
+
+  # The one check a ruleset would require for this workflow. Passes when
+  # every needed job succeeded or was skipped by `changes`.
+  schema-registry-ok:
+    name: schema-registry-ok
+    if: always()
+    needs: [changes, schema-registry-gate]
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: jq -e 'to_entries | all(.value.result == "success" or .value.result == "skipped")' <<<"$NEEDS"

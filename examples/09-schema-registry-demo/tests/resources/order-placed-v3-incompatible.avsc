@@ -1,0 +1,15 @@
+{
+  "type": "record",
+  "name": "OrderPlaced",
+  "namespace": "dev.patterncatalyst.contracts.avro",
+  "doc": "Evolution fixture for tests/test_compatibility.py -- v3 RETYPES totalCents from 'long' (v1/v2) to 'string'. There is no valid Avro schema-resolution promotion from long to string, so a v3 reader cannot deserialize data written by the v1/v2 writer schema. Apicurio's BACKWARD compatibility rule must REJECT this registration -- the deliberate negative case this demonstrator proves. Live-verified against the pinned quay.io/apicurio/apicurio-registry:3.3.3 image: the rejection comes back as HTTP 400 with an RFC 7807 problem body whose 'name' is 'RuleViolationException' (an older, pre-3.3 registry answered 409 for the identical request -- see app/registry_client.py's module docstring).",
+  "fields": [
+    { "name": "orderId", "type": "long", "doc": "The saga correlation key -- this order's identifier." },
+    { "name": "customerId", "type": "long", "doc": "The customer who placed the order." },
+    { "name": "customerEmail", "type": "string", "doc": "Denormalized customer email snapshot, carried on the wire so downstream consumers never need to look up the customer." },
+    { "name": "totalCents", "type": "string", "doc": "INCOMPATIBLE CHANGE: retyped from 'long' (v1/v2) to 'string' -- no valid Avro promotion path, breaks BACKWARD compatibility." },
+    { "name": "confirmationMessage", "type": "string", "doc": "The order-confirmation message text." },
+    { "name": "placedAt", "type": { "type": "long", "logicalType": "timestamp-millis" }, "doc": "When the order was placed." },
+    { "name": "paymentMethod", "type": ["null", "string"], "default": null, "doc": "The checkout request's payment method. Optional." }
+  ]
+}

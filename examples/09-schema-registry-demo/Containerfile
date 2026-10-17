@@ -1,0 +1,50 @@
+# 09-schema-registry-demo -- UBI 10, multi-stage, non-root.
+#
+# Optional for a demo module (no long-running server, no database of its
+# own) but included for consistency with every other example's Containerfile
+# in this project (e.g. ../05-payment-service/Containerfile). Same verified
+# base image: UBI 10 publishes only the `-minimal` Python 3.14 image, and
+# every dependency here ships a prebuilt wheel (aiokafka included), so
+# `uv sync` never needs a C compiler.
+ARG UBI_PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506
+ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.13.1
+
+FROM ${UV_IMAGE} AS uv
+
+FROM ${UBI_PYTHON_IMAGE} AS builder
+COPY --from=uv /uv /uvx /usr/local/bin/
+
+WORKDIR /app
+
+# Resolve dependencies first so dependency installs cache independently of
+# application code changes.
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked --no-install-project --no-dev
+
+COPY app ./app
+COPY schemas ./schemas
+RUN uv sync --locked --no-dev
+
+FROM ${UBI_PYTHON_IMAGE}
+
+WORKDIR /app
+COPY --from=builder /app /app
+ENV PATH="/app/.venv/bin:${PATH}" \
+    PYTHONUNBUFFERED=1
+
+# Non-root, OpenShift/arbitrary-UID compatible -- same convention as every
+# other service's Containerfile in this project (no shadow-utils on the
+# minimal image, so fix ownership instead of creating a user with useradd).
+USER root
+RUN chgrp -R 0 /app && chmod -R g=u /app
+USER 1001:0
+
+# No EXPOSE -- this module serves no HTTP/gRPC port of its own.
+#
+# Runs the same register -> round-trip -> v2-accept -> v3-reject progression
+# demos/demo-schema-registry.sh calls, against REGISTRY_URL/
+# KAFKA_BOOTSTRAP_SERVERS env vars (defaults assume the shared compose
+# stack's apicurio/kafka services, reachable as `apicurio`/`kafka` on the
+# compose network rather than localhost -- override both env vars when
+# actually running this image inside that network).
+CMD ["python", "-m", "app.demo_cli"]

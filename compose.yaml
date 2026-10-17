@@ -64,8 +64,15 @@
 # Debezium can tail its WAL via pgoutput — requires a container restart to
 # take effect; existing data in the postgres-data volume survives.
 #
-# No Apicurio — out of scope so far (the Java repo's compose.yaml adds it at
-# ch.28, schema-registry).
+# apicurio : ch.28 (DRQ-038 follow-up, DRQ-076) Avro + Apicurio Schema
+#            Registry service, used ONLY by examples/09-schema-registry-demo
+#            -- a DEMONSTRATOR, additive to the live topology. No other
+#            service in this stack (examples/00 through examples/08, the
+#            strangler proxy, or any Newman contract suite -- DRQ-036/038)
+#            depends on it, reads from it, or has its JSON event flows
+#            touched by it in any way. Mirrors the Java sibling's
+#            compose.yaml apicurio block (same image, same in-memory H2
+#            storage, same healthcheck shape).
 #
 # Image tags are pinned once in .env (gitignored) / .env.example (tracked).
 # Re-verify tags with `skopeo list-tags` before bumping — see .env.example's
@@ -215,6 +222,40 @@ services:
       timeout: 3s
       retries: 20
       start_period: 30s
+    restart: unless-stopped
+
+  # ─── Apicurio Schema Registry — examples/09-schema-registry-demo ONLY ────
+  # ch.28 (DRQ-038 follow-up, DRQ-076): an Avro + Apicurio Schema Registry
+  # DEMONSTRATOR. BLAST RADIUS: used exclusively by
+  # examples/09-schema-registry-demo, which publishes a field-for-field
+  # Avro mirror of order.placed to its OWN order.events.avro.demo topic to
+  # teach schema registration + BACKWARD-compatibility evolution checking.
+  # The live JSON event flows (examples/00-monolith through
+  # examples/07-order-service, DRQ-036/038) are completely UNCHANGED by
+  # this service's presence — nothing else in this compose file, no Newman
+  # contract suite, and no other example reads from or depends on it.
+  # APICURIO_STORAGE_KIND=sql / APICURIO_STORAGE_SQL_KIND=h2: in-memory
+  # (embedded H2), ephemeral, wiped on every container restart — no
+  # external dependency, matching the Java sibling's identical compose.yaml
+  # block.
+  apicurio:
+    image: quay.io/apicurio/apicurio-registry:${APICURIO_IMAGE_TAG}
+    container_name: meap-apicurio
+    ports:
+      - "${APICURIO_HOST_PORT:-8095}:8080"
+    environment:
+      - APICURIO_STORAGE_KIND=sql
+      - APICURIO_STORAGE_SQL_KIND=h2
+    mem_limit: 512m
+    healthcheck:
+      # Apicurio Registry 3.3 serves health on the management interface
+      # (container port 9000, not published here); /health/ready on 8080
+      # is a 404.
+      test: ["CMD", "curl", "-sf", "http://localhost:9000/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 20s
     restart: unless-stopped
 
 volumes:

@@ -219,12 +219,25 @@ up 1:1.
     REST/gRPC/GraphQL and when each fits; the core aggregate extracted last;
     the Strawberry GraphQL gateway as the CQRS read-aggregation surface; the
     strangler completes and the monolith's order app is decommissioned.
-28. **27 The FastAPI Chassis** — pydantic-settings, dependency injection,
-    structured health/metrics, OpenAPI, async lifespans — "what you migrated
-    *to*," the Python analogue of the Quarkus/MicroProfile chassis chapter.
+28. **27 The FastAPI Chassis** — config via a frozen `@dataclass`'s
+    `from_env()` classmethod (**DRQ-083 corrects this blurb's earlier
+    pydantic-settings claim** — no service ever adopted pydantic-settings;
+    7/8 services follow the `Settings.from_env()` shape), dependency
+    injection, structured health/metrics, OpenAPI, async lifespans — "what
+    you migrated *to*," the Python analogue of the Quarkus/MicroProfile
+    chassis chapter. **Landed r08** — authored as an honest per-service
+    used/partial/deferred scorecard (`/health` 6/8, `errors.py` 6/8,
+    `tenacity` 1/8, OTel/metrics 0/8 deferred to ch.30), not a claim of a
+    uniform shared chassis library (DRQ-082, deferred by choice).
 29. **28 Contracts & the Service Registry** — schema/API/shared-data-type
     registry use cases; Apicurio with Avro/Protobuf/JSONSchema/OpenAPI/
-    AsyncAPI (unchanged — language-agnostic).
+    AsyncAPI (unchanged — language-agnostic). **Landed r08** —
+    `examples/09-schema-registry-demo/` realizes the Avro path on pure-Python
+    fastavro + aiokafka + the Apicurio v3 REST API (honoring DRQ-033's
+    standing rejection of confluent-kafka), with a hand-rolled global-id wire
+    envelope; schema evolution verified live (v2 optional-with-default
+    ACCEPTED 200, v3 retype REJECTED 400 `RuleViolationException`) against
+    Apicurio 3.3.3 via Testcontainers (DRQ-084).
 
 **Part 9 — Operating the Modernized System**
 30. **29 Deployment Patterns** — rolling, breaking-schema-change, blue-green
@@ -297,9 +310,9 @@ the "Runnable via" column changes to name the Python mechanism.
 | Saga — Orchestrated (D) | ch.24 | CNDP Python DB-backed saga orchestrator | **landed r06** — shipping extraction adapts + embeds the CNDP orchestrator (`select(Saga).with_for_update()`, idempotent `advance()`, reverse-order `compensate()`, DRQ-059); crash-resumable (`resume_running_sagas()`), a durability upgrade over the Java sibling's `InMemorySagaService` (DRQ-060); deliberate orchestration-vs-choreography contrast with r05's payment saga |
 | Idempotent Compensation (D) | ch.23 | inventory-service `idempotency_key` + `inventory.compensations` ledger (`ON CONFLICT DO NOTHING`), plus a client-side status-transition guard in `order_saga_listener` | **landed r05** — closes DRQ-043's explicit deferral; double-delivery proven at both layers (saga-listener guard + ledger), stock net-zero (94→94) under forced redelivery |
 | Circuit Breaker / Discovery / Health (E) | ch.25, ch.27, ch.30 | `tenacity`/`circuitbreaker` + FastAPI health routes | reframed off Netflix OSS, same as Java sibling; **ch.25 landed r06** — the gRPC deadline, compensating `Release`, outbox at-least-once + two-layer idempotency, and the orchestrator's own timeout/crash-resume are documented as the existing chassis, plus one new concrete mechanism (a `tenacity` retry-with-timeout on the shipping saga's `enrich` HTTP call, DRQ-068/069); `pybreaker` circuit breaker + bulkhead are named but deferred (no second failure mode yet forces them) |
-| Microservices Chassis (E) | ch.27, ch.32 | FastAPI + pydantic-settings | |
+| Microservices Chassis (E) | ch.27, ch.32 | FastAPI + frozen `@dataclass`/`from_env()` config (**DRQ-083 corrects this row's earlier "pydantic-settings" claim** — no service ever adopted it) | **landed r08 (ch.27)** — honest per-service used/partial/deferred scorecard across all 8 services (config 7/8, schemas-via-pydantic 6/8, `/health` 6/8, `errors.py` 6/8, `tenacity` 1/8, OTel/metrics 0/8 deferred to ch.30); a shared chassis library is DEFERRED BY CHOICE, not built (DRQ-082) |
 | Fixed / Rolling / Breaking-Schema / Blue-Green (F) | ch.29 | manifests (unchanged) | Fixed demoted to a paragraph |
-| Service/Schema/API registry + requirements (G) | ch.28 | Apicurio (unchanged) | |
+| Service/Schema/API registry + requirements (G) | ch.28 | Apicurio (unchanged) | **landed r08** — `examples/09-schema-registry-demo/` on pure-Python fastavro + aiokafka + Apicurio v3 REST (no confluent-kafka, honoring DRQ-033), hand-rolled global-id envelope; v2 optional-field evolution ACCEPTED (200), v3 field-retype REJECTED (400 `RuleViolationException`), both verified live via Testcontainers against Apicurio 3.3.3; Apicurio added to `compose.yaml`/`.env.example` additively (`:8095`), scoped to this one demo (DRQ-084/DRQ-085); separate additive `schema-registry.yml` CI gate (DRQ-086) |
 | Service Mesh / Observability / Tracing (H) | ch.30 | Istio + OTel Python auto-instrumentation (minikube) | |
 | Caching (H) | App. H (Java-sourced, adapted) | demoted → appendix | generic; no migration driver |
 | API Gateway + Service Discovery evolution (H) | ch.26, ch.28 | FastAPI gateway + Apicurio | **GraphQL/Aggregation Gateway landed r07 (ch.26)** — see the row below |
@@ -577,7 +590,7 @@ shifted down by one iteration, for the same total of **10 iterations**.
 | **r05** | **Sagas — choreographed — done** | Part 7 ch.20/22/23 (ch.21 deferred to r07): **Payment extraction (`examples/05-payment-service/`, aiokafka choreography)** — `POST /api/orders` 201→202 PENDING in choreographed mode (zero-regression synchronous mode unchanged); `order_saga_listener` reacts to `payment.captured`/`payment.declined`; idempotent inventory `Release` (ledger + `idempotency_key`) closes DRQ-043; shipping-fail Option A (new `SHIPPING_FAILED` terminal, refund-on-ship-fail deferred to r06); `STRANGLER_PAYMENT_ENABLED` + `PAYMENT_MODE` two-dimension cutover; Newman converted to async bounded-wait + stuck-PENDING negative; `payment-equivalence-gate` green | Java r06 |
 | **r06** | **Sagas — orchestrated + resilience — done** | Part 7 ch.24–25: **Shipping extraction (`examples/06-shipping-service/`, :8087) via the reused CNDP Python DB-backed saga orchestrator** (ch.24), crash-resumable (durability upgrade over the Java sibling's in-memory orchestrator), `AWAITING_SHIPMENT` lifecycle, orchestrated-vs-choreographed contrast with r05; **payment-service refund hop closes DRQ-054** (ship-fail now refunds a captured payment); ch.25 (failure-mode taxonomy + the one new `tenacity` enrich-retry mechanism, pybreaker/bulkhead deferred); two cutover flags (`STRANGLER_SHIPPING_ENABLED` + `SHIPPING_MODE`); Newman `shipping-equivalence-gate` green both ways + stuck-AWAITING_SHIPMENT negative (and a poll-script bug the live cutover caught and fixed — retry through `AWAITING_SHIPMENT`, not just `PENDING`) | Java r07 |
 | **r07** | **Order + GraphQL gateway — THE FINALE, strangler fig COMPLETE — done** | Part 8 ch.21/26: **Order extraction (`examples/07-order-service/`, :8088, CQRS from day one — same-DB two-table read model, same-tx projection, DRQ-072) + the additive Strawberry GraphQL gateway (`examples/08-graphql-gateway/`, :8090, own front door, DRQ-074)**; lifts the four saga reactions, own outbox → `order.placed`, customer FK→snapshot (owns `customers`, DRQ-073); monolith **decommissioned** — pre-cutover reversibility proof, then the one irreversible move (DRQ-077): flagless strangler proxy, monolith frozen-not-deleted + `reference/monolith-before` branch + `v0-monolith`/`stage/01..06` tags (DRQ-075); shipping's `enrich` re-pointed to order-service; **SMELL #1/#2 STRUCK, ACID→ACD for all six contexts** (DRQ-080); equivalence suite converted to a contract/acceptance suite, green ≥2× monolith-free plus 3 negatives incl. the CQRS projection-disabled check (DRQ-076/DRQ-079); ch.21 (Event Sourcing & CQRS, deferred from r05) + ch.26 authored | Java r08 |
-| **r08** | Operate + deliver + appendices | Part 9 (29–30), ch.31; minikube substrate; port/adapt remaining reuse appendices | Java r09 |
+| **r08** | **Part 8: FastAPI chassis + contracts/registry — done** | ch.27 (FastAPI Chassis) authored as an honest per-service used/partial/deferred scorecard, correcting the plan's earlier pydantic-settings claim to the as-built frozen `@dataclass`/`from_env()` shape (DRQ-082/DRQ-083); ch.28 (Contracts & Service Registry) authored + `examples/09-schema-registry-demo/` built (pure-Python fastavro + aiokafka + Apicurio v3 REST, hand-rolled global-id envelope, honoring DRQ-033's rejection of confluent-kafka, DRQ-084); round-trip + schema-evolution compatibility (v2 ACCEPT-200 / v3 REJECT-400) verified live via Testcontainers; Apicurio added to `compose.yaml`/`.env.example` additively (`:8095`, DRQ-085), live JSON event flows untouched; new separate `schema-registry.yml` CI gate, `code-ci.yml`/`contract-gate`/`code-ci-ok` untouched (DRQ-086); new pins fastavro 1.13.1 + apicurio-registry 3.3.3 (DRQ-087). **Part 8 (ch.27–28) is now complete; ch.29–33 remain.** Per the approved `_plans/backmatter-track-plan.md` (which diverges from this table's original r08/r09/r10 grouping, as that plan itself notes), the remaining back-matter work is sequenced r09 = ch.29 (Deployment Patterns, `deploy/k8s/`) + ch.31 (CI/CD & Supply Chain, `examples/10-supply-chain/`), r10 = ch.30 (Mesh/Observability, live/user-run) + ch.32 (capstone). | Java r09 (regrouped per the back-matter track plan) |
 | **r09** | Deck + close | ch.32 conclusion; rebuild the companion deck (`lgtm-presentation`); cross-linking; final validation | Java r10 |
 | **r10** | OpenShift/CRC appendix + cross-sibling reconciliation | ch.33 built live on CRC (per standing OpenShift/CRC Appendix Standard); a dedicated drift sweep against the Java sibling's `reconciliation.md` | new — not present in the Java sibling's table; added so the 10-iteration count matches while giving the OpenShift appendix and a final reconciliation pass their own iteration rather than crowding r08 |
 

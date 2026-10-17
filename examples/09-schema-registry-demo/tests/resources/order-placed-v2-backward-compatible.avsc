@@ -1,0 +1,16 @@
+{
+  "type": "record",
+  "name": "OrderPlaced",
+  "namespace": "dev.patterncatalyst.contracts.avro",
+  "doc": "Evolution fixture for tests/test_compatibility.py -- v2 adds ONE new field (giftMessage) WITH a default value, on top of ../../schemas/order-placed-v1.avsc. Under Apicurio's BACKWARD compatibility rule this is a VALID evolution: a reader using this v2 schema can still deserialize data written by the v1 schema (the missing field is filled in with its default).",
+  "fields": [
+    { "name": "orderId", "type": "long", "doc": "The saga correlation key -- this order's identifier." },
+    { "name": "customerId", "type": "long", "doc": "The customer who placed the order." },
+    { "name": "customerEmail", "type": "string", "doc": "Denormalized customer email snapshot, carried on the wire so downstream consumers never need to look up the customer." },
+    { "name": "totalCents", "type": "long", "doc": "The order total, in cents." },
+    { "name": "confirmationMessage", "type": "string", "doc": "The order-confirmation message text." },
+    { "name": "placedAt", "type": { "type": "long", "logicalType": "timestamp-millis" }, "doc": "When the order was placed." },
+    { "name": "paymentMethod", "type": ["null", "string"], "default": null, "doc": "The checkout request's payment method. Optional." },
+    { "name": "giftMessage", "type": ["null", "string"], "default": null, "doc": "NEW in v2 -- an optional gift message, defaulted to null so v1-written data (which has no such field) deserializes cleanly under this schema." }
+  ]
+}

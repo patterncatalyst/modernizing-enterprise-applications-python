@@ -42,6 +42,11 @@ This file is the catalogue — one row per diagram, append-only.
 | `rest-grpc-graphql-protocol-fit` | ch.26 | REST, gRPC, and GraphQL side by side, each labeled with the real seam this project chose it for: REST's request/reply for every service's own surface, gRPC's strongly-typed hot path for order-service's inventory reservation, GraphQL's bounded aggregation for the gateway's one query. Source: `rest-grpc-graphql-protocol-fit.py`. |
 | `graphql-gateway-five-source-fanout` | ch.26 | The data-less aggregation gateway fanning one `order(id)` query out to five sources (order/payment/shipping REST, inventory gRPC, review REST per item), each field resolved lazily and nullable, bounded by depth/token limiters fixed in operator config. Source: `graphql-gateway-five-source-fanout.py`. |
 | `final-monolith-free-topology` | ch.26 | The end-state topology: six independently deployable services plus the GraphQL gateway, reached through one flagless edge router with no monolith fallback left, and the monolith itself frozen and unwired -- the golden-baseline referent, not deleted. Source: `final-monolith-free-topology.py`. |
+| `fastapi-chassis-anatomy` | ch.27 | The cross-cutting concerns inside one FastAPI service, startup to request: config.py's frozen dataclass Settings.from_env(), stdlib RotatingFileHandler logging, the lifespan wiring up db/consumer/relay, errors.py and /health as request-time concerns present on 6 of 8 services, tenacity retry as the one resilience wrapper (shipping only), and OTel/metrics/pybreaker/bulkhead/a shared chassis library named as deferred. Source: `fastapi-chassis-anatomy.py`. |
+| `chassis-scorecard` | ch.27 | The used/partial/deferred scorecard across all 8 services, as three stacked bands: used (config, logging, Containerfile -- all or nearly all services); partial (health 6/8, errors.py 6/8, tenacity 1/8, each with a named reason for the gap); deferred (OTel/metrics, pybreaker/bulkhead, a true shared chassis library -- zero footprint today, re-checkable by grep). Source: `chassis-scorecard.py`. |
+| `hand-duplicated-vs-registry-schema` | ch.28 | Two panels: today's hand-authored `order.placed` copies (payment-service's 7-field `OrderPlacedEvent` with `paymentMethod`, notification-service's 6-field copy without it -- two independent understandings, no mechanism checking they still agree) versus ch.28's demonstrator, one `order-placed-v1.avsc` registered once with Apicurio and resolved by global id from both a producer and a consumer. Source: `hand-duplicated-vs-registry-schema.py`. |
+| `avro-wire-envelope-registry-flow` | ch.28 | The hand-rolled `[1-byte magic][8-byte global id][Avro bytes]` wire envelope (`app/envelope.py`, not Confluent's format -- DRQ-033's pure-Python lane has no serde to supply one) plus the full register/resolve/produce/consume flow against Apicurio's v3 REST API, including the consumer fetching the writer schema by global id rather than trusting its own local copy. Source: `avro-wire-envelope-registry-flow.py`. |
+| `avro-compatibility-evolution` | ch.28 | The BACKWARD compatibility proof: v1 registers, v2 (adds `giftMessage` with a default) is ACCEPTED (200), v3 (retypes `totalCents` long -> string) is REJECTED (400, `RuleViolationException`) -- the actual status live-verified against `apicurio-registry:3.3.3`. Source: `avro-compatibility-evolution.py`. |
 
 ## Regenerating
 
@@ -79,6 +84,11 @@ python3 -I order-view-rebuildable-projection.py
 python3 -I rest-grpc-graphql-protocol-fit.py
 python3 -I graphql-gateway-five-source-fanout.py
 python3 -I final-monolith-free-topology.py
+python3 -I fastapi-chassis-anatomy.py
+python3 -I chassis-scorecard.py
+python3 -I hand-duplicated-vs-registry-schema.py
+python3 -I avro-wire-envelope-registry-flow.py
+python3 -I avro-compatibility-evolution.py
 ```
 
 Each spec validates its own output on the way out (`generate_diagram.emit()`

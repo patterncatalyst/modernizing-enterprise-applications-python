@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 760" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="20" y="50" width="1280" height="600" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="70" font-size="12" font-weight="700" fill="#1d1d1d">Inside one FastAPI service, startup to request</text>
+<rect x="540" y="10" width="240" height="40" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="660.0" y="35.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">uvicorn ASGI entry point</text>
+<rect x="60" y="110" width="300" height="110" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="210.0" y="155.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">config.py: frozen @dataclass Settings</text>
+<text x="210.0" y="172.5" font-size="11.5" fill="#555555" text-anchor="middle">Settings.from_env() reads os.environ</text>
+<text x="210.0" y="187.5" font-size="11.5" fill="#555555" text-anchor="middle">at call time -- 7 of 8 services</text>
+<rect x="400" y="110" width="300" height="110" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="550.0" y="155.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">_configure_logging()</text>
+<text x="550.0" y="172.5" font-size="11.5" fill="#555555" text-anchor="middle">stdlib logging.handlers.RotatingFileHandler</text>
+<text x="550.0" y="187.5" font-size="11.5" fill="#555555" text-anchor="middle">logs/&lt;service&gt;.log + console -- all 8</text>
+<rect x="740" y="110" width="300" height="110" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="890.0" y="155.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">@asynccontextmanager lifespan()</text>
+<text x="890.0" y="172.5" font-size="11.5" fill="#555555" text-anchor="middle">wires db engine, starts owned</text>
+<text x="890.0" y="187.5" font-size="11.5" fill="#555555" text-anchor="middle">Kafka consumer(s) + outbox relay</text>
+<rect x="60" y="300" width="290" height="110" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="205.0" y="345.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">errors.py: ApiError base class</text>
+<text x="205.0" y="362.5" font-size="11.5" fill="#555555" text-anchor="middle">uniform {error, message, timestamp}</text>
+<text x="205.0" y="377.5" font-size="11.5" fill="#555555" text-anchor="middle">6 of 8 (absent: proxy, gateway)</text>
+<rect x="390" y="300" width="290" height="110" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="535.0" y="345.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">GET /health: liveness only</text>
+<text x="535.0" y="362.5" font-size="11.5" fill="#555555" text-anchor="middle">process-is-up, no downstream probed</text>
+<text x="535.0" y="377.5" font-size="11.5" fill="#555555" text-anchor="middle">6 of 8 (absent: proxy, review)</text>
+<rect x="720" y="300" width="320" height="110" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="880.0" y="345.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Containerfile</text>
+<text x="880.0" y="362.5" font-size="11.5" fill="#555555" text-anchor="middle">UBI-based image build</text>
+<text x="880.0" y="377.5" font-size="11.5" fill="#555555" text-anchor="middle">8 of 8 -- every service ships one</text>
+<rect x="60" y="490" width="460" height="120" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="290.0" y="540.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">tenacity retry + exponential backoff</text>
+<text x="290.0" y="557.5" font-size="11.5" fill="#555555" text-anchor="middle">examples/06-shipping-service/app/enrich_client.py</text>
+<text x="290.0" y="572.5" font-size="11.5" fill="#555555" text-anchor="middle">ONE call site, ONE service -- not a shared wrapper</text>
+<rect x="560" y="490" width="480" height="120" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="800.0" y="540.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">DEFERRED: OpenTelemetry/Prometheus (ch.30 adds 3 services),</text>
+<text x="800.0" y="557.5" font-size="11.5" fill="#555555" text-anchor="middle">pybreaker circuit breaker, bulkhead isolation,</text>
+<text x="800.0" y="572.5" font-size="11.5" fill="#555555" text-anchor="middle">a shared chassis library -- named, not built</text>
+<path d="M593.3333333333334,50.0 L360.0,120.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M643.7037037037037,50.0 L594.8148148148148,110.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M694.074074074074,50.0 L796.2962962962963,110.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M740.0,206.6058394160584 L350.0,314.7810218978102" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="551.0" y="254.6934306569343" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">routes registered</text>
+<text x="551.0" y="254.6934306569343" font-size="11" fill="#555" text-anchor="middle">routes registered</text>
+<path d="M787.2368421052631,220.0 L637.7631578947369,300.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="718.5" y="254.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">route registered</text>
+<text x="718.5" y="254.0" font-size="11" fill="#555" text-anchor="middle">route registered</text>
+<path d="M360.0,207.53731343283582 L720.0,309.6268656716418" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="546.0" y="252.5820895522388" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">baked at build</text>
+<text x="546.0" y="252.5820895522388" font-size="11" fill="#555" text-anchor="middle">baked at build</text>
+<path d="M228.97435897435898,410.0 L263.84615384615387,490.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="252.4102564102564" y="444.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">only outbound call wrapped</text>
+<text x="252.4102564102564" y="444.0" font-size="11" fill="#555" text-anchor="middle">only outbound call wrapped</text>
+<path d="M520.0,550.0 L560.0,550.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="546.0" y="544.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">not yet justified</text>
+<text x="546.0" y="544.0" font-size="11" fill="#555" text-anchor="middle">not yet justified</text>
+<text x="660.0" y="30" font-size="14" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.27 -- the chassis is convention, not a framework feature: every box above is code someone wrote, not a dependency someone added</text>
+<text x="40" y="720" font-size="11" fill="#555555" text-anchor="start">Config and logging are the floor every service shares identically; health, errors, and resilience are opt-in and partial by actual count, not by oversight.</text>
+<text x="40" y="738" font-size="11" fill="#555555" text-anchor="start">No service imports a shared chassis package -- each file above is copied and adapted per service, the same convention repeated eight times.</text>
+</svg>
