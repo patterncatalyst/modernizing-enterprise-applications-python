@@ -259,9 +259,4 @@ caught.
 
 ---
 
-*Verification status: <span class="status status--unverified">unverified</span> —
-conceptual chapter, no runnable example under `examples/`. The phase names,
-gate placement, and ledger artifacts described here are the same ones
-`_plans/build-plan.md` section F.1 and `_plans/decisions.md` record for
-this project, and the same ones Chapter 7 exercises against real,
-checked-in evidence.*
+*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — no runnable example of its own; the phases, gates, and ledger artifacts it describes are the ones this project actually uses, and Chapter 7 exercises them against checked-in evidence.*

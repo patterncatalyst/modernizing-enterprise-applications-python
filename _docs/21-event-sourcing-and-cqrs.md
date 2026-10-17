@@ -359,10 +359,4 @@ consistency gap at exactly one service boundary, and nowhere past it.
 
 ---
 
-*Verification status: <span class="status status--verified">verified</span>.
-The CQRS mechanism is live, already-shipped code exercised by
-`tooling/newman/GOLDEN-BASELINE-r07.md`'s STEP C against a real Postgres
-instance (50 requests/133 assertions, 0 failed, repeated across 4 runs);
-the projection-disabled negative quoted above is taken directly from that
-run's output. The CQRS-versus-event-sourcing scoping argument is analysis
-of already-verified behavior, not an independent claim.*
+*Verification status: <span class="status status--verified">verified</span>. The CQRS mechanism is live, already-shipped code exercised by the CQRS contract run in `tooling/newman/` against a real Postgres instance (50 requests/133 assertions, 0 failed, repeated across 4 runs); the projection-disabled negative quoted above is taken directly from that run's output. The CQRS-versus-event-sourcing scoping argument is analysis of already-verified behavior, not an independent claim.*

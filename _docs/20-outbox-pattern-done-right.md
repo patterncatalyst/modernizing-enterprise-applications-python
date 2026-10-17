@@ -407,11 +407,4 @@ transaction, is what resolves an order.
 
 ---
 
-*Verification status: <span class="status status--verified">verified</span>.
-Every mechanism this chapter describes is live, already-shipped code
-exercised by `tooling/newman/GOLDEN-BASELINE.md`'s r05 CUTOVER lane against
-a real Postgres and Kafka broker — the redelivery and negative-check
-numbers cited above are quoted directly from that lane's run output. The
-ordering/cleanup/poison-message gaps are documented limitations confirmed
-by reading the relay code's own exception handling, not claims requiring a
-further run.*
+*Verification status: <span class="status status--verified">verified</span>. Every mechanism this chapter describes is live, already-shipped code exercised by the live cutover run in `tooling/newman/` against a real Postgres and Kafka broker — the redelivery and negative-check numbers cited above are quoted directly from that run's output. The ordering/cleanup/poison-message gaps are documented limitations confirmed by reading the relay code's own exception handling, not claims requiring a further run.*

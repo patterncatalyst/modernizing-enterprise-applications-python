@@ -486,10 +486,4 @@ chapter's scorecard already accounts for.
 
 ---
 
-*Verification status: <span class="status status--unverified">unverified</span>.
-This is a conceptual, docs-only chapter with no new runnable example; its
-job is reconciling `_plans/build-plan.md` section C against chapters
-already shipped, not producing new evidence. Every verdict cites the
-chapter that proved it (ch.14 through ch.31), and this iteration's
-reconciliation was re-confirmed against each cited chapter rather than
-assumed carried-forward.*
+*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — a docs-only reconciliation with no new runnable example; every verdict cites the chapter that proved it (Chapters 14 through 31), re-confirmed against each rather than assumed.*

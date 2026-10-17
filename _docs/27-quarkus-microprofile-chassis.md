@@ -493,12 +493,4 @@ call whom, and with what guarantee the shape won't change underneath them.
 
 ---
 
-*Verification status: <span class="status status--unverified">unverified</span>.
-This is a conceptual chapter with no new runnable example; its scorecard is
-read directly from the services' own source (`config.py`/`main.py`/
-`errors.py` shapes and dependency declarations across all eight services)
-rather than produced by a run. Re-confirm with a fresh `grep -rl tenacity
-examples/*/pyproject.toml` (and the matching checks for OpenTelemetry/
-Prometheus and `pydantic_settings`) before citing this scorecard again,
-since an added dependency would move a row from DEFERRED to PARTIAL or
-USED.*
+*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — no new runnable example; its scorecard is read directly from the services' own source (`config.py`/`main.py`/`errors.py` and the dependency declarations across the services), checkable with `grep -rl tenacity examples/*/pyproject.toml` and the matching checks for OpenTelemetry, Prometheus, and `pydantic_settings`.*

@@ -415,11 +415,4 @@ scaffolded, named and explained in their own right for the first time.
 
 ---
 
-*Verification status: <span class="status status--verified">verified</span>.
-Every artifact cited is real, already-shipped code exercised end to end in
-`tooling/newman/GOLDEN-BASELINE-r07.md`: the reversibility proof, the
-flagless proxy rewrite, a GraphQL contract bug found and fixed, the
-monolith-free contract suite (50 requests/133 assertions, 0 failed,
-repeated across two stability windows), and three negative checks each
-restored to 0 failed. Numbers are quoted directly from that evidence file's
-run output, not re-derived for this chapter.*
+*Verification status: <span class="status status--verified">verified</span>. Every artifact cited is real, already-shipped code exercised end to end by `tooling/newman/`'s contract suite: the reversibility proof, the flagless proxy rewrite, a GraphQL contract bug found and fixed, the monolith-free contract suite (50 requests/133 assertions, 0 failed, repeated across two stability windows), and three negative checks each restored to 0 failed. Numbers are quoted directly from that evidence, not re-derived for this chapter.*

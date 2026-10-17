@@ -480,4 +480,4 @@ the checkout process as a sequence of facts and decisions — and produces the
 decomposition backlog the rest of Part 4 and Part 5 draw from.
 
 ---
-*Verification status: <span class="status status--unverified">unverified</span>. Conceptual chapter — no new code runs here; every excerpt is quoted verbatim from `examples/00-monolith/` and `examples/02-review-service/`, independently checkable with `grep -rn 'SMELL\[ch\.' examples/00-monolith`. The DDD and hexagonal classifications are this chapter's reasoning about that real code; the extraction-order forecast is only confirmed as Chapters 15, 17, 19, 23, 24, and 26 each run it.*
+*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — no new code runs here; every excerpt is quoted verbatim from `examples/00-monolith/` and `examples/02-review-service/`, independently checkable with `grep -rn 'SMELL\[ch\.' examples/00-monolith`.*

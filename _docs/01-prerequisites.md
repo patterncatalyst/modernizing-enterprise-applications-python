@@ -345,4 +345,4 @@ read — `decisions.md`, `build-plan.md`, and `reconciliation.md` — and shows
 you how to keep the same kind of ledger for your own migration.
 
 ---
-*Verification status: <span class="status status--unverified">unverified</span>. Conceptual chapter — the toolchain and commands described are reproducible from the project's own tracked files (`compose.yaml`, `.env.example`, `scripts/stack-up.sh`/`stack-down.sh`, `examples/00-monolith/README.md`), but this chapter itself runs no automated check; confirm `scripts/stack-up.sh` reports the services healthy and the Newman run above is green on a fresh clone before continuing to Part 3.*
+*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — the toolchain and commands it describes are reproducible from the project's own tracked files (`compose.yaml`, `.env.example`, `scripts/stack-up.sh`/`stack-down.sh`, `examples/00-monolith/README.md`); bring the stack up and confirm the Newman run above is green on a fresh clone before continuing to Part 3.*

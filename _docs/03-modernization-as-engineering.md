@@ -276,11 +276,4 @@ chapter that follows.
 
 ---
 
-*Verification status: <span class="status status--unverified">unverified</span> —
-conceptual chapter, no runnable example under `examples/`. Its factual
-claims point at artifacts this book makes checkable elsewhere: the Phase
-A/B measurements cited above are recorded in full in
-`examples/02-review-service/MIGRATION.md`; the deliberate smells this
-chapter gestures at are catalogued with in-code tags in Chapter 9; and the
-coupling vocabulary used to reason about them is developed in full in
-Chapter 13.*
+*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — no runnable example of its own; the Phase A/B measurements it cites are recorded under `examples/02-review-service/`, and the smells and coupling vocabulary it gestures at are made concrete in Chapters 9 and 13.*

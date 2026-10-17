@@ -351,13 +351,4 @@ difficulty, five more times.
 
 ---
 
-*Verification status: <span class="status status--unverified">unverified</span> —
-conceptual chapter narrating real evidence, not a new runnable example. The
-defect this chapter centers on is real, dated, and recorded in this
-project's own files — `tooling/newman/GOLDEN-BASELINE.md` ("A pre-existing
-defect discovered while proving this" and "The r02 PHASE-2 repair lane")
-and `decisions.md` (DRQ-026, DRQ-028). The commands cited above are
-reproducible against `examples/00-monolith`, `examples/01-strangler-proxy`,
-and `examples/02-review-service` directly; this chapter's own footer stays
-unverified/conceptual because its job is narrating and citing that evidence,
-not producing new evidence of its own.*
+*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — it narrates real, checked-in evidence rather than producing new evidence of its own. The defect it centers on is recorded in the project's own test notes under `tooling/newman/`, and the commands it cites are reproducible against `examples/00-monolith`, `examples/01-strangler-proxy`, and `examples/02-review-service`.*

@@ -497,11 +497,4 @@ modes and the resilience chassis.
 
 ---
 
-*Verification status: <span class="status status--verified">verified</span>.
-The full topology — monolith, inventory/payment/shipping services, the
-strangler proxy, and a real Kafka broker — was brought up live for
-`tooling/newman/GOLDEN-BASELINE.md`'s r06 CUTOVER lane: the happy and
-ship-fail paths resolve correctly, reversibility and crash-resume are
-reproduced against a live restarted container, and the negative check
-fails as required. 6 consecutive stable runs followed the poll-script fix
-ch.25 covers; no application-code bug surfaced, only a test-harness one.*
+*Verification status: <span class="status status--verified">verified</span>. The full topology — monolith, inventory/payment/shipping services, the strangler proxy, and a real Kafka broker — was brought up live for the cutover run in `tooling/newman/`: the happy and ship-fail paths resolve correctly, reversibility and crash-resume are reproduced against a live restarted container, and the negative check fails as required. 6 consecutive stable runs followed the poll-script fix ch.25 covers; no application-code bug surfaced, only a test-harness one.*

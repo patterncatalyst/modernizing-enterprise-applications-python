@@ -220,9 +220,10 @@ independent check exists, a cross-check against it. Chapters that are
 conceptual rather than hands-on, including this one, are marked as such
 rather than padded with a token example to look consistent; a chapter that
 has nothing real to run says so instead of manufacturing a toy. Every
-chapter, hands-on or not, ends with a verification-status note naming exactly
-what was and was not confirmed by a real run, because a claim this book
-cannot check is a claim it does not make silently.
+chapter ends with a verification-status note: hands-on chapters report what a
+real run confirmed, and conceptual chapters record that their claims are drawn
+from, and checkable against, the tracked code. A claim this book cannot stand
+behind is one it does not make silently.
 
 The code is not a supplement to this book; it is most of the argument. Every
 extraction chapter points at a corresponding directory under `examples/` —
@@ -308,4 +309,4 @@ makes the case for why any of this modernization work is worth doing in the
 first place — and when it is not.
 
 ---
-*Verification status: <span class="status status--unverified">unverified</span>. Conceptual chapter — no runnable example lives under `examples/` for this chapter itself; its factual claims point at artifacts the `examples/` directories make checkable elsewhere in this book, including the six-context monolith and its deliberate smells (Part 3), the behavior-equivalence suite and the equivalence gate (Chapter 10 and Chapter 7), and the extraction history recorded in `_plans/reconciliation.md`.*
+*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — no runnable example of its own; its claims point at artifacts the `examples/` tree makes checkable elsewhere in this book, from the six-context monolith and its deliberate smells (Part 3) to the behavior-equivalence suite and its gate (Chapters 10 and 7).*

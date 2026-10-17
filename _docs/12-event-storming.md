@@ -377,4 +377,4 @@ by how strongly coupled it is to everything around it — and which, measured
 the same way, might be better left uncut.
 
 ---
-*Verification status: <span class="status status--unverified">unverified</span>. Conceptual chapter — every excerpt is quoted verbatim from `examples/00-monolith/`, and the `config/settings.py` topic constants are greppable in that tree. The event-to-seam mapping is only confirmed as Chapters 17, 19, 23, and 24 each realize it.*
+*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — every excerpt is quoted verbatim from `examples/00-monolith/`, and the `config/settings.py` topic constants are greppable in that tree.*

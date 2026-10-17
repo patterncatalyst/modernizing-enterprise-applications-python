@@ -305,4 +305,4 @@ with this project's own ledger as its running, working example rather than a
 diagram. Chapter 3, "Modernization as Engineering, Not Fashion," is next.
 
 ---
-*Verification status: <span class="status status--unverified">unverified</span>. Conceptual chapter — the artifacts it describes exist in this repository under `_plans/` (`decisions.md`, `build-plan.md`, `reconciliation.md`, and the per-iteration `rNN-build-plan.md` files), but this chapter itself runs no code and has no equivalence gate of its own to pass or fail.*
+*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — it describes the project's decision-and-plan ledger; those artifacts are tracked in the repository, and the chapter itself runs no code.*

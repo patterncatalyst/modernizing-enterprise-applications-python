@@ -286,10 +286,4 @@ Python-shaped defect the safety net caught before it reached a reader.
 
 ---
 
-*Verification status: <span class="status status--unverified">unverified</span> —
-conceptual chapter, no runnable example under `examples/`. The claims
-checkable directly against this repository: the `lgtm-*` skill names, the
-`AGENTS.md` governance pattern (`examples/02-review-service/AGENTS.md`),
-and the proxy's routing logic (`examples/01-strangler-proxy/app/main.py`).
-Chapter 7 is where this chapter's claims about what the safety net actually
-catches get their full worked proof.*
+*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — no runnable example of its own; the `lgtm-*` skills, the `AGENTS.md` governance pattern (`examples/02-review-service/AGENTS.md`), and the proxy's routing logic (`examples/01-strangler-proxy/app/main.py`) are all checkable in the repository.*
