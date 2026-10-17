@@ -1,0 +1,179 @@
+# supply-chain.yml -- ch.31 (DRQ-092) syft->grype->policy supply-chain
+# gate, scanning container images (the real deployable form) rather than
+# the source tree or uv.lock alone -- that catches both Python-dependency
+# and UBI base-layer CVEs.
+#
+# A SEPARATE, ADDITIVE workflow: never edits, depends on, or shares a job
+# with code-ci.yml / code-ci-ok / schema-registry.yml -- those gates stay
+# exactly as they were.
+#
+# Summary-job gate pattern (see
+# ~/.claude/skills/lgtm-github/references/branch-protection.md), same shape
+# as schema-registry.yml: a cheap `changes` job decides whether the heavy
+# jobs run; `sbom-scan` does the real, GATING work; `supply-chain-ok` is the
+# single required check, `if: always()`, and passes when every needed job is
+# success-or-skipped. No `paths:` filter on `on:` -- a path-filtered-out run
+# of a workflow with a required summary job reports nothing, which would
+# wedge a ruleset that requires this check. (DRQ-092 explicitly corrects the
+# Java sibling's `supply-chain.yml`, which has a `paths:` filter and no
+# `*-ok` summary job -- this is the shape it should have used.)
+#
+# Scope decision (A/B-4 = B, DRQ-088): the gate hard-gates ONLY on the
+# order-service image -- the real, currently-deployed artifact. The frozen
+# examples/00-monolith "before" image is scanned too, for the before/after
+# supply-chain story (see examples/10-supply-chain/ and
+# _docs/31-cicd-gitops-supply-chain.md), but as a SEPARATE, non-gating job:
+# `monolith-scan` runs with `continue-on-error: true` and is deliberately
+# left OUT of `supply-chain-ok`'s `needs:` list below, so its result -- pass
+# or fail -- can never affect the required check. The monolith is expected
+# to fail this scan (that's the point being demonstrated); it must never
+# block merges on account of a frozen, no-longer-shipped image.
+#
+# Gating basis (gate-on: fixable, examples/10-supply-chain/policy.yaml): the
+# `sbom-scan` job below only fails on High/Critical findings that have a
+# published fix (`fix-state` other than `not-fixed`) -- a finding with no
+# upstream patch can't be remediated by any change available in this repo,
+# so blocking merges on it doesn't reduce risk. See
+# examples/10-supply-chain/.grype.yaml for the committed ignore rule this
+# job's `config:` input loads, which is the exact same file demo.sh uses
+# locally.
+
+name: Supply Chain
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # Decides whether the heavy jobs run. The workflow always runs (no
+  # `paths:` filter on `on:` above), so the required summary job always
+  # reports.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.diff.outputs.run }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - id: diff
+        run: |
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          if ! files="$(git diff --name-only "$base" "${{ github.sha }}" 2>/dev/null)"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"   # cannot diff: run everything
+          elif grep -qE '^(examples/07-order-service/|examples/00-monolith/|examples/10-supply-chain/|\.github/workflows/supply-chain\.yml$)' <<<"$files"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # THE GATE: build the order-service image (the real, currently-deployed
+  # artifact), generate a CycloneDX SBOM with syft (anchore/sbom-action),
+  # then scan it with grype (anchore/scan-action), hard-failing the job on
+  # any High-or-above finding. This is the only job supply-chain-ok depends
+  # on below.
+  sbom-scan:
+    name: sbom-scan (order-service)
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v7
+
+      - name: Build order-service image
+        run: |
+          docker build \
+            -t mea/order-service:scan \
+            -f examples/07-order-service/Containerfile \
+            examples/07-order-service
+
+      - name: Generate SBOM (syft, CycloneDX JSON)
+        uses: anchore/sbom-action@v0
+        with:
+          image: mea/order-service:scan
+          format: cyclonedx-json
+          output-file: order-service.cdx.json
+          upload-artifact: true
+          artifact-name: order-service-sbom.cdx.json
+
+      # gate-on: fixable (examples/10-supply-chain/policy.yaml,
+      # examples/10-supply-chain/.grype.yaml): `config` loads the same
+      # grype ignore rule (`fix-state: not-fixed`) demo.sh applies locally,
+      # so `fail-build`/`severity-cutoff: high` below effectively means
+      # "fail on fixable High-or-above" here too -- local and CI enforce
+      # the identical rule from the identical committed file. Not-fixed
+      # findings aren't dropped: grype still lists them under
+      # `ignoredMatches` in its own JSON output, this config only keeps
+      # them out of the pass/fail decision.
+      - name: Scan SBOM (grype, fail on fixable High)
+        uses: anchore/scan-action@v7
+        with:
+          sbom: order-service.cdx.json
+          fail-build: true
+          severity-cutoff: high
+          output-format: table
+          config: examples/10-supply-chain/.grype.yaml
+
+  # NON-GATING: scans the frozen examples/00-monolith "before" image for the
+  # before/after supply-chain story. `continue-on-error: true` keeps a
+  # finding (or a build break) from failing this job's reported conclusion,
+  # and -- the actual guarantee -- `supply-chain-ok` below does not list
+  # this job in its `needs:`, so its result is never consulted by the gate
+  # regardless of how continue-on-error reports it.
+  monolith-scan:
+    name: monolith-scan (00-monolith, non-gating)
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    continue-on-error: true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v7
+
+      - name: Build monolith image
+        run: |
+          docker build \
+            -t mea/monolith:scan \
+            -f examples/00-monolith/Dockerfile \
+            examples/00-monolith
+
+      - name: Generate SBOM (syft, CycloneDX JSON)
+        uses: anchore/sbom-action@v0
+        with:
+          image: mea/monolith:scan
+          format: cyclonedx-json
+          output-file: monolith.cdx.json
+          upload-artifact: true
+          artifact-name: monolith-sbom.cdx.json
+
+      - name: Scan SBOM (grype, reported only -- never gates)
+        uses: anchore/scan-action@v7
+        with:
+          sbom: monolith.cdx.json
+          fail-build: true
+          severity-cutoff: high
+          output-format: table
+
+  # The one check a ruleset would require for this workflow. Passes when
+  # every needed job succeeded or was skipped by `changes`. `monolith-scan`
+  # is intentionally absent from `needs:` -- see the header and the
+  # `monolith-scan` job comment above for why it can never appear here.
+  supply-chain-ok:
+    name: supply-chain-ok
+    if: always()
+    needs: [changes, sbom-scan]
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: jq -e 'to_entries | all(.value.result == "success" or .value.result == "skipped")' <<<"$NEEDS"

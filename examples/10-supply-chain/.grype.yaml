@@ -1,0 +1,32 @@
+# grype configuration for the ch.31 supply-chain gate (DRQ-088/DRQ-092).
+#
+# Fixable-only gating: a CI gate should block on what the team can actually
+# remediate. A High/Critical finding with no published upstream fix
+# (`fix-state: not-fixed`) cannot be resolved by any action inside this
+# repository -- re-pinning the base image tag, bumping a Python dependency,
+# or any other change available to this project -- so blocking merges on it
+# does not reduce risk, it just leaves the pipeline permanently red until an
+# upstream maintainer ships a patch. Findings that DO have a path to
+# remediation (`fixed`, `wont-fix`, or `unknown` fix state) still gate the
+# build at the `fail-on: High` threshold set in policy.yaml.
+#
+# This rule matches on `fix-state`, not a list of CVE IDs: a fixed-state
+# property is robust to grype-DB drift (new CVEs land with whatever
+# fix-state the DB currently has for them; the rule does not need to be
+# updated to keep tracking "has a fix" vs. "does not"), where a hard-coded
+# CVE-ID ignore list would silently stop matching the moment the DB adds or
+# renumbers an advisory.
+#
+# Ignored matches are NOT removed from the scan. grype moves them from
+# `matches` to a separate `ignoredMatches` array in its JSON output -- they
+# are surfaced in the report, reported in evidence/, and visible with
+# `grype --show-suppressed`; this config only removes them from the
+# pass/fail decision, not from the record.
+#
+# See examples/10-supply-chain/policy.yaml (gate-on: fixable) and README.md
+# for the current snapshot this rule was written against: 35 High findings,
+# all `fix-state: not-fixed`, all in the shared ubi10/python-314-minimal
+# base layer, on both the order-service and monolith images (grype DB built
+# 2026-10-16).
+ignore:
+  - fix-state: not-fixed

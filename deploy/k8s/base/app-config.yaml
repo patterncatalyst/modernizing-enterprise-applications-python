@@ -1,0 +1,120 @@
+# app-config.yaml -- shared env contract for the 8 app Deployments.
+#
+# This is a re-authoring, not a port, of the Java sibling's app-config.yaml.
+# The two config models diverge in a load-bearing way:
+#
+#   Java:   each service's quarkus.datasource.jdbc.url is a per-service
+#           string with its own `?currentSchema=...` query param, so six
+#           DIFFERENT JDBC URLs are needed (one ConfigMap key each,
+#           REVIEW_SERVICE_JDBC_URL .. ORDER_SERVICE_JDBC_URL).
+#   Python: every service reads ONE env var, `DATABASE_URL`
+#           (`app/config.py`/`app/db.py::resolve_database_url` across
+#           02/03/04/05/06/07), and the Postgres SCHEMA is picked by the
+#           service's OWN code -- `search_path=<schema>,public` set on every
+#           connection in `app/db.py`, plus `schema="<schema>"` on each
+#           SQLAlchemy model's `__table_args__` (see e.g.
+#           examples/04-inventory-service/app/db.py). The schema is NOT a
+#           property of the connection string -- passing a different
+#           DATABASE_URL does not change which schema a service writes to.
+#           So there is exactly ONE DATABASE_URL value for all six DB-backed
+#           services (02/03/04/05/06/07), not six. Because that value
+#           embeds the Postgres credentials (`postgresql://user:pass@host/db`,
+#           not split into separate username/password fields the way Java's
+#           JDBC URL + quarkus.datasource.username/password are), it lives
+#           entirely in app-secret.yaml's `database-url` key, consumed via
+#           secretKeyRef -- never copied into this ConfigMap.
+#
+# Two kinds of keys below:
+#
+#   (a) keys with ONE correct value shared by every service that reads them
+#       (Kafka bootstrap, the Kafka topic names, the gRPC target, the
+#       strangler's six backend URLs, graphql-gateway's four REST targets) --
+#       safe to put in one ConfigMap and `envFrom` into all 8 Deployments;
+#       a service with no matching `Settings.from_env()` field just ignores
+#       the key.
+#   (b) keys where the SAME env var name needs a DIFFERENT value per service
+#       (`HTTP_PORT`/`PORT`, `CONSUMER_GROUP`) -- these are NOT here; each
+#       Deployment sets them directly in its own `env:` block (see
+#       <svc>.yaml), because collapsing them into one shared ConfigMap key
+#       would mean every service getting the SAME port or consumer-group id,
+#       which is wrong by construction. Timeout/query-limit knobs
+#       (GRPC_TIMEOUT_S, REST_TIMEOUT_S, ENRICH_TIMEOUT_S, MAX_QUERY_DEPTH,
+#       MAX_QUERY_TOKENS, OUTBOX_POLL_MS) are left at each service's own
+#       `Settings.from_env()` default (already production-appropriate) and
+#       are not overridden here at all -- OUTBOX_POLL_MS is the one
+#       exception: payment-/shipping-/order-service all want the SAME
+#       1000ms default, so it is set once below for explicitness.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mea-app-config
+  namespace: mea
+  labels:
+    app.kubernetes.io/part-of: mea
+data:
+  # ── shared by every Kafka consumer/producer (03/04/05/06/07) ─────────────
+  KAFKA_BOOTSTRAP_SERVERS: "kafka.mea.svc.cluster.local:9092"
+
+  # ── shared Kafka topic names -- same env var name IS the same topic
+  # across every producer/consumer of it, so one value is correct for all.
+  # (examples/03,05,07's ORDER_PLACED_TOPIC; 05,06,07's PAYMENT_CAPTURED_TOPIC;
+  # 05,07's PAYMENT_DECLINED_TOPIC; 05's PAYMENT_REFUNDED_TOPIC; 06,07's
+  # SHIPMENT_DISPATCHED_TOPIC; 05,06,07's SHIPMENT_FAILED_TOPIC.) ───────────
+  ORDER_PLACED_TOPIC: "order.placed"
+  PAYMENT_CAPTURED_TOPIC: "payment.captured"
+  PAYMENT_DECLINED_TOPIC: "payment.declined"
+  PAYMENT_REFUNDED_TOPIC: "payment.refunded"
+  SHIPMENT_DISPATCHED_TOPIC: "shipment.dispatched"
+  SHIPMENT_FAILED_TOPIC: "shipment.failed"
+
+  # ── inventory-service's transition-only CDC consumer (DRQ analog of the
+  # r04 cutover window, see examples/04-inventory-service/app/cdc_consumer.py
+  # + ../CUTOVER.md) -- OFF at r09, same as every other environment; this
+  # service's own Alembic migration seeds its schema directly, so there is
+  # nothing for the CDC consumer to backfill. Set explicitly (rather than
+  # left to the code default) so the "why is this off" story is visible in
+  # cluster config, not just in source. ─────────────────────────────────────
+  INVENTORY_CDC_ENABLED: "false"
+
+  # ── inventory-service's gRPC target -- shared by order-service (gRPC
+  # client, examples/07-order-service/app/inventory_client.py) and
+  # graphql-gateway (gRPC client, examples/08-graphql-gateway/app/clients.py).
+  # inventory-service.yaml exposes BOTH :8084 (http) and :9004 (grpc) on one
+  # Service. ─────────────────────────────────────────────────────────────
+  INVENTORY_GRPC_TARGET: "inventory-service.mea.svc.cluster.local:9004"
+
+  # ── strangler-proxy's six fixed backend targets (examples/01-strangler-
+  # proxy/app/config.py) -- operator-configured, never derived from the
+  # inbound request (SSRF guard, see that module's docstring). ─────────────
+  STRANGLER_REVIEW_BASE_URL: "http://review-service.mea.svc.cluster.local:8001"
+  STRANGLER_NOTIFICATION_BASE_URL: "http://notification-service.mea.svc.cluster.local:8002"
+  STRANGLER_INVENTORY_BASE_URL: "http://inventory-service.mea.svc.cluster.local:8084"
+  STRANGLER_PAYMENT_BASE_URL: "http://payment-service.mea.svc.cluster.local:8085"
+  STRANGLER_SHIPPING_BASE_URL: "http://shipping-service.mea.svc.cluster.local:8087"
+  STRANGLER_ORDER_BASE_URL: "http://order-service.mea.svc.cluster.local:8088"
+
+  # ── shipping-service's saga enrich-step target (examples/06-shipping-
+  # service/app/enrich_client.py: GET {ORDER_BASE_URL}/api/orders/{id}).
+  # MONOLITH_BASE_URL (that service's documented, operator-only fallback --
+  # see its app/config.py docstring) is deliberately NOT set here: the
+  # frozen monolith (examples/00-monolith) has no Deployment/Service in this
+  # topology, so there is nothing in-cluster for it to point at; an operator
+  # restoring the monolith in a break-glass scenario sets ORDER_BASE_URL
+  # itself, per that docstring. ─────────────────────────────────────────────
+  ORDER_BASE_URL: "http://order-service.mea.svc.cluster.local:8088"
+
+  # ── graphql-gateway's four downstream REST targets (examples/08-graphql-
+  # gateway/app/config.py). ORDER_SERVICE_URL is a DIFFERENT env var name
+  # than shipping-service's ORDER_BASE_URL above even though both point at
+  # the same order-service -- both are the real, independently-chosen
+  # property names in this project's code, not a naming inconsistency to
+  # reconcile. ───────────────────────────────────────────────────────────
+  ORDER_SERVICE_URL: "http://order-service.mea.svc.cluster.local:8088"
+  PAYMENT_SERVICE_URL: "http://payment-service.mea.svc.cluster.local:8085"
+  SHIPPING_SERVICE_URL: "http://shipping-service.mea.svc.cluster.local:8087"
+  REVIEW_SERVICE_URL: "http://review-service.mea.svc.cluster.local:8001"
+
+  # ── payment-/shipping-/order-service's outbox relay poll interval -- all
+  # three want the same 1000ms default; set once here instead of three
+  # identical per-Deployment literals. ──────────────────────────────────────
+  OUTBOX_POLL_MS: "1000"

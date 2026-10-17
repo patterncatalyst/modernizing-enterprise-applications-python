@@ -178,6 +178,36 @@ passlib 1.7.4, aiokafka 0.14.0, alembic 1.20.0, testcontainers 4.15.0.)
 | DRQ-085 | **Apicurio is added to `compose.yaml` (`:8095`, in-memory/H2-backed) and `.env.example` (`APICURIO_IMAGE_TAG=3.3.3`) as additive infrastructure, used ONLY by `examples/09-schema-registry-demo/`.** No existing service's `order.placed`/`payment.captured`/`payment.declined`/`shipment.dispatched`/`shipment.failed` hand-maintained JSON contracts (DRQ-036 and its descendants) are touched, repointed, or validated against the new registry — every live JSON event flow in the running topology is byte-for-byte unaffected by this addition. | Accepted — keeps the registry's blast radius scoped to the one new demo it exists to teach, consistent with this project's standing practice of introducing new infrastructure additively (e.g. notification's first owned schema, DRQ-035) rather than retrofitting it across already-shipped seams that have no need for it. | accepted |
 | DRQ-086 | **The schema-registry CI gate is a SEPARATE, additive `.github/workflows/schema-registry.yml`** with its own summary job (Testcontainers-backed Kafka + Apicurio), never folded into `code-ci.yml`'s `contract-gate` or the required `code-ci-ok` summary status, and never given a `paths:` filter (a path-filtered required check can wedge a branch-protection ruleset, the same hazard named in the standing CI-discipline note). | Accepted — extends this project's established pattern of one new additive gate per new seam (`review-equivalence-gate`, `notification-equivalence-gate`, `inventory-equivalence-gate`, `payment-equivalence-gate`, `shipping-equivalence-gate`) rather than widening an existing required gate's scope or dependency footprint. | accepted |
 | DRQ-087 | **New r08 dependency pins** (see version-matrix addition below): fastavro **1.13.1** (`examples/09-schema-registry-demo/pyproject.toml`), `apicurio-registry` image **3.3.3** (compose, `.env.example`). `aiokafka 0.14.0` is reused unchanged from the r03 matrix. | Accepted — surveyed 2026-10-17 at r08 execution; `apicurio-registry:3.3.3` matches the track plan's "New pins" note (`_plans/backmatter-track-plan.md`); fastavro surveyed current-stable at execution time, ahead of the track plan's "~1.10.x" placeholder guess. | accepted |
+| DRQ-088 | **A/B-4 resolution = B: `examples/10-supply-chain/` scans order-service `after` (hard-gated) AND the frozen `00-monolith` "before" (non-gating/reported)**, realized in `policy.yaml`'s `targets:` and `demo.sh`. | Accepted — the before/after contrast is the chapter's whole teaching point, and gating only on the still-live order-service image keeps a frozen, deliberately-unmaintained monolith image from blocking the required CI gate while still surfacing its findings. | accepted |
+| DRQ-089 | **Deploy topology: kustomize `base` + a single `overlays/minikube` overlay; one `mea` namespace, schema-per-service-in-code on ONE shared `DATABASE_URL` Secret; probes match each service's reality** (`tcpSocket` for `01-strangler-proxy` + `02-review-service`, which have no `/health`; `httpGet /health` for the other six); NodePort only on the strangler-proxy edge, every other Service stays ClusterIP; the ch.30 Istio/observability overlay is left as a commented seam, not active at r09. | Accepted — matches the project's established per-service reality (DRQ-082's chassis scorecard: `/health` 6/8) rather than faking uniform health probes, and keeps the minikube overlay rendering clean with no dangling reference to a sibling overlay that doesn't exist yet. | accepted |
+| DRQ-090 | **Supply-chain policy: SBOM target = the built container IMAGE (CycloneDX via syft), not the source tree / `uv.lock`; `fail-on: High`**, policy-as-code in a committed `policy.yaml`. | Accepted — scanning the image is the only way to catch UBI base-layer CVEs (which is exactly what the finding below turned up) in addition to Python dependency CVEs; a source-tree-only scan would have missed the entire base-layer finding. | accepted |
+| DRQ-091 | **`deploy-manifests.yml` is a new, separate, additive CI gate** — `changes` (no `paths:`) → `render` (`kubectl kustomize` on `base` and `overlays/minikube`, piped into `kubeconform -strict` for offline schema validation and `kubectl apply --dry-run=client -f -` for client-side structural validation) → `deploy-manifests-ok` summary (`if: always()`, all-success-or-skipped). | Accepted — follows the `schema-registry.yml` shape (DRQ-086's precedent): a required summary job with no `paths:` filter so it never wedges the branch-protection ruleset on an unrelated PR. | accepted |
+| DRQ-092 | **`supply-chain.yml` is a new, separate, additive CI gate** — `changes` (no `paths:`) → `sbom-scan` (build order-service image, `anchore/sbom-action@v0` syft CycloneDX, `anchore/scan-action@v7` grype `fail-build: true severity-cutoff: high`, plus a `continue-on-error` non-gating step that builds+scans the frozen monolith image per DRQ-088) → `supply-chain-ok` summary. **This explicitly CORRECTS the Java sibling's `supply-chain.yml`**, which has a `paths:` filter and no `*-ok` summary job — both hazards this project's CI-discipline standard forbids. | Accepted — extends the project's one-new-additive-gate-per-new-seam pattern (the five `*-equivalence-gate`s, then `schema-registry.yml`) to the supply-chain seam, and names the Java-sibling correction explicitly rather than silently diverging from a sibling book's shape. | accepted |
+| DRQ-093 | **r09 pins** (surveyed 2026-10-17): syft **v1.54.1**, grype **v0.120.1**, `anchore/sbom-action` **@v0** (v0.24.3), `anchore/scan-action` **@v7** (v7.4.2, corrected from the track-plan's placeholder v6), kubectl **v1.37.1** (bundles kustomize ~v5.7.x; `kustomize` standalone reference pin v5.8.3), kubeconform **v0.8.0**. | Accepted — surveyed current-stable at r09 execution per the build plan's survey note; scan-action's v6→v7 jump and syft/grype both being well ahead of the track plan's placeholder guesses are recorded so a later reconcile pass doesn't mistake either for an oversight. | accepted |
+| DRQ-094 | **Gate on FIXABLE findings only** (`examples/10-supply-chain/.grype.yaml`: `ignore: fix-state: not-fixed`, consumed by both `demo.sh` and `supply-chain.yml`) — **this corrects `_plans/r09-build-plan.md`'s "re-pin to a patched tag" risk-mitigation assumption, which could not hold.** The grype gate was found red on BOTH scanned images: 35 High CVEs, 0 Critical, every one `fix-state: not-fixed`, all in the shared UBI10 `python-314-minimal:10.2-1791928506` base layer (none in application dependencies). A re-pin was investigated and found **impossible**: `skopeo` confirmed the pinned tag is already the newest `10.2-` build published, and all 35 findings have no published fix to re-pin onto. The required gate instead blocks only on remediable (fixable) findings; the 35 unfixable base-layer Highs are surfaced in the report — in grype's own `ignoredMatches` output for order-service, and in the full, unfiltered raw report for the frozen monolith. Net effect: order-service has **0 fixable Highs → a real PASS**; the full 35 are still visible to anyone reading the evidence. This is a point-in-time result (grype DB built 2026-10-16) that a later DB update or published fix could change in either direction. | Accepted — correction + user decision. Blocking on what's remediable and surfacing-rather-than-hiding what isn't is the only gate shape that can ever go green against a base image with zero published fixes; silently lowering `fail-on` was rejected as suppressing the CVE count rather than resolving it, and leaving the gate permanently red was rejected as a gate nobody could ever act on. Robust to normal grype-DB drift, since the ignore rule is keyed to fix-state, not to specific CVE IDs. | accepted — correction |
+
+## Version matrix additions (r09 — surveyed 2026-10-17, pin exactly)
+
+| Component | Pin | Where | Notes |
+|---|---|---|---|
+| syft | **v1.54.1** | `.github/workflows/supply-chain.yml` (via `anchore/sbom-action@v0`), `examples/10-supply-chain/demo.sh` | SBOM generation (CycloneDX), container image target (DRQ-090) |
+| grype | **v0.120.1** | `.github/workflows/supply-chain.yml` (via `anchore/scan-action@v7`), `examples/10-supply-chain/demo.sh` | vulnerability scan; `.grype.yaml` `ignore: fix-state: not-fixed` applied (DRQ-094) |
+| anchore/sbom-action | **@v0** (v0.24.3) | `.github/workflows/supply-chain.yml` | confirmed current at r09 survey |
+| anchore/scan-action | **@v7** (v7.4.2) | `.github/workflows/supply-chain.yml` | corrected from the track-plan's placeholder v6 (DRQ-093) |
+| kubectl | **v1.37.1** | `.github/workflows/deploy-manifests.yml` | `kubectl kustomize` render + `--dry-run=client`; bundles kustomize ~v5.7.x |
+| kubeconform | **v0.8.0** | `.github/workflows/deploy-manifests.yml` | offline `-strict` schema validation of the rendered manifests |
+
+(Reused unchanged from the r01–r08 matrices: django 5.2.18, DRF 3.18.3,
+psycopg 3.3.6, pytest 9.1.1 (+pytest-asyncio 1.4.0), ruff 0.17.1, uv 0.13.1,
+Postgres 18.6-alpine, apache/kafka 4.3.1, Newman 6.2.2, Node 22, UBI10
+python-314-minimal, starlette 1.8.0, uvicorn[standard] 0.54.0, httpx 0.28.1,
+fastapi 0.143.2, sqlalchemy[asyncio] 2.1.4, asyncpg 0.32.0, pydantic 2.14.1,
+passlib 1.7.4, aiokafka 0.14.0, alembic 1.20.0, testcontainers 4.15.0,
+grpcio/grpcio-tools 1.84.0, protobuf 7.36.2, tenacity 9.2.1,
+strawberry-graphql 0.335.0, fastavro 1.13.1, apicurio-registry 3.3.3. No new
+Python package pins at r09 — deploy + supply-chain are tooling, not app
+dependencies; standalone `kustomize` reference pin v5.8.3 noted in DRQ-093
+but CI uses `kubectl kustomize`, not a separate `kustomize` binary.)
 
 ## Version matrix additions (r08 — surveyed 2026-10-17, pin exactly)
 
@@ -233,7 +263,7 @@ unchanged from the r01–r04 matrices above (see DRQ-058). The only new fact is
 the payment-service port assignment: HTTP `:8085` (no gRPC listener —
 payment-service has no `grpcio` dependency, DRQ-051).
 
-## Open questions (r08 close — two track-plan A/B gates still open for r09/r10)
+## Open questions (r09 close — one track-plan A/B gate still open for r10)
 
 All five questions the Phase-1 planner flagged in `_plans/r01-build-plan.md`
 ("Open decisions for the user") were resolved by the user before r01 began
@@ -306,3 +336,24 @@ applies at **r09**, when `examples/10-supply-chain/` is built, and remains
 unresolved until then. No open question blocks r08's own acceptance bar —
 both gates that applied to r08's scope (A/B-1, A/B-3) are resolved and
 realized in this iteration's code.
+
+**r09 close: A/B-4 is now resolved.** The user chose **B** — scan
+order-service (hard-gated) plus the frozen `00-monolith` "before"
+(non-gating/reported) — recorded above as DRQ-088 and realized in
+`examples/10-supply-chain/policy.yaml` and `demo.sh`. r09 also surfaced a
+finding the plan itself did not anticipate: `_plans/r09-build-plan.md`'s
+risk section assumed a red grype gate could be cleared by re-pinning the UBI
+base image to a patched tag. That assumption **did not hold** — `skopeo`
+confirmed the pinned `python-314-minimal:10.2-1791928506` tag is already the
+newest `10.2-` build published, and all 35 High findings it carries (0
+Critical, none in application dependencies) are `fix-state: not-fixed` with
+no published patch to re-pin onto. The user decided to **gate on fixable
+findings only** (`.grype.yaml` `ignore: fix-state: not-fixed`), surfacing the
+35 unfixable base-layer Highs in `ignoredMatches` and the monolith's raw
+report rather than hiding them or lowering `fail-on` — recorded as DRQ-094,
+itself a correction of the plan's re-pin assumption, not a new design
+preference. **Only one track-plan A/B gate remains open**: **A/B-2** (ch.30
+verification — user runs the live minikube/Istio sequence once and hands
+back evidence vs. document-only/deferred) applies at **r10**, when ch.30 is
+authored against a live cluster, and remains unresolved until then. No open
+question blocks r09's own acceptance bar.

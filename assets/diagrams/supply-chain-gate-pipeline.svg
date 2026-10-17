@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 920" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="20" y="50" width="1360" height="340" rx="12" fill="#f1f5f9" stroke="#ddd"/>
+<text x="32" y="70" font-size="12" font-weight="700" fill="#1d1d1d">examples/10-supply-chain/demo.sh == supply-chain.yml: build -&gt; syft SBOM -&gt; grype scan -&gt; fixable-only policy gate (DRQ-088/090/092)</text>
+<rect x="20" y="420" width="1360" height="460" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="440" font-size="12" font-weight="700" fill="#1d1d1d">Four separate, additive required checks -- same changes / gate / *-ok summary-job shape, no paths: filter (DRQ-091/092)</text>
+<rect x="50" y="95" width="190" height="95" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="145.0" y="133.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Build image</text>
+<text x="145.0" y="150.0" font-size="11.5" fill="#555555" text-anchor="middle">order-service</text>
+<text x="145.0" y="165.0" font-size="11.5" fill="#555555" text-anchor="middle">Containerfile (UBI10)</text>
+<rect x="270" y="95" width="190" height="95" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="365.0" y="133.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">syft v1.54.1</text>
+<text x="365.0" y="150.0" font-size="11.5" fill="#555555" text-anchor="middle">CycloneDX JSON SBOM</text>
+<text x="365.0" y="165.0" font-size="11.5" fill="#555555" text-anchor="middle">5720 components</text>
+<rect x="490" y="95" width="210" height="95" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="595.0" y="133.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">grype v0.120.1</text>
+<text x="595.0" y="150.0" font-size="11.5" fill="#555555" text-anchor="middle">DB built 2026-10-16</text>
+<text x="595.0" y="165.0" font-size="11.5" fill="#555555" text-anchor="middle">265 matches: 0C/35H/153M/77L</text>
+<rect x="730" y="95" width="230" height="95" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="845.0" y="133.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">.grype.yaml ignore rule</text>
+<text x="845.0" y="150.0" font-size="11.5" fill="#555555" text-anchor="middle">fix-state: not-fixed</text>
+<text x="845.0" y="165.0" font-size="11.5" fill="#555555" text-anchor="middle">-&gt; ignoredMatches (35 High)</text>
+<rect x="990" y="95" width="190" height="95" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="1085.0" y="133.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">policy.yaml gate</text>
+<text x="1085.0" y="150.0" font-size="11.5" fill="#555555" text-anchor="middle">fail-on: High, fixable only</text>
+<text x="1085.0" y="165.0" font-size="11.5" fill="#555555" text-anchor="middle">fixable = 0 High / 0 Crit</text>
+<rect x="1210" y="95" width="150" height="95" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="1285.0" y="133.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">gate: required</text>
+<text x="1285.0" y="150.0" font-size="11.5" fill="#555555" text-anchor="middle">PASS</text>
+<text x="1285.0" y="165.0" font-size="11.5" fill="#555555" text-anchor="middle">exit 0</text>
+<rect x="50" y="225" width="190" height="95" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="145.0" y="263.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Build image</text>
+<text x="145.0" y="280.0" font-size="11.5" fill="#555555" text-anchor="middle">00-monolith (frozen)</text>
+<text x="145.0" y="295.0" font-size="11.5" fill="#555555" text-anchor="middle">Dockerfile (UBI10)</text>
+<rect x="270" y="225" width="190" height="95" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="365.0" y="263.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">syft</text>
+<text x="365.0" y="280.0" font-size="11.5" fill="#555555" text-anchor="middle">CycloneDX JSON SBOM</text>
+<text x="365.0" y="295.0" font-size="11.5" fill="#555555" text-anchor="middle">5690 components</text>
+<rect x="490" y="225" width="210" height="95" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="595.0" y="263.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">grype, same DB</text>
+<text x="595.0" y="280.0" font-size="11.5" fill="#555555" text-anchor="middle">SAME base layer</text>
+<text x="595.0" y="295.0" font-size="11.5" fill="#555555" text-anchor="middle">265 matches: 0C/35H/153M/77L</text>
+<rect x="730" y="225" width="230" height="95" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="845.0" y="263.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">gate: reported</text>
+<text x="845.0" y="280.0" font-size="11.5" fill="#555555" text-anchor="middle">measured on RAW count</text>
+<text x="845.0" y="295.0" font-size="11.5" fill="#555555" text-anchor="middle">(not filtered to fixable)</text>
+<rect x="990" y="225" width="190" height="95" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="1085.0" y="263.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">fail-on: High</text>
+<text x="1085.0" y="280.0" font-size="11.5" fill="#555555" text-anchor="middle">raw High = 35 &gt; 0</text>
+<text x="1085.0" y="295.0" font-size="11.5" fill="#555555" text-anchor="middle">reported FAIL</text>
+<rect x="1210" y="225" width="150" height="95" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="1285.0" y="263.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">continue-on-error</text>
+<text x="1285.0" y="280.0" font-size="11.5" fill="#555555" text-anchor="middle">never blocks</text>
+<text x="1285.0" y="295.0" font-size="11.5" fill="#555555" text-anchor="middle">the pipeline</text>
+<rect x="60" y="460" width="290" height="95" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="205.0" y="498.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">code-ci.yml</text>
+<text x="205.0" y="515.0" font-size="11.5" fill="#555555" text-anchor="middle">contract-gate</text>
+<text x="205.0" y="530.0" font-size="11.5" fill="#555555" text-anchor="middle">full Newman suite, no monolith</text>
+<rect x="60" y="580" width="290" height="70" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="205.0" y="620.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">code-ci-ok</text>
+<rect x="390" y="460" width="290" height="95" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="535.0" y="498.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">schema-registry.yml</text>
+<text x="535.0" y="515.0" font-size="11.5" fill="#555555" text-anchor="middle">schema-registry-gate</text>
+<text x="535.0" y="530.0" font-size="11.5" fill="#555555" text-anchor="middle">Avro round trip + BACKWARD compat</text>
+<rect x="390" y="580" width="290" height="70" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="535.0" y="620.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">schema-registry-ok</text>
+<rect x="720" y="460" width="290" height="95" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="865.0" y="498.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">deploy-manifests.yml</text>
+<text x="865.0" y="515.0" font-size="11.5" fill="#555555" text-anchor="middle">render</text>
+<text x="865.0" y="530.0" font-size="11.5" fill="#555555" text-anchor="middle">kubectl kustomize + kubeconform -strict</text>
+<rect x="720" y="580" width="290" height="70" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="865.0" y="620.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">deploy-manifests-ok</text>
+<rect x="1050" y="460" width="290" height="95" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="1195.0" y="498.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">supply-chain.yml</text>
+<text x="1195.0" y="515.0" font-size="11.5" fill="#555555" text-anchor="middle">sbom-scan (order-service)</text>
+<text x="1195.0" y="530.0" font-size="11.5" fill="#555555" text-anchor="middle">fixable-only grype gate</text>
+<rect x="1050" y="580" width="290" height="70" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1195.0" y="620.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">supply-chain-ok</text>
+<rect x="1050" y="680" width="290" height="70" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="1195.0" y="705.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">monolith-scan</text>
+<text x="1195.0" y="722.5" font-size="11.5" fill="#555555" text-anchor="middle">continue-on-error: true</text>
+<text x="1195.0" y="737.5" font-size="11.5" fill="#555555" text-anchor="middle">absent from needs: -- never gates</text>
+<rect x="420" y="790" width="540" height="95" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="690.0" y="828.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Repository ruleset</text>
+<text x="690.0" y="845.0" font-size="11.5" fill="#555555" text-anchor="middle">4 required checks, each if: always()</text>
+<text x="690.0" y="860.0" font-size="11.5" fill="#555555" text-anchor="middle">a new gate = a new additive workflow, old ones untouched</text>
+<path d="M240.0,142.5 L270.0,142.5" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M460.0,142.5 L490.0,142.5" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M700.0,142.5 L730.0,142.5" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M960.0,142.5 L990.0,142.5" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="981.0" y="136.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">fixable matches only</text>
+<text x="981.0" y="136.5" font-size="11" fill="#555" text-anchor="middle">fixable matches only</text>
+<path d="M1180.0,142.5 L1210.0,142.5" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M240.0,272.5 L270.0,272.5" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M460.0,272.5 L490.0,272.5" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M700.0,272.5 L730.0,272.5" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M960.0,272.5 L990.0,272.5" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1180.0,272.5 L1210.0,272.5" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M205.0,555.0 L205.0,580.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M535.0,555.0 L535.0,580.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M865.0,555.0 L865.0,580.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1195.0,555.0 L1195.0,580.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1195.0,555.0 L1195.0,680.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="1201.0" y="611.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">built + scanned, never gates</text>
+<text x="1201.0" y="611.5" font-size="11" fill="#555" text-anchor="middle">built + scanned, never gates</text>
+<path d="M281.29213483146066,650.0 L586.4606741573034,790.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M559.3820224719101,650.0 L656.9101123595506,790.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M837.4719101123595,650.0 L727.3595505617977,790.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1115.561797752809,650.0 L797.8089887640449,790.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1273.2876712328766,190.0 L1206.7123287671234,460.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="1246.0" y="319.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">same 3 steps as demo.sh</text>
+<text x="1246.0" y="319.0" font-size="11" fill="#555" text-anchor="middle">same 3 steps as demo.sh</text>
+<text x="700.0" y="30" font-size="16" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.31 -- the supply-chain gate pipeline (top) and the four additive, separately-gated CI checks it joins (bottom)</text>
+<text x="40" y="874" font-size="11" fill="#555555" text-anchor="start">Both images inherit the SAME 35 High CVEs from the shared ubi10/python-314-minimal base layer -- none from either service&#x27;s own Python dependencies.</text>
+<text x="40" y="892" font-size="11" fill="#555555" text-anchor="start">gate-on: fixable (.grype.yaml) scopes the block to what a re-pin or a dependency bump could actually fix; point-in-time against the grype DB (built 2026-10-16) and the pinned base-image tag.</text>
+</svg>

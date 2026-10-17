@@ -1588,13 +1588,163 @@ different-version behavior (409). The additive posture (compose, CI, and
 every live JSON event contract) was verified by inspection, not merely
 asserted. No unexplained drift for ch.27/28.
 
-**Forward reference:** the next sub-iteration, **r09**, covers **ch.29
-(Deployment Patterns, `deploy/k8s/` kustomize base + overlays, verified via
-`kubectl kustomize` + client-side dry-run, no live cluster) and ch.31
-(CI/CD & Supply Chain, `examples/10-supply-chain/`, syft→grype→policy,
-scanning both order-service and the frozen `00-monolith` "before" per
-track-plan USER DECISION A/B-4, still open at r08 close)** — both
-CI-verifiable headless, per `_plans/backmatter-track-plan.md`'s grouping.
-ch.30 (Mesh/Observability, the one live-cluster chapter, per-track USER
-DECISION A/B-2, still open at r08 close) and ch.32 (the capstone) remain
-grouped at r10.
+---
+
+## ch.29/31 — Deployment Patterns + CI/CD & Supply Chain (r09, Part 9 + Part 10, non-extraction)
+
+### The deploy tree, and the config-model divergence caught during build
+
+**Source:** `_plans/r09-build-plan.md`'s "Grounded reconnaissance" section
+(the plan's own binding-facts recon of the 8 services' real ports, probes,
+and config) and DRQ-083 (r08's config-mechanism correction: a frozen
+`@dataclass Settings.from_env()`, not pydantic-settings).
+
+**What shipped:** `deploy/k8s/` — a kustomize `base` (namespace `mea`,
+`app-config.yaml` ConfigMap, `app-secret.yaml`, eight per-service
+Deployment+Service manifests, `infra/` Postgres + Kafka StatefulSets) plus a
+single `overlays/minikube` overlay (image retagging, `imagePullPolicy:
+Never`, NodePort 30888 on the strangler-proxy edge only, the ch.30
+Istio/observability seam left commented so the overlay renders clean now).
+Probes are honored per-service rather than copied uniformly: `tcpSocket` for
+`01-strangler-proxy` and `02-review-service` (the two services with no
+`/health` route, per DRQ-082's chassis scorecard), `httpGet /health` for the
+other six (DRQ-089). Both trees render with `kubectl kustomize` (23
+resources each) and pass `kubeconform -strict` (23/23 Valid).
+
+**The real config-model divergence, caught during the W1-a self-check, not
+assumed from the plan's wording:** `_plans/r09-build-plan.md`'s own
+"Approach" section described the ConfigMap as carrying "per-service
+`*_DATABASE_URL`/schema" entries — read literally, that implies one
+connection-string variable per service. Building `app-config.yaml` against
+the actual services' `config.py`/`Settings.from_env()` modules (the same
+source DRQ-083 corrected at r08) showed the real shape is simpler and
+different: **one shared `DATABASE_URL`** (all eight services point at the
+same Postgres instance and the same env var name), with schema selection
+happening **in each service's own code** (SQLAlchemy `schema=` /
+Django `search_path`), not via a per-service connection-string variable.
+Building `app-config.yaml` to the plan's literal wording would have shipped
+eight ConfigMap keys that no service actually reads. **Corrected in the
+manifest itself** (one `DATABASE_URL` key, schema-per-service-in-code
+documented in ch.29 and the ConfigMap's own comments), not shipped as
+written and footnoted later.
+
+**Why this is the same class of finding as DRQ-083, not a new kind of bug:**
+r08's reconcile pass found a build-plan blurb asserting a config mechanism
+(pydantic-settings) the code never adopted; this is the same
+doc(-plan)-vs-code drift, one layer removed — a plan clause describing a
+ConfigMap shape the as-built services' config modules don't support. Caught
+the same way: by reading the actual `config.py` of each service before
+writing the manifest, not by trusting the plan's prose.
+
+**Verdict:** CLEAN — a real plan-vs-code divergence was found during build
+(not after), corrected in the shipped manifest rather than carried forward,
+and named here per R4 rather than silently fixed with no trail.
+
+### The headless-render limit
+
+**Source:** `_plans/r09-build-plan.md` §M's own named risk ("Renders-but-
+wouldn't-apply").
+
+**What's actually verified vs. what isn't:** `kubectl kustomize` (offline
+render) and `kubeconform -strict` (offline schema validation) both passed
+clean on `base` and `overlays/minikube`. `kubectl apply --dry-run=client`
+is also offline and structural. None of these reach cluster admission —
+defaults, webhooks, RBAC, PVC binding, and whether the manifests would
+actually schedule and come up healthy all require a live apiserver, which
+r09 does not have. ch.29 and `deploy/k8s/README.md` both state this limit
+in the same terms, scoped to exactly what offline validation covers, rather
+than implying the headless checks are equivalent to a live deploy. The live
+minikube path is written and user-runnable (`deploy/k8s/scripts/`) but
+deferred to ch.30/r10, not claimed as CI-verified here.
+
+**Verdict:** CLEAN — the limit is named in the same chapter that could be
+read as implying more, not left for a reader to discover the hard way.
+
+### Supply-chain: the fixable-only result, told accurately
+
+**Source:** `_plans/r09-build-plan.md` §M's "grype DB drift / point-in-time"
+risk, and the A/B-4 user gate (resolved **B**, recorded as DRQ-088).
+
+**What was actually found, not what the plan expected:** the plan's risk
+section anticipated a *transient* High appearing after the evidence was
+committed, mitigated by "pin/triage via a documented grype ignore... never
+by silently lowering `fail-on`," and separately assumed (in its own
+drafting) that a red gate on the UBI base layer could be cleared by
+re-pinning to a newer, patched tag. Running the real scan surfaced a
+different and harder fact: **both** scanned images — order-service (after)
+and the frozen `00-monolith` (before) — came back with **35 High CVEs, 0
+Critical, every one `fix-state: not-fixed`**, all in the shared UBI10
+`python-314-minimal:10.2-1791928506` base layer, none in either image's
+application dependencies. **Re-pinning was checked and found impossible**:
+`skopeo` confirmed the pinned tag is already the newest `10.2-` build
+published, and "not-fixed" means no vendor patch exists yet to re-pin onto
+— the plan's re-pin assumption does not hold against this image, and ch.31
+says so plainly rather than silently dropping the idea.
+
+**The decision, and why it's not the same as lowering the bar:** the user
+chose to **gate on fixable findings only** — `examples/10-supply-chain/
+.grype.yaml` sets `ignore: fix-state: not-fixed`, consumed identically by
+`demo.sh` and `.github/workflows/supply-chain.yml` (DRQ-094). This is
+different from raising `fail-on` or dropping the check: every one of the 35
+unfixable Highs is still visible — in grype's `ignoredMatches` field for
+order-service's scan output, and in the monolith's full, unfiltered raw
+report (which is non-gating per A/B-4=B anyway) — the gate just stops
+blocking merges on CVEs no action in this repo can fix. With the ignore rule
+applied, **order-service has 0 fixable Highs and PASSes for real**; the
+monolith (non-gating) reports its findings including all 35. Both images
+sharing the identical base-layer finding is itself evidence the result is a
+base-image fact, not an order-service-specific regression.
+
+**Named limitation, not silently dropped:** this result is point-in-time
+(grype DB built 2026-10-16, per the plan's own drift risk); a future grype
+DB update could reclassify a finding as fixed (tightening the gate, which is
+fine) or a new High could appear outside the `not-fixed` ignore (also fine —
+that's the gate doing its job). README + ch.31's verification footer state
+this explicitly.
+
+**Verdict:** CLEAN — the actual (harder) finding is reported instead of the
+plan's anticipated (milder) one, the re-pin assumption's failure is named
+rather than quietly abandoned, and the fixable-only decision is shown to
+still surface the full 35, not hide them.
+
+### Two new additive gates, one explicit correction of the Java sibling
+
+**Source:** `_plans/r09-build-plan.md`'s CI-discipline note (citing
+DRQ-086's precedent) and its explicit call-out that "the Java `supply-
+chain.yml` violates both rules (has `paths:`, no `*-ok`)."
+
+**What shipped:** `deploy-manifests.yml` (`changes` → `render` → `deploy-
+manifests-ok`) and `supply-chain.yml` (`changes` → `sbom-scan` → `supply-
+chain-ok`), both with no `paths:` filter and both ending in an `if: always()`
+summary job — the same shape as `schema-registry.yml` (DRQ-086) and every
+`*-equivalence-gate` before it. `supply-chain.yml` **explicitly corrects**
+the Java sibling's shape, which has a `paths:` filter (risking a wedged
+required check on unrelated PRs) and no `*-ok` summary at all (DRQ-092).
+`code-ci.yml`, `contract-gate`, `code-ci-ok`, `pages.yml`, and
+`schema-registry.yml` are confirmed untouched.
+
+**Verdict:** CLEAN — the one-new-additive-gate-per-seam pattern is extended
+twice more without exception, and the Java-sibling correction is named as a
+correction, not a silent divergence.
+
+### Verdicts summary
+
+CLEAN across every artifact in this section, **plus one plan-vs-code
+divergence found and fixed during build** (the ConfigMap's per-service-
+DATABASE_URL wording vs. the real single-shared-`DATABASE_URL`-plus-
+schema-in-code shape, corrected in the shipped manifest and named here, the
+same class of finding as DRQ-083's config-mechanism correction at r08) and
+**one finding harder than the plan anticipated** (35 not-fixed, un-re-pinnable
+base-layer Highs shared by both scanned images, resolved by the user's
+gate-on-fixable-only decision, DRQ-094, rather than the plan's own
+re-pin-to-a-patched-tag assumption, which did not hold). The track-plan A/B-4
+gate (order-service only vs. order-service + the frozen monolith) was
+resolved by the user in favor of **B**, recorded as DRQ-088. The
+headless-render limit is named in the same chapter it could be mistaken as
+exceeding. No unexplained drift for ch.29/31.
+
+**Forward reference:** the next sub-iteration, **r10**, covers **ch.30
+(Mesh, Observability & Distributed Tracing — Istio, Kiali, OpenTelemetry +
+the LGTM stack, live on minikube, user-run, per track-plan USER DECISION
+A/B-2 still open at r09 close) and ch.32 (The Pattern Language, Revisited —
+the capstone)**, per `_plans/backmatter-track-plan.md`'s grouping.
