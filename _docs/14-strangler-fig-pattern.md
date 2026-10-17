@@ -445,10 +445,8 @@ nothing on the outside can tell the difference.
 ---
 
 *Verification status: <span class="status status--verified">verified</span>.
-The proxy's pytest suite (7 tests, in-process stub backends) and the live
-Newman equivalence runs recorded in `examples/01-strangler-proxy/CUTOVER.md`
-and `tooling/newman/GOLDEN-BASELINE.md` both pass against a real stack
-(Postgres 18.6-alpine, the monolith, and `examples/02-review-service`):
-58/58 assertions green with the flag off, on, and reverted; the negative
-check with the review-service down fails loudly (502s, exit 1) as required,
-then returns to 16/16 green once restarted.*
+The proxy's pytest suite and the live Newman equivalence run
+(`tooling/newman/GOLDEN-BASELINE.md`) both pass against a real stack:
+58/58 assertions green with the flag off, on, and reverted, and the
+review-service-down negative check fails loudly as required, then recovers
+once restarted.*

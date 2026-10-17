@@ -459,21 +459,12 @@ chapter both named and left open.
 ---
 
 *Verification status: <span class="status status--verified">verified</span>.
-The full choreographed topology — monolith, payment-service, inventory-service,
-review-service, notification-service, the strangler proxy, and a real
-single-node Kafka broker — was brought up live for
-`tooling/newman/GOLDEN-BASELINE.md`'s r05 CUTOVER lane. Figures quoted
-directly from that lane: fully-choreographed run, 95 assertions/0 failed,
-Scenario 1 resolving CONFIRMED on attempt 2/20, Scenario 3/4 resolving
-PAYMENT_DECLINED/SHIPPING_FAILED with net-zero stock (94) confirmed by an
-unconditional direct query; reversibility run, 89 assertions/0 failed,
-Scenario 1 back to 201/attempt-1; the negative check, payment-service killed,
-Newman exit 1 after the full 20x750ms/15.1s bounded-wait budget, order
-confirmed stuck PENDING by direct query, self-healing to CONFIRMED within
-seconds of restart; double-delivery idempotency proven independently at the
-saga status-guard layer (stock 94 before/after a hand-redelivered
-`payment.declined`) and the inventory ledger layer (stock 94 before/after two
-direct, identical-key gRPC `Release` calls bypassing the saga entirely). No
-integration bug surfaced during this proof — every mechanism behaved exactly
-as its own docstrings describe. The known stranded-payment-on-ship-fail gap
-(ch.22) remains open by design, deferred to r06.*
+The full choreographed topology — monolith, payment/inventory/review/
+notification services, the strangler proxy, and a real Kafka broker — was
+brought up live for `tooling/newman/GOLDEN-BASELINE.md`'s r05 CUTOVER lane:
+95/95 and 89/89 assertions green across the forward and reversed runs, the
+negative check fails strictly then self-heals on restart, and
+double-delivery idempotency is proven independently at both the saga and
+inventory layers. No integration bug surfaced; the known
+stranded-payment-on-ship-fail gap (ch.22) remains open by design, deferred
+to r06.*

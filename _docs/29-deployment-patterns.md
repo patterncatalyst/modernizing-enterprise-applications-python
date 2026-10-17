@@ -557,33 +557,9 @@ actually up.
 
 ---
 
-*Verification status: `kubectl kustomize deploy/k8s/base` and
-`kubectl kustomize deploy/k8s/overlays/minikube` both render with exit 0,
-23 resources each; piping the overlay's render through `kubeconform
--strict -summary` (v0.8.0) reports `23 resources found parsing stdin -
-Valid: 23, Invalid: 0, Errors: 0, Skipped: 0`; `kubectl apply
---dry-run=client -f -` (kubectl v1.37.1, bundling kustomize v5.8.1) against
-the same render fails at RESTMapping discovery with `dial tcp
-[::1]:8080: connect: connection refused` in this sandbox, which has no
-reachable apiserver — the exact "needs a live cluster" limit this
-chapter's "Verifying without a cluster" section describes, not a manifest
-defect. Cited: `deploy/k8s/base/namespace.yaml`, `app-config.yaml`,
-`app-secret.yaml`, `strangler-proxy.yaml`, `review-service.yaml`,
-`notification-service.yaml`, `inventory-service.yaml`,
-`payment-service.yaml`, `shipping-service.yaml`, `order-service.yaml`,
-`graphql-gateway.yaml`, `infra/postgres-statefulset.yaml`,
-`infra/kafka-statefulset.yaml`, `kustomization.yaml`;
-`deploy/k8s/overlays/minikube/kustomization.yaml`;
-`deploy/k8s/scripts/{lib.sh,build-images.sh,setup-profile.sh,deploy.sh,
-teardown.sh}`; `deploy/k8s/README.md`'s Probes and Env contract tables;
-`examples/07-order-service/Containerfile` (UBI 10 `python-314-minimal`,
-non-root `USER 1001:0`, the `alembic upgrade head && exec uvicorn ...`
-startup command) and the sibling Containerfiles it matches;
-`examples/01-strangler-proxy/app/main.py` and
-`examples/02-review-service/app/main.py` (confirmed absence of any
-`/health` route); `examples/02-review-service/README.md` (the local
-migrate/seed step `scripts/deploy.sh` reproduces against the in-cluster
-Postgres). Re-confirm before relying on the 23-resource count again: a
-fresh `kubectl kustomize deploy/k8s/overlays/minikube | kubeconform
--strict -summary` should report the same figures, since an added manifest
-or a kubeconform/kubectl version bump would change them.*
+*Verification status: <span class="status status--unverified">unverified</span>.
+Both the base and the minikube overlay render with `kubectl kustomize`
+(23 resources each) and pass `kubeconform -strict` with zero invalid;
+applying to a live cluster was not exercised in this sandbox (no reachable
+apiserver), the exact "needs a live cluster" limit this chapter's own
+"Verifying without a cluster" section describes, not a manifest defect.*

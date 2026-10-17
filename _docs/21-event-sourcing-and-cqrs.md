@@ -360,18 +360,9 @@ consistency gap at exactly one service boundary, and nowhere past it.
 ---
 
 *Verification status: <span class="status status--verified">verified</span>.
-The CQRS mechanism described is live, already-shipped code:
-`examples/07-order-service/app/repository.py`'s
-`create_order_with_outbox_and_view` and `transition_order_status_with_view`
-are exercised by `tooling/newman/GOLDEN-BASELINE-r07.md`'s STEP C against a
-real Postgres instance as part of the monolith-free contract suite (50
-requests / 133 assertions, 0 failed, repeated across 4 runs). The
-projection-disabled negative quoted above (`1/53 assertions failed`, the
-bounded-wait poll exhausting its full 40-attempt budget at `PENDING` instead
-of `CONFIRMED`, restored to `0 failed` after reverting the one commented-out
-line) is quoted directly from that lane's run output, not re-derived for
-this chapter. The CQRS-versus-event-sourcing scoping argument is this
-chapter's own analysis of already-verified behavior (there is no event
-store anywhere in this repository, confirmed by inspection of
-`app/models.py` across every service), not a claim requiring a further run
-to confirm.*
+The CQRS mechanism is live, already-shipped code exercised by
+`tooling/newman/GOLDEN-BASELINE-r07.md`'s STEP C against a real Postgres
+instance (50 requests/133 assertions, 0 failed, repeated across 4 runs);
+the projection-disabled negative quoted above is taken directly from that
+run's output. The CQRS-versus-event-sourcing scoping argument is analysis
+of already-verified behavior, not an independent claim.*
