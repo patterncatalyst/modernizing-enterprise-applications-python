@@ -185,6 +185,39 @@ passlib 1.7.4, aiokafka 0.14.0, alembic 1.20.0, testcontainers 4.15.0.)
 | DRQ-092 | **`supply-chain.yml` is a new, separate, additive CI gate** — `changes` (no `paths:`) → `sbom-scan` (build order-service image, `anchore/sbom-action@v0` syft CycloneDX, `anchore/scan-action@v7` grype `fail-build: true severity-cutoff: high`, plus a `continue-on-error` non-gating step that builds+scans the frozen monolith image per DRQ-088) → `supply-chain-ok` summary. **This explicitly CORRECTS the Java sibling's `supply-chain.yml`**, which has a `paths:` filter and no `*-ok` summary job — both hazards this project's CI-discipline standard forbids. | Accepted — extends the project's one-new-additive-gate-per-new-seam pattern (the five `*-equivalence-gate`s, then `schema-registry.yml`) to the supply-chain seam, and names the Java-sibling correction explicitly rather than silently diverging from a sibling book's shape. | accepted |
 | DRQ-093 | **r09 pins** (surveyed 2026-10-17): syft **v1.54.1**, grype **v0.120.1**, `anchore/sbom-action` **@v0** (v0.24.3), `anchore/scan-action` **@v7** (v7.4.2, corrected from the track-plan's placeholder v6), kubectl **v1.37.1** (bundles kustomize ~v5.7.x; `kustomize` standalone reference pin v5.8.3), kubeconform **v0.8.0**. | Accepted — surveyed current-stable at r09 execution per the build plan's survey note; scan-action's v6→v7 jump and syft/grype both being well ahead of the track plan's placeholder guesses are recorded so a later reconcile pass doesn't mistake either for an oversight. | accepted |
 | DRQ-094 | **Gate on FIXABLE findings only** (`examples/10-supply-chain/.grype.yaml`: `ignore: fix-state: not-fixed`, consumed by both `demo.sh` and `supply-chain.yml`) — **this corrects `_plans/r09-build-plan.md`'s "re-pin to a patched tag" risk-mitigation assumption, which could not hold.** The grype gate was found red on BOTH scanned images: 35 High CVEs, 0 Critical, every one `fix-state: not-fixed`, all in the shared UBI10 `python-314-minimal:10.2-1791928506` base layer (none in application dependencies). A re-pin was investigated and found **impossible**: `skopeo` confirmed the pinned tag is already the newest `10.2-` build published, and all 35 findings have no published fix to re-pin onto. The required gate instead blocks only on remediable (fixable) findings; the 35 unfixable base-layer Highs are surfaced in the report — in grype's own `ignoredMatches` output for order-service, and in the full, unfiltered raw report for the frozen monolith. Net effect: order-service has **0 fixable Highs → a real PASS**; the full 35 are still visible to anyone reading the evidence. This is a point-in-time result (grype DB built 2026-10-16) that a later DB update or published fix could change in either direction. | Accepted — correction + user decision. Blocking on what's remediable and surfacing-rather-than-hiding what isn't is the only gate shape that can ever go green against a base image with zero published fixes; silently lowering `fail-on` was rejected as suppressing the CVE count rather than resolving it, and leaving the gate permanently red was rejected as a gate nobody could ever act on. Robust to normal grype-DB drift, since the ignore rule is keyed to fix-state, not to specific CVE IDs. | accepted — correction |
+| DRQ-095 | **A/B-2 resolution = A: ch.30 verification mode is a user-run live sequence.** The user runs the minikube + Istio + LGTM sequence once end-to-end and hands back trace/metrics/mTLS evidence, giving ch.30 a `verified-live (user-run)` footer with committed evidence (capture pending the run). The build itself — `deploy/k8s/istio/`, `deploy/k8s/observability/`, the activated minikube overlay — is identical to the (B) document-only path; the A/B choice only governs the footer wording and whether evidence is captured and committed. | Fixed — user decision (chose the track plan's recommended A/B-2 option at the `_plans/r10-build-plan.md` gate) over the document-only/deferred alternative; closes the last open track-plan A/B gate from `_plans/backmatter-track-plan.md`. | fixed |
+| DRQ-096 | **The 3 OTel-instrumented services = A: strangler-proxy + order-service + inventory-service** (synchronous gRPC hero trace, no outbox hazard), over option B (proxy + order + payment-service, an async Kafka saga hop that would have required DRQ-103's outbox trace-context propagation). Instrumentation is `opentelemetry-distro` 0.66b1 + `opentelemetry-exporter-otlp-proto-grpc` 1.45.0, wired no-op by default (`OTEL_SDK_DISABLED=true` in `.env.example`; flipped to `false` plus the OTLP endpoint in the k8s ConfigMap). Purely additive: existing test suites pass unchanged (29/20/24). **Noted caveat:** `opentelemetry-instrumentation-sqlalchemy` 0.66b1 requires `sqlalchemy<2.1.0`, but all three services pin `sqlalchemy[asyncio]` 2.1.4 (kept per the standing prefer-newer-versions preference) — the SQLAlchemy ORM instrumentor declines to install itself under that skew, so the hero trace's DB spans come from the `asyncpg` instrumentor instead, not the ORM one. | Fixed — user decision (chose the planner's recommended option A at the `_plans/r10-build-plan.md` gate) over option B; since B did not occur, DRQ-103 (its conditional outbox-propagation follow-on) was never triggered — see DRQ-103. | fixed |
+| DRQ-097 | **Istio sidecar injection mechanism = per-Deployment pod-template label.** `sidecar.istio.io/inject: "true"` is set on the pod template of each of the 8 app Deployments individually; postgres and kafka are excluded (no label); the `mea` namespace itself is left unlabelled (no namespace-wide `istio-injection: enabled`), so injection is explicit and per-workload rather than namespace-default. | Accepted — synthesis default from `_plans/r10-build-plan.md` §F; a per-Deployment label keeps the two stateful infra Deployments (postgres, kafka) outside the mesh without needing a namespace-level exclusion annotation, and makes the activated minikube overlay's diff self-documenting (8 label patches, one per app). | accepted |
+| DRQ-098 | **mTLS mode = STRICT mesh-wide, with one PERMISSIVE edge exception.** A `PeerAuthentication` sets STRICT mTLS across the `mea` namespace; a narrower PERMISSIVE exception carves out the plaintext NodePort → strangler-proxy edge hop, since that entry path is not itself a mesh sidecar-to-sidecar call. | Accepted — synthesis default from `_plans/r10-build-plan.md` §F; STRICT-by-default is the standard secure-unless-proven-otherwise mesh posture, and the edge exception is scoped to exactly the one hop that has to accept traffic from outside the mesh. | accepted |
+| DRQ-099 | **Observability overlay shape = a single `grafana/otel-lgtm:0.36.0` all-in-one Deployment, left out of the mesh.** One Deployment (reusing the pinned LGTM all-in-one image) backed by a ClusterIP Service (OTLP, `:4317`) and a NodePort Service (Grafana UI), plus an `otelcol` ConfigMap (carrying forward the compose stack's receiver config and adding an istio-mesh Prometheus-SD scrape receiver), a `grafana-datasources` ConfigMap, and the RBAC the scrape needs. No `sidecar.istio.io/inject` label — the observability stack itself stays unmeshed so it is never in the critical path of mesh mTLS. | Accepted — synthesis default from `_plans/r10-build-plan.md` §F; reuses the r01-pinned all-in-one image rather than standing up Loki/Tempo/Mimir/Grafana as four separate Deployments, consistent with this project's compose-stack shape, and keeping it unmeshed avoids a circular mTLS dependency for the thing meant to observe the mesh. | accepted |
+| DRQ-100 | **r10 pins** (surveyed 2026-10-17): Istio/istioctl **1.31.2**; `opentelemetry-distro` **0.66b1** + `opentelemetry-exporter-otlp-proto-grpc` **1.45.0** (+ `opentelemetry-instrumentation` **0.66b1**); reused unchanged: `grafana/otel-lgtm` 0.36.0, kubectl/k8s **v1.37.1**, kubeconform **v0.8.0**; minikube floor **v1.33.0**. Corrects `_plans/backmatter-track-plan.md`'s earlier placeholder guesses for the mesh/OTel toolchain. | Accepted — surveyed current-stable at r10 execution per the build plan's survey note, same discipline as DRQ-093 at r09. | accepted |
+| DRQ-101 | **ch.30 CI posture: add one new, separate, additive `mesh-manifests.yml` gate** (headless `kubeconform` on the `deploy/k8s/istio/` and `deploy/k8s/observability/` overlays only — no live cluster, no `paths:` filter, a `mesh-manifests-ok` summary job), rather than attempting to CI-gate the live minikube+Istio run itself (not CI-gateable — it needs a real cluster). Render result: the activated minikube overlay is 31 resources Valid + 3 Istio CRs skipped (CRD schemas not present in a headless kubeconform run); the observability overlay is 8/8 Valid. `code-ci.yml`/`contract-gate`/`code-ci-ok`/`schema-registry.yml`/`deploy-manifests.yml`/`supply-chain.yml` are untouched. | Accepted — planner recommendation adopted; mirrors `deploy-manifests.yml`'s shape (DRQ-091) and extends the one-new-additive-gate-per-new-seam pattern to the mesh seam, keeping the overlays render-verified headlessly even though the live cluster behavior waits on the user's run (DRQ-095). | accepted |
+| DRQ-102 | **ch.32 §C reconciliation + final-project framing.** The Pattern-coverage matrix's Mesh/Observability/Tracing (H) row is filled in; every "landed rNN" cell across §C is re-confirmed against the as-built code; ch.32's own scorecard figure is kept identical to §C; ch.32 is framed throughout as the book's final project, not as a summary chapter tacked onto the end. | Accepted — closes out the Pattern-coverage matrix the moment the last pattern (service mesh/observability) actually lands in code, and keeps the last chapter's own self-description in step with the ledger it describes. | accepted |
+| DRQ-103 | **Conditional outbox trace-context propagation — NOT TRIGGERED.** This item was scoped to activate only if DRQ-096 resolved **B** (the async Kafka saga hop through payment-service), adding a nullable `traceparent` column to order-service's outbox plus relay restore before the `aiokafka` produce, so the saga hero trace would be one continuous trace across the Kafka hop. Since DRQ-096 resolved **A** (the synchronous gRPC trio: proxy + order + inventory), this work was never started — there is no async saga hop in the r10 trace path to need it. | Not triggered — conditional on DRQ-096=B per `_plans/r10-build-plan.md` §F; DRQ-096 resolved A, so the condition did not occur. Left here as a resolved non-event, not an open item, in case a later iteration revisits the payment-service trace hop. | not triggered (DRQ-096 resolved A) |
+
+## Version matrix additions (r10 — surveyed 2026-10-17, pin exactly)
+
+| Component | Pin | Where | Notes |
+|---|---|---|---|
+| Istio / istioctl | **1.31.2** | `install-istio.sh`, `deploy/k8s/istio/` | istioctl-installed `IstioOperator`; STRICT mesh-wide mTLS + PERMISSIVE edge exception (DRQ-098) |
+| opentelemetry-distro | **0.66b1** | `examples/01-strangler-proxy/`, `examples/07-order-service/`, `examples/04-inventory-service/` `pyproject.toml` | zero-code auto-instrumentation entrypoint for the 3-service OTel trio (DRQ-096) |
+| opentelemetry-exporter-otlp-proto-grpc | **1.45.0** | same 3 services | OTLP/gRPC exporter, pointed at the observability overlay's ClusterIP `:4317` in the k8s ConfigMap |
+| opentelemetry-instrumentation | **0.66b1** | same 3 services | instrumentation package family backing the distro; the `sqlalchemy` instrumentor in this family declines against `sqlalchemy[asyncio]` 2.1.4 (requires `<2.1.0`) — see the caveat under DRQ-096 |
+
+(Reused unchanged from the r01–r09 matrices: django 5.2.18, DRF 3.18.3,
+psycopg 3.3.6, pytest 9.1.1 (+pytest-asyncio 1.4.0), ruff 0.17.1, uv 0.13.1,
+Postgres 18.6-alpine, apache/kafka 4.3.1, Newman 6.2.2, Node 22, UBI10
+python-314-minimal, starlette 1.8.0, uvicorn[standard] 0.54.0, httpx 0.28.1,
+fastapi 0.143.2, sqlalchemy[asyncio] 2.1.4, asyncpg 0.32.0, pydantic 2.14.1,
+passlib 1.7.4, aiokafka 0.14.0, alembic 1.20.0, testcontainers 4.15.0,
+grpcio/grpcio-tools 1.84.0, protobuf 7.36.2, tenacity 9.2.1,
+strawberry-graphql 0.335.0, fastavro 1.13.1, apicurio-registry 3.3.3, syft
+v1.54.1, grype v0.120.1, anchore/sbom-action @v0, anchore/scan-action @v7,
+kubectl/k8s v1.37.1, kubeconform v0.8.0. Also carried forward unchanged into
+r10: `grafana/otel-lgtm` 0.36.0 (the observability overlay's all-in-one
+image, DRQ-099) and the minikube floor v1.33.0 — now reached only via the
+docker+containerd driver, with the podman minikube-driver opt-in removed
+this iteration.)
 
 ## Version matrix additions (r09 — surveyed 2026-10-17, pin exactly)
 
@@ -263,7 +296,7 @@ unchanged from the r01–r04 matrices above (see DRQ-058). The only new fact is
 the payment-service port assignment: HTTP `:8085` (no gRPC listener —
 payment-service has no `grpcio` dependency, DRQ-051).
 
-## Open questions (r09 close — one track-plan A/B gate still open for r10)
+## Open questions (r10 close — all track-plan A/B gates resolved)
 
 All five questions the Phase-1 planner flagged in `_plans/r01-build-plan.md`
 ("Open decisions for the user") were resolved by the user before r01 began
@@ -357,3 +390,29 @@ verification — user runs the live minikube/Istio sequence once and hands
 back evidence vs. document-only/deferred) applies at **r10**, when ch.30 is
 authored against a live cluster, and remains unresolved until then. No open
 question blocks r09's own acceptance bar.
+
+**r10 close: A/B-2 is now resolved.** The user chose option **A** — run the
+live minikube + Istio + LGTM sequence once and hand back trace/metrics/mTLS
+evidence — recorded above as DRQ-095; ch.30 carries a `verified-live
+(user-run)` footer, with evidence capture itself still pending the user's
+actual run (the build — `deploy/k8s/istio/`, `deploy/k8s/observability/`,
+the activated minikube overlay with its 8 injection-label patches — is
+identical regardless of which A/B-2 option was chosen). This closes the
+**last** of the five A/B gates `_plans/backmatter-track-plan.md` posed at
+the start of the Part 8–10 back-matter work (A/B-1 → DRQ-084, A/B-3 →
+DRQ-086/DRQ-087, A/B-5 → the track plan's own grouping, A/B-4 → DRQ-088,
+A/B-2 → DRQ-095): **no track-plan A/B gate remains open.** r10 also carried
+its own build-plan-level open/user-gate choice (not one of the track plan's
+five) — which three services to instrument with OTel — resolved **A**
+(strangler-proxy + order-service + inventory-service, synchronous, recorded
+as DRQ-096) over **B** (the async Kafka hop through payment-service);
+because B did not occur, the DRQ-103 outbox trace-context-propagation work
+it would have required was never triggered (recorded as not-triggered, not
+as deferred). With A/B-2 resolved, **every A/B gate raised across r01–r10
+has now been resolved by the user** — nothing in the decomposition,
+back-matter, or mesh/observability track remains gated on a user choice.
+What remains is scope the approved track plan always treated as separate
+future work, not an open A/B decision: the front-matter chapters
+(ch.00–13), the three decks, and ch.33 (the OpenShift/CRC appendix, per the
+standing OpenShift/CRC Appendix Standard) — none of these were posed as an
+A/B choice, so none are open questions in this ledger's sense.
