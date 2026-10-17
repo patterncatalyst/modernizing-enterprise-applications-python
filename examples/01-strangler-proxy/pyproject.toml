@@ -7,6 +7,36 @@ dependencies = [
     "starlette==1.8.0",
     "uvicorn[standard]==0.54.0",
     "httpx==0.28.1",
+    # r10/ch.30, DRQ-096=A -- zero-code OTel auto-instrumentation (lgtm-python
+    # house posture). opentelemetry-distro/-exporter-otlp-proto-grpc are
+    # pinned per DRQ-100 (0.66b1/1.45.0); every opentelemetry-instrumentation-*
+    # below is the exact set `uv run opentelemetry-bootstrap -a requirements`
+    # resolved for THIS environment (starlette+httpx are the ones this
+    # service's code actually exercises; the rest -- asyncio/dbapi/
+    # exceptions/logging/sqlite3/threading/urllib/wsgi/click/grpc -- are
+    # bootstrap's always-included default set plus grpcio being present
+    # transitively as the OTLP exporter's own transport; they no-op when the
+    # matching library is never used). Pinned explicitly here (not left to
+    # `opentelemetry-bootstrap -a install`, which silently installs nothing
+    # into a pip-less uv venv) so the build is reproducible. Wrapped at the
+    # Containerfile entrypoint with `opentelemetry-instrument`; NO-OP by
+    # default via `OTEL_SDK_DISABLED=true` in `.env.example` so compose/CI
+    # stay byte-for-byte unaffected -- only `deploy/k8s/base/app-config.yaml`
+    # flips it active, in-cluster only.
+    "opentelemetry-distro==0.66b1",
+    "opentelemetry-exporter-otlp-proto-grpc==1.45.0",
+    "opentelemetry-instrumentation-asyncio==0.66b1",
+    "opentelemetry-instrumentation-dbapi==0.66b1",
+    "opentelemetry-instrumentation-exceptions==0.66b1",
+    "opentelemetry-instrumentation-logging==0.66b1",
+    "opentelemetry-instrumentation-sqlite3==0.66b1",
+    "opentelemetry-instrumentation-threading==0.66b1",
+    "opentelemetry-instrumentation-urllib==0.66b1",
+    "opentelemetry-instrumentation-wsgi==0.66b1",
+    "opentelemetry-instrumentation-click==0.66b1",
+    "opentelemetry-instrumentation-grpc==0.66b1",
+    "opentelemetry-instrumentation-httpx==0.66b1",
+    "opentelemetry-instrumentation-starlette==0.66b1",
 ]
 
 [dependency-groups]

@@ -72,6 +72,13 @@ spec:
               value: "8088"
             - name: CONSUMER_GROUP
               value: "order-service"
+            # r10/ch.30 -- the one per-service OTEL key: OTEL_SDK_DISABLED/
+            # OTEL_EXPORTER_OTLP_ENDPOINT/_PROTOCOL come from mea-app-config
+            # above (shared, same value for all three instrumented
+            # services); OTEL_SERVICE_NAME can't live there since it needs a
+            # different value per Deployment.
+            - name: OTEL_SERVICE_NAME
+              value: "order-service"
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:

@@ -48,4 +48,12 @@ EXPOSE 8088
 # `alembic upgrade head` runs this service's own migrations (creates the
 # `order_svc` schema + all 5 tables + seeds customers Ada/Grace, a no-op if
 # already applied) before the server starts.
-CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8088"]
+#
+# r10/ch.30 -- the server process (not the migration step) is wrapped with
+# `opentelemetry-instrument` (opentelemetry-distro, zero-code: fastapi server
+# spans, asyncpg/sqlalchemy DB spans, grpc CLIENT spans to inventory-service,
+# aiokafka spans). NO-OP by default: `OTEL_SDK_DISABLED=true` in
+# .env.example means this wrapper does not attempt OTLP export in
+# compose/CI; only `deploy/k8s/base/app-config.yaml` flips it active,
+# in-cluster only.
+CMD ["sh", "-c", "alembic upgrade head && exec opentelemetry-instrument uvicorn app.main:app --host 0.0.0.0 --port 8088"]

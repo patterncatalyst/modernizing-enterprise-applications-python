@@ -13,6 +13,48 @@ dependencies = [
     "aiokafka==0.14.0",
     "grpcio==1.84.0",
     "protobuf==7.36.2",
+    # r10/ch.30, DRQ-096=A -- zero-code OTel auto-instrumentation (lgtm-python
+    # house posture). opentelemetry-distro/-exporter-otlp-proto-grpc pinned
+    # per DRQ-100 (0.66b1/1.45.0); every opentelemetry-instrumentation-*
+    # below is the exact set `uv run opentelemetry-bootstrap -a requirements`
+    # resolved for THIS environment -- fastapi/asyncpg/sqlalchemy/grpc/
+    # aiokafka are the ones this service's code actually exercises (the
+    # hero trace's order-service hop: FastAPI server span, asyncpg spans for
+    # the aggregate + order_view write, grpc CLIENT span to inventory-
+    # service's Reserve); the rest (asyncio/dbapi/exceptions/logging/
+    # sqlite3/threading/urllib/wsgi/click/starlette/httpx/requests/urllib3/
+    # tortoiseorm) are bootstrap's always-included default set plus
+    # libraries this environment has only transitively (starlette underlies
+    # fastapi; httpx/requests/urllib3 come from the dev-only
+    # testcontainers/docker-py chain) -- they no-op when the matching
+    # library is never used. Pinned explicitly here (not left to
+    # `opentelemetry-bootstrap -a install`, which silently installs nothing
+    # into a pip-less uv venv) so the build is reproducible. Wrapped at the
+    # Containerfile entrypoint with `opentelemetry-instrument`; NO-OP by
+    # default via `OTEL_SDK_DISABLED=true` in `.env.example` so compose/CI
+    # stay byte-for-byte unaffected -- only `deploy/k8s/base/app-config.yaml`
+    # flips it active, in-cluster only.
+    "opentelemetry-distro==0.66b1",
+    "opentelemetry-exporter-otlp-proto-grpc==1.45.0",
+    "opentelemetry-instrumentation-asyncio==0.66b1",
+    "opentelemetry-instrumentation-dbapi==0.66b1",
+    "opentelemetry-instrumentation-exceptions==0.66b1",
+    "opentelemetry-instrumentation-logging==0.66b1",
+    "opentelemetry-instrumentation-sqlite3==0.66b1",
+    "opentelemetry-instrumentation-threading==0.66b1",
+    "opentelemetry-instrumentation-urllib==0.66b1",
+    "opentelemetry-instrumentation-wsgi==0.66b1",
+    "opentelemetry-instrumentation-aiokafka==0.66b1",
+    "opentelemetry-instrumentation-asyncpg==0.66b1",
+    "opentelemetry-instrumentation-click==0.66b1",
+    "opentelemetry-instrumentation-fastapi==0.66b1",
+    "opentelemetry-instrumentation-grpc==0.66b1",
+    "opentelemetry-instrumentation-httpx==0.66b1",
+    "opentelemetry-instrumentation-requests==0.66b1",
+    "opentelemetry-instrumentation-sqlalchemy==0.66b1",
+    "opentelemetry-instrumentation-starlette==0.66b1",
+    "opentelemetry-instrumentation-tortoiseorm==0.66b1",
+    "opentelemetry-instrumentation-urllib3==0.66b1",
 ]
 
 [dependency-groups]
