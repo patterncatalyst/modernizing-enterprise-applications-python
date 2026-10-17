@@ -56,6 +56,39 @@ This file is the catalogue — one row per diagram, append-only.
 | `openshift-crc-topology` | ch.33 | The `mea` topology on OpenShift Local (CRC): 8 app pods under restricted-v2 (no fixed UID), postgres/kafka under nonroot-v2 via the `mea-infra` SA, otel-lgtm under anyuid (runAsUser 0 only), and the two edge Routes (strangler-proxy + graphql-gateway) as the only ingress. Source: `openshift-crc-topology.py`. |
 | `openshift-image-delivery` | ch.33 | Host `podman build` → push to the exposed internal registry → Deployment pulls by digest; `--mirror-infra` seeds postgres/kafka into the registry for the egress-less CRC VM, and the frozen monolith image feeds the review-service bootstrap Job. Source: `openshift-image-delivery.py`. |
 | `openshift-mesh-mtls-edge` | ch.33 | OSSM 3 STRICT mesh-wide mTLS with a PERMISSIVE carve-out per Route-facing service, Sail's `istio.io/rev` label injection (not the minikube annotation), and Kiali reading otel-lgtm's Prometheus; the Route is the edge (OSSM provisions no ingress gateway). Source: `openshift-mesh-mtls-edge.py`. |
+| `monolith-to-microservices-outcome` | ch.00 | The before/after outcome: a Django 5.2+DRF monolith strangled into 6 FastAPI services + a Strawberry gateway behind an ASGI proxy, with Kafka. Source: `monolith-to-microservices-outcome.py`. |
+| `extraction-sequence-ladder` | ch.00 | The six extractions in order: review -> notification -> inventory -> payment -> shipping -> order. Source: `extraction-sequence-ladder.py`. |
+| `toolchain-and-repo-layout` | ch.01 | The required toolchain (uv, Python 3.14, Django/DRF, FastAPI, Docker+compose observability) and the repo directory layout. Source: `toolchain-and-repo-layout.py`. |
+| `ledger-files-to-adlc-phases` | ch.02 | Which ADLC phase each ledger file serves: decisions.md / build-plan.md / reconciliation.md. Source: `ledger-files-to-adlc-phases.py`. |
+| `microservice-traits` | ch.03 | The ten traits of a microservice. Source: `microservice-traits.py`. |
+| `rewrite-vs-strangler-risk` | ch.03 | Big-bang rewrite risk vs incremental strangler risk over time. Source: `rewrite-vs-strangler-risk.py`. |
+| `migration-metrics-review` | ch.03 | The delivery/operability metrics modernization improves (review: the Python win is structural, not a startup-time number). Source: `migration-metrics-review.py`. |
+| `migration-strategy-spectrum` | ch.04 | Lift & Shift / Modernize & Extend / Rip & Rewrite. Source: `migration-strategy-spectrum.py`. |
+| `modernization-value-vs-change-2x2` | ch.04 | The strategic-value x change-frequency quadrant for choosing what to modernize. Source: `modernization-value-vs-change-2x2.py`. |
+| `strangler-evolution-arc` | ch.04 | Monolith -> strangler-proxy era -> services, over time. Source: `strangler-evolution-arc.py`. |
+| `sdlc-vs-adlc` | ch.05 | The SDLC phase map vs the ADLC. Source: `sdlc-vs-adlc.py`. |
+| `agentic-sdlc-to-adlc` | ch.05 | Which SDLC steps agents replace or augment in the ADLC. Source: `agentic-sdlc-to-adlc.py`. |
+| `adlc-tooling` | ch.05 | The ADLC tooling: the lgtm-* skills, lgtm-relay tiering, and the MCP surface (no Quarkus-Agent/Camel-MCP equivalent). Source: `adlc-tooling.py`. |
+| `adlc-local-vs-hosted` | ch.05 | Local-dev vs hosted/CI execution of the ADLC. Source: `adlc-local-vs-hosted.py`. |
+| `plan-execute-validate-relay` | ch.06 | The lgtm-relay tiering: Opus plan -> Sonnet execute -> Opus validate. Source: `plan-execute-validate-relay.py`. |
+| `asgi-strangler-proxy-flow` | ch.06 | The Starlette+httpx ASGI reverse-proxy routing a request to monolith-or-service by flag (full-path prefix, hop-by-hop stripping, buffered body, 404/502). Source: `asgi-strangler-proxy-flow.py`. |
+| `structural-vs-behavioral-gates` | ch.06 | Structural checks (ruff, import wiring) vs behavioral/equivalence gates. Source: `structural-vs-behavioral-gates.py`. |
+| `shared-table-routing-defect` | ch.07 | A real Python-shaped defect caught at a gate (the chunked-body/empty-POST proxy bug in-process tests missed). Source: `shared-table-routing-defect.py`. |
+| `adlc-safety-net-layers` | ch.07 | Tests + contracts + reconciliation as layered guardrails. Source: `adlc-safety-net-layers.py`. |
+| `monolith-architecture` | ch.08 | The reference monolith: six Django apps + common + config as one deployable, shared Postgres schema, DRF edge. Source: `monolith-architecture.py`. |
+| `monolith-six-contexts` | ch.08 | The six bounded contexts inside the monolith. Source: `monolith-six-contexts.py`. |
+| `place-order-transaction-sequence` | ch.08 | The god checkout place_order spanning six contexts in one transaction, with the OUT_OF_STOCK/PAYMENT_DECLINED branches. Source: `place-order-transaction-sequence.py`. |
+| `monolith-shared-schema-er` | ch.08 | The shared Postgres schema ER with the real cross-context FKs (order_items already a snapshot, no inventory FK). Source: `monolith-shared-schema-er.py`. |
+| `smell-map` | ch.09 | The 7 deliberate smells mapped to the chapter that cures each (5 open, 2 cured at r03). Source: `smell-map.py`. |
+| `test-pyramid` | ch.10 | The real pytest/pytest-django tiers for the monolith. Source: `test-pyramid.py`. |
+| `whitebox-pyramid-vs-blackbox-equivalence` | ch.10 | The whitebox pytest pyramid vs the Newman blackbox equivalence suite. Source: `whitebox-pyramid-vs-blackbox-equivalence.py`. |
+| `context-map` | ch.11 | The six contexts and their DDD relationships (incl. the gRPC ACL that exists but is unused on the sync path). Source: `context-map.py`. |
+| `hexagonal-ports-adapters` | ch.11 | Domain core + ports/adapters, keeping the ORM out of the core. Source: `hexagonal-ports-adapters.py`. |
+| `event-storm-checkout` | ch.12 | Checkout as an event-storm timeline: events/commands/policies (real topic constants vs conceptual-only events). Source: `event-storm-checkout.py`. |
+| `event-storming-legend` | ch.12 | The event-storming sticky-note grammar legend. Source: `event-storming-legend.py`. |
+| `storm-wall-to-backlog` | ch.12 | The storm wall mapped to a decomposition backlog (each boundary -> its chapter/mechanism). Source: `storm-wall-to-backlog.py`. |
+| `coupling-ladder` | ch.13 | The Constantine/Khononov coupling taxonomy scored against real monolith code. Source: `coupling-ladder.py`. |
+| `context-dependency-graph-cace` | ch.13 | Afferent/efferent coupling across the six contexts, resolving into the extraction order. Source: `context-dependency-graph-cace.py`. |
 
 ## Regenerating
 
@@ -107,6 +140,39 @@ python3 -I book-pattern-scorecard.py
 python3 -I openshift-crc-topology.py
 python3 -I openshift-image-delivery.py
 python3 -I openshift-mesh-mtls-edge.py
+python3 -I monolith-to-microservices-outcome.py
+python3 -I extraction-sequence-ladder.py
+python3 -I toolchain-and-repo-layout.py
+python3 -I ledger-files-to-adlc-phases.py
+python3 -I microservice-traits.py
+python3 -I rewrite-vs-strangler-risk.py
+python3 -I migration-metrics-review.py
+python3 -I migration-strategy-spectrum.py
+python3 -I modernization-value-vs-change-2x2.py
+python3 -I strangler-evolution-arc.py
+python3 -I sdlc-vs-adlc.py
+python3 -I agentic-sdlc-to-adlc.py
+python3 -I adlc-tooling.py
+python3 -I adlc-local-vs-hosted.py
+python3 -I plan-execute-validate-relay.py
+python3 -I asgi-strangler-proxy-flow.py
+python3 -I structural-vs-behavioral-gates.py
+python3 -I shared-table-routing-defect.py
+python3 -I adlc-safety-net-layers.py
+python3 -I monolith-architecture.py
+python3 -I monolith-six-contexts.py
+python3 -I place-order-transaction-sequence.py
+python3 -I monolith-shared-schema-er.py
+python3 -I smell-map.py
+python3 -I test-pyramid.py
+python3 -I whitebox-pyramid-vs-blackbox-equivalence.py
+python3 -I context-map.py
+python3 -I hexagonal-ports-adapters.py
+python3 -I event-storm-checkout.py
+python3 -I event-storming-legend.py
+python3 -I storm-wall-to-backlog.py
+python3 -I coupling-ladder.py
+python3 -I context-dependency-graph-cace.py
 ```
 
 Each spec validates its own output on the way out (`generate_diagram.emit()`
