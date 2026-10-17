@@ -1,0 +1,37 @@
+# istio-install.yaml -- ch.30 (additive)
+#
+# IstioOperator for `istioctl install -f ...` (NOT `kubectl apply -k` --
+# IstioOperator resources are reconciled by the Istio operator controller,
+# not a plain apply flow). NOT listed in kustomization.yaml's
+# `resources:` in this directory and NOT kubeconform-validated: it is a
+# cluster-only install artifact (the operator controller rejects/ignores a
+# client-side render) and its CRD is not in the offline Kubernetes OpenAPI
+# schema set kubeconform checks against. `deploy/k8s/scripts/install-istio.sh`
+# is the only consumer of this file.
+#
+# `default` profile: istiod + the ingress gateway (not `minimal`, which omits
+# the gateway; not `demo`, which bundles its own Prometheus/Jaeger/Grafana
+# addons that would duplicate the LGTM stack in ../observability).
+#
+# meshConfig.extensionProviders' `otel` provider is how Envoy's OWN spans
+# (not app spans) reach lgtm.mea.svc.cluster.local:4317 -- telemetry.yaml
+# turns this provider on mesh-wide. meshConfig.accessLogFile: /dev/stdout
+# means `kubectl logs <pod> -c istio-proxy` shows per-request access log
+# lines once telemetry.yaml's accessLogging stanza is applied.
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: mea-istio
+  namespace: istio-system
+spec:
+  profile: default
+  meshConfig:
+    accessLogFile: /dev/stdout
+    extensionProviders:
+      - name: otel
+        opentelemetry:
+          port: 4317
+          service: lgtm.mea.svc.cluster.local
+    defaultConfig:
+      tracing:
+        sampling: 100.00

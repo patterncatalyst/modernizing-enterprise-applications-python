@@ -1374,7 +1374,7 @@ unexplained drift for ch.21/26.
 
 ---
 
-## CAPSTONE
+## FINAL PROJECT
 
 **The strangler-fig is complete — the Django monolith is decommissioned;
 six FastAPI services plus a GraphQL gateway sit behind a flagless edge
@@ -1747,4 +1747,4 @@ exceeding. No unexplained drift for ch.29/31.
 (Mesh, Observability & Distributed Tracing — Istio, Kiali, OpenTelemetry +
 the LGTM stack, live on minikube, user-run, per track-plan USER DECISION
 A/B-2 still open at r09 close) and ch.32 (The Pattern Language, Revisited —
-the capstone)**, per `_plans/backmatter-track-plan.md`'s grouping.
+the final project)**, per `_plans/backmatter-track-plan.md`'s grouping.

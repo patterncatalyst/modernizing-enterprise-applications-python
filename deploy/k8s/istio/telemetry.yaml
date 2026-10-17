@@ -1,0 +1,26 @@
+# telemetry.yaml -- ch.30 (additive)
+#
+# Mesh-wide Telemetry resource (no selector -> applies to every meshed
+# workload in `mea`): routes Envoy's own trace spans to the `otel`
+# extensionProvider (istio-install.yaml) and turns on access logging via the
+# built-in `envoy` provider (writes to meshConfig.accessLogFile, /dev/stdout
+# -- visible via `kubectl logs <pod> -c istio-proxy`).
+#
+# randomSamplingPercentage: 100.00 is a DEMO sampler, not a production
+# setting -- at mesh scale 100% trace sampling is a cost and cardinality
+# problem; it is chosen here so the ch.30 hero trace and every mesh hop are
+# guaranteed to be captured in a single live run, not chosen as the
+# production-appropriate default.
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  name: mesh-default
+  namespace: istio-system
+spec:
+  tracing:
+    - providers:
+        - name: otel
+      randomSamplingPercentage: 100.00
+  accessLogging:
+    - providers:
+        - name: envoy
