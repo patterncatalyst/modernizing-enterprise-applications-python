@@ -42,7 +42,7 @@ spec:
       terminationGracePeriodSeconds: 20
       containers:
         - name: inventory-service
-          image: mea/inventory-service:latest
+          image: mea/inventory-service:1.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

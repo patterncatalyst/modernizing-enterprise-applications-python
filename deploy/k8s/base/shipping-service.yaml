@@ -46,7 +46,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: shipping-service
-          image: mea/shipping-service:latest
+          image: mea/shipping-service:1.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

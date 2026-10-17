@@ -48,7 +48,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: notification-service
-          image: mea/notification-service:latest
+          image: mea/notification-service:1.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

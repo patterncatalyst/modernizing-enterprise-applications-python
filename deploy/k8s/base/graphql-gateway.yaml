@@ -42,7 +42,7 @@ spec:
       terminationGracePeriodSeconds: 10
       containers:
         - name: graphql-gateway
-          image: mea/graphql-gateway:latest
+          image: mea/graphql-gateway:1.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

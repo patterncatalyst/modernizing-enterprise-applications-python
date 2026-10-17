@@ -46,7 +46,7 @@ spec:
       terminationGracePeriodSeconds: 10
       containers:
         - name: review-service
-          image: mea/review-service:latest
+          image: mea/review-service:1.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

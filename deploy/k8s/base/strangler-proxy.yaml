@@ -38,7 +38,7 @@ spec:
       terminationGracePeriodSeconds: 10
       containers:
         - name: strangler-proxy
-          image: mea/strangler-proxy:latest
+          image: mea/strangler-proxy:1.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

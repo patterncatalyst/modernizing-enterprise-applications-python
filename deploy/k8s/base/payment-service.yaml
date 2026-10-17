@@ -43,7 +43,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: payment-service
-          image: mea/payment-service:latest
+          image: mea/payment-service:1.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
