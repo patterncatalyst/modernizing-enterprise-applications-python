@@ -1,0 +1,15 @@
+{
+  "type": "record",
+  "name": "OrderPlaced",
+  "namespace": "dev.patterncatalyst.contracts.avro",
+  "doc": "ch.28 (DRQ-038 follow-up, DRQ-033/DRQ-076 Python lane) -- Avro mirror of examples/07-order-service's real order.placed JSON event (see ../../07-order-service/EVENTS.md's 'Produces: order.placed' section), field-for-field identical in name and meaning. DEMONSTRATOR schema only: the live order.placed JSON event produced by the real order service (examples/07-order-service) and consumed by payment-/notification-service is UNCHANGED -- this record is published to a SEPARATE demo topic (order.events.avro.demo) by examples/09-schema-registry-demo, to teach Avro + Apicurio schema registration and BACKWARD compatibility checking in isolation. paymentMethod is modeled OPTIONAL here (union with null, default null) -- a deliberate deviation from the real event (which always sets it) chosen to demonstrate Avro's optional-field-with-default idiom from v1 onward, rather than only introducing it at v2 (see tests/resources/order-placed-v2-backward-compatible.avsc for the v2 evolution fixture, which instead adds a NEW optional field, giftMessage).",
+  "fields": [
+    { "name": "orderId", "type": "long", "doc": "The saga correlation key -- this order's identifier." },
+    { "name": "customerId", "type": "long", "doc": "The customer who placed the order." },
+    { "name": "customerEmail", "type": "string", "doc": "Denormalized customer email snapshot, carried on the wire so downstream consumers never need to look up the customer." },
+    { "name": "totalCents", "type": "long", "doc": "The order total, in cents." },
+    { "name": "confirmationMessage", "type": "string", "doc": "The order-confirmation message text." },
+    { "name": "placedAt", "type": { "type": "long", "logicalType": "timestamp-millis" }, "doc": "When the order was placed." },
+    { "name": "paymentMethod", "type": ["null", "string"], "default": null, "doc": "The checkout request's payment method. Optional (see this schema's top-level doc)." }
+  ]
+}

@@ -1,0 +1,41 @@
+[project]
+name = "mea-schema-registry-demo"
+version = "0.1.0"
+description = "Modernizing Enterprise Applications (Python) -- ch.28 (DRQ-038 follow-up, DRQ-076) Avro + Apicurio Schema Registry DEMONSTRATOR. Pure-Python (DRQ-033): fastavro + aiokafka + a plain httpx client against Apicurio's v3 REST API -- NOT confluent-kafka. ADDITIVE ONLY: publishes a field-for-field Avro mirror of the real order.placed JSON event (examples/07-order-service, unchanged) to its OWN order.events.avro.demo topic, fronted by Apicurio, to teach schema registration and BACKWARD-compatibility evolution checking in isolation."
+requires-python = ">=3.14"
+dependencies = [
+    "fastavro==1.13.1",
+    "aiokafka==0.14.0",
+    "httpx==0.28.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "ruff==0.17.1",
+    "testcontainers==4.15.0",
+]
+
+[tool.pytest.ini_options]
+python_files = ["test_*.py"]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.uv]
+# A standalone demo module, not a distributable library -- don't
+# build/install it as a package into its own virtualenv. Same convention as
+# every other service's pyproject.toml in this project (e.g.
+# ../05-payment-service/pyproject.toml).
+package = false

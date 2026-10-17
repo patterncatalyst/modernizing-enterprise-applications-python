@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 560" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="60" y="150" width="320" height="160" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="220.0" y="198.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">v1 -- order-placed-v1.avsc</text>
+<text x="220.0" y="215.0" font-size="11.5" fill="#555555" text-anchor="middle">orderId, customerId, customerEmail,</text>
+<text x="220.0" y="230.0" font-size="11.5" fill="#555555" text-anchor="middle">totalCents: long, confirmationMessage,</text>
+<text x="220.0" y="245.0" font-size="11.5" fill="#555555" text-anchor="middle">placedAt, paymentMethod (optional)</text>
+<text x="220.0" y="260.0" font-size="11.5" fill="#555555" text-anchor="middle"></text>
+<text x="220.0" y="275.0" font-size="11.5" fill="#555555" text-anchor="middle">register_or_resolve() -&gt; version &quot;1&quot;</text>
+<rect x="500" y="150" width="320" height="160" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="660.0" y="198.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">v2 -- adds giftMessage</text>
+<text x="660.0" y="215.0" font-size="11.5" fill="#555555" text-anchor="middle">[&quot;null&quot;,&quot;string&quot;], default null</text>
+<text x="660.0" y="230.0" font-size="11.5" fill="#555555" text-anchor="middle"></text>
+<text x="660.0" y="245.0" font-size="11.5" fill="#555555" text-anchor="middle">register_version(version=&quot;2&quot;)</text>
+<text x="660.0" y="260.0" font-size="11.5" fill="#555555" text-anchor="middle"></text>
+<text x="660.0" y="275.0" font-size="11.5" fill="#555555" text-anchor="middle">200 OK, version &quot;2&quot;</text>
+<rect x="940" y="150" width="320" height="160" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="1100.0" y="190.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">v3 -- retypes totalCents</text>
+<text x="1100.0" y="207.5" font-size="11.5" fill="#555555" text-anchor="middle">long -&gt; string (no valid Avro</text>
+<text x="1100.0" y="222.5" font-size="11.5" fill="#555555" text-anchor="middle">promotion path)</text>
+<text x="1100.0" y="237.5" font-size="11.5" fill="#555555" text-anchor="middle"></text>
+<text x="1100.0" y="252.5" font-size="11.5" fill="#555555" text-anchor="middle">register_version(version=&quot;3&quot;)</text>
+<text x="1100.0" y="267.5" font-size="11.5" fill="#555555" text-anchor="middle"></text>
+<text x="1100.0" y="282.5" font-size="11.5" fill="#555555" text-anchor="middle">400, name=&quot;RuleViolationException&quot;</text>
+<rect x="360" y="380" width="600" height="80" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="660.0" y="418.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Apicurio BACKWARD compatibility rule, attached to artifact</text>
+<text x="660.0" y="435.0" font-size="11.5" fill="#555555" text-anchor="middle">order-placed-compat-test-* via set_compatibility_rule(&quot;BACKWARD&quot;)</text>
+<path d="M380.0,230.0 L500.0,230.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="446.0" y="224.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">evolve: add optional field with default</text>
+<text x="446.0" y="224.0" font-size="11" fill="#555" text-anchor="middle">evolve: add optional field with default</text>
+<path d="M820.0,230.0 L940.0,230.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="886.0" y="224.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">evolve: retype an existing field</text>
+<text x="886.0" y="224.0" font-size="11" fill="#555" text-anchor="middle">evolve: retype an existing field</text>
+<path d="M380.0,299.0909090909091 L567.3684210526316,380.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M660.0,310.0 L660.0,380.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="666.0" y="339.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">ACCEPTED</text>
+<text x="666.0" y="339.0" font-size="11" fill="#2f5f3d" text-anchor="middle">ACCEPTED</text>
+<path d="M940.0,299.0909090909091 L752.6315789473684,380.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="852.3157894736842" y="333.54545454545456" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">REJECTED</text>
+<text x="852.3157894736842" y="333.54545454545456" font-size="11" fill="#555" text-anchor="middle">REJECTED</text>
+<text x="660.0" y="32" font-size="18" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.28 -- schema evolution against a live BACKWARD rule: an additive change passes, a retype is rejected before a single message ships</text>
+<text x="50" y="70" font-size="11" fill="#555555" text-anchor="start">tests/test_compatibility.py, live-verified against quay.io/apicurio/apicurio-registry:3.3.3 -- not guessed from documentation.</text>
+<text x="50" y="538" font-size="11" fill="#555555" text-anchor="start">A hand-maintained JSON record can never give you this: nothing stops a retyped field until a consumer&#x27;s deserializer breaks in production.</text>
+</svg>
