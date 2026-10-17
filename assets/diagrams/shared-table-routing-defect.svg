@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 780" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="20" y="90" width="680" height="600" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="110" font-size="12" font-weight="700" fill="#1d1d1d">The ambiguity -- a shape-only suite sees the same response either way</text>
+<rect x="740" y="90" width="680" height="600" rx="12" fill="#eaf4ec" stroke="#ddd"/>
+<text x="752" y="110" font-size="12" font-weight="700" fill="#1d1d1d">What closed the gap -- a real POST, a real socket, the shared table</text>
+<rect x="60" y="150" width="600" height="70" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="360.0" y="183.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Shape-only equivalence check</text>
+<text x="360.0" y="200.0" font-size="11.5" fill="#555555" text-anchor="middle">HTTP only -- status code, body shape</text>
+<rect x="60" y="250" width="600" height="70" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="360.0" y="283.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">ASGI strangler proxy :8888</text>
+<text x="360.0" y="300.0" font-size="11.5" fill="#555555" text-anchor="middle">flag: STRANGLER_REVIEW_ENABLED</text>
+<rect x="60" y="360" width="280" height="90" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="200.0" y="403.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Django monolith :8000 (WSGI)</text>
+<text x="200.0" y="420.0" font-size="11.5" fill="#555555" text-anchor="middle">answers /api/reviews (path A)</text>
+<rect x="380" y="360" width="280" height="90" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="520.0" y="403.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Review service (FastAPI) :8001</text>
+<text x="520.0" y="420.0" font-size="11.5" fill="#555555" text-anchor="middle">answers /api/reviews (path B)</text>
+<rect x="140" y="520" width="440" height="90" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="360.0" y="563.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">shared Postgres schema (DRQ-028)</text>
+<text x="360.0" y="580.0" font-size="11.5" fill="#555555" text-anchor="middle">reviews + auth_user -- read &amp; written by both</text>
+<rect x="780" y="150" width="600" height="70" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="1080.0" y="183.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Newman, real socket, real WSGI backend</text>
+<text x="1080.0" y="200.0" font-size="11.5" fill="#555555" text-anchor="middle">asserts on the row, not just the response shape</text>
+<rect x="780" y="250" width="600" height="70" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="1080.0" y="283.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">ASGI strangler proxy :8888</text>
+<text x="1080.0" y="300.0" font-size="11.5" fill="#555555" text-anchor="middle">body buffered -- await request.body()</text>
+<rect x="780" y="360" width="280" height="90" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="920.0" y="403.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">In-process test (ASGITransport)</text>
+<text x="920.0" y="420.0" font-size="11.5" fill="#555555" text-anchor="middle">mock transport -- bug hid here, passed</text>
+<rect x="1100" y="360" width="280" height="90" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="1240.0" y="403.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Real WSGI socket (CUTOVER.md)</text>
+<text x="1240.0" y="420.0" font-size="11.5" fill="#555555" text-anchor="middle">bug surfaced here: empty body</text>
+<rect x="860" y="520" width="440" height="90" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1080.0" y="563.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Fixed: buffered body, correct Content-Length</text>
+<text x="1080.0" y="580.0" font-size="11.5" fill="#555555" text-anchor="middle">58/58 assertions green -- baseline, cutover, reverted</text>
+<path d="M360.0,220.0 L360.0,250.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="366.0" y="229.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">HTTP request only</text>
+<text x="366.0" y="229.0" font-size="11" fill="#555" text-anchor="middle">HTTP request only</text>
+<path d="M313.3333333333333,320.0 L260.0,360.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="292.66666666666663" y="334.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">path A</text>
+<text x="292.66666666666663" y="334.0" font-size="11" fill="#555" text-anchor="middle">path A</text>
+<path d="M406.6666666666667,320.0 L460.0,360.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="439.33333333333337" y="334.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">path B</text>
+<text x="439.33333333333337" y="334.0" font-size="11" fill="#555" text-anchor="middle">path B</text>
+<path d="M245.0,450.0 L315.0,520.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M475.0,450.0 L405.0,520.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="446.0" y="479.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">same rows either way</text>
+<text x="446.0" y="479.0" font-size="11" fill="#2f5f3d" text-anchor="middle">same rows either way</text>
+<path d="M1080.0,220.0 L1080.0,250.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1033.3333333333333,320.0 L980.0,360.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="1012.6666666666666" y="334.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">passed -- false confidence</text>
+<text x="1012.6666666666666" y="334.0" font-size="11" fill="#555" text-anchor="middle">passed -- false confidence</text>
+<path d="M1126.6666666666667,320.0 L1180.0,360.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="1159.3333333333335" y="334.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">surfaced the real defect</text>
+<text x="1159.3333333333335" y="334.0" font-size="11" fill="#2f5f3d" text-anchor="middle">surfaced the real defect</text>
+<path d="M965.0,450.0 L1035.0,520.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M1195.0,450.0 L1125.0,520.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="720.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.07 -- the shared-table proof: why response shape alone couldn&#x27;t tell path A from path B</text>
+<text x="720.0" y="56" font-size="12" fill="#555555" text-anchor="middle">Review&#x27;s r02 form still shares the monolith&#x27;s Postgres schema (DRQ-028) -- DB ownership is deferred to ch.18/19</text>
+<text x="60" y="630" font-size="11" fill="#555555" text-anchor="start">A misrouted request and a correctly routed one can return similarly shaped bodies, because both read and write the same rows.</text>
+<text x="780" y="630" font-size="11" fill="#555555" text-anchor="start">The in-process mock transport couldn&#x27;t see the real WSGI stack&#x27;s chunked-body handling --</text>
+<text x="780" y="646" font-size="11" fill="#555555" text-anchor="start">only a real socket run against the real backend, checking the shared table, caught it.</text>
+<text x="40" y="764" font-size="10" fill="#777777" text-anchor="start">Sourced from _plans/decisions.md (DRQ-026, DRQ-028) and examples/01-strangler-proxy/CUTOVER.md (&quot;A bug this cutover caught&quot;).</text>
+</svg>

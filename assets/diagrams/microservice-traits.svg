@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 560" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="40" y="150" width="280" height="140" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="180.0" y="210.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">1. Independently deployable</text>
+<text x="180.0" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">ships on its own schedule,</text>
+<text x="180.0" y="242.5" font-size="11.5" fill="#555555" text-anchor="middle">not the monolith&#x27;s shared release</text>
+<rect x="340" y="150" width="280" height="140" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="480.0" y="210.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">2. Modeled around a business domain</text>
+<text x="480.0" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">boundary matches a bounded</text>
+<text x="480.0" y="242.5" font-size="11.5" fill="#555555" text-anchor="middle">context, not a technical layer</text>
+<rect x="640" y="150" width="280" height="140" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="780.0" y="210.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">3. Communicate over the network</text>
+<text x="780.0" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">HTTP/gRPC/Kafka, not an in-process</text>
+<text x="780.0" y="242.5" font-size="11.5" fill="#555555" text-anchor="middle">Django app import</text>
+<rect x="940" y="150" width="280" height="140" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1080.0" y="210.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">4. Opinionated SOA</text>
+<text x="1080.0" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">SOA&#x27;s integration ideas,</text>
+<text x="1080.0" y="242.5" font-size="11.5" fill="#555555" text-anchor="middle">stronger defaults on size + ownership</text>
+<rect x="1240" y="150" width="280" height="140" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1380.0" y="210.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">5. Technology agnostic</text>
+<text x="1380.0" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">one team&#x27;s language or framework</text>
+<text x="1380.0" y="242.5" font-size="11.5" fill="#555555" text-anchor="middle">needs no neighbor&#x27;s coordination</text>
+<rect x="40" y="314" width="280" height="140" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="180.0" y="374.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">6. A distributed system</text>
+<text x="180.0" y="391.5" font-size="11.5" fill="#555555" text-anchor="middle">true of the set, not one service --</text>
+<text x="180.0" y="406.5" font-size="11.5" fill="#555555" text-anchor="middle">partial failure is now possible</text>
+<rect x="340" y="314" width="280" height="140" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="480.0" y="374.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">7. API-focused</text>
+<text x="480.0" y="391.5" font-size="11.5" fill="#555555" text-anchor="middle">internals hidden behind the API,</text>
+<text x="480.0" y="406.5" font-size="11.5" fill="#555555" text-anchor="middle">not a shared library or table</text>
+<rect x="640" y="314" width="280" height="140" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="780.0" y="374.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">8. Decentralized governance</text>
+<text x="780.0" y="391.5" font-size="11.5" fill="#555555" text-anchor="middle">how a service is built is</text>
+<text x="780.0" y="406.5" font-size="11.5" fill="#555555" text-anchor="middle">owned by the team that builds it</text>
+<rect x="940" y="314" width="280" height="140" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1080.0" y="374.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">9. Decentralized data management</text>
+<text x="1080.0" y="391.5" font-size="11.5" fill="#555555" text-anchor="middle">each service owns its own schema,</text>
+<text x="1080.0" y="406.5" font-size="11.5" fill="#555555" text-anchor="middle">not one shared Postgres schema</text>
+<rect x="1240" y="314" width="280" height="140" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1380.0" y="374.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">10. Designed for failure</text>
+<text x="1380.0" y="391.5" font-size="11.5" fill="#555555" text-anchor="middle">any service can be down, any time --</text>
+<text x="1380.0" y="406.5" font-size="11.5" fill="#555555" text-anchor="middle">not: if the process is up, all is reachable</text>
+<text x="800.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.03 -- the ten microservice traits: what the word is actually promising</text>
+<text x="800.0" y="56" font-size="12" fill="#555555" text-anchor="middle">each service&#x27;s boundary matches a bounded context -- the target this book&#x27;s six extractions are built toward, one at a time</text>
+<text x="40" y="490" font-size="11" fill="#555555" text-anchor="start">None of these ten traits is this book&#x27;s own goal in isolation. Together, they are the destination the strangler-fig</text>
+<text x="40" y="506" font-size="11" fill="#555555" text-anchor="start">sequence (ch.14-26) is aimed at -- each of the six extractions is a bet that one more bounded context can acquire them.</text>
+<text x="40" y="544" font-size="10" fill="#777777" text-anchor="start">Sourced from _plans/build-plan.md (&quot;A. Approach&quot;).</text>
+</svg>

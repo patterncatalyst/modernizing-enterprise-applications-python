@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 560" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="40" y="150" width="330" height="220" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="205.0" y="235.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Big-bang rewrite</text>
+<text x="205.0" y="252.5" font-size="11.5" fill="#555555" text-anchor="middle">risk taken at once: all of it</text>
+<text x="205.0" y="267.5" font-size="11.5" fill="#555555" text-anchor="middle">time to value: one long cutover</text>
+<text x="205.0" y="282.5" font-size="11.5" fill="#555555" text-anchor="middle">trade-off: cleanest end-state,</text>
+<text x="205.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">no incremental verification</text>
+<rect x="400" y="150" width="330" height="220" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
+<text x="565.0" y="235.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Strangler fig (this book)</text>
+<text x="565.0" y="252.5" font-size="11.5" fill="#555555" text-anchor="middle">risk taken at once: one seam</text>
+<text x="565.0" y="267.5" font-size="11.5" fill="#555555" text-anchor="middle">time to value: continuous</text>
+<text x="565.0" y="282.5" font-size="11.5" fill="#555555" text-anchor="middle">trade-off: equivalence-gated,</text>
+<text x="565.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">slower end to end</text>
+<rect x="760" y="150" width="330" height="220" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="925.0" y="235.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Branch-by-abstraction</text>
+<text x="925.0" y="252.5" font-size="11.5" fill="#555555" text-anchor="middle">risk taken at once: one branch</text>
+<text x="925.0" y="267.5" font-size="11.5" fill="#555555" text-anchor="middle">time to value: fast per branch</text>
+<text x="925.0" y="282.5" font-size="11.5" fill="#555555" text-anchor="middle">trade-off: good for in-process</text>
+<text x="925.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">seams; data ownership unsolved</text>
+<rect x="1120" y="150" width="330" height="220" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1285.0" y="235.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Parallel-run (shadow)</text>
+<text x="1285.0" y="252.5" font-size="11.5" fill="#555555" text-anchor="middle">risk taken at once: both paths</text>
+<text x="1285.0" y="267.5" font-size="11.5" fill="#555555" text-anchor="middle">time to value: needs a comparator</text>
+<text x="1285.0" y="282.5" font-size="11.5" fill="#555555" text-anchor="middle">trade-off: strong confidence,</text>
+<text x="1285.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">two live paths cost double</text>
+<text x="750.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.04 -- the migration-strategy spectrum: how much risk you take on at once, and how long you wait</text>
+<text x="750.0" y="56" font-size="12" fill="#2f5f3d" text-anchor="middle">this book commits to the strangler fig, gated at every step by a Newman behavior-equivalence suite</text>
+<text x="565.0" y="136" font-size="11.5" fill="#2f5f3d" text-anchor="middle" font-weight="700">this book&#x27;s choice</text>
+<text x="40" y="544" font-size="10.5" fill="#555555" text-anchor="start">Sourced from _plans/build-plan.md (&quot;A. Approach&quot;) -- the same incremental-vs-rewrite risk-shape case Sam Newman makes in Building Microservices.</text>
+</svg>

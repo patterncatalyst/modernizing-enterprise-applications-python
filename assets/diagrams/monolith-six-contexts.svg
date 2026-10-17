@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 560" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="20" y="70" width="1260" height="300" rx="12" fill="#ffffff" stroke="#ddd"/>
+<text x="32" y="90" font-size="12" font-weight="700" fill="#1d1d1d">Django project — one deployable (gunicorn), one WSGI process</text>
+<rect x="40" y="400" width="1220" height="90" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="52" y="420" font-size="12" font-weight="700" fill="#1d1d1d">PostgreSQL — one shared schema</text>
+<rect x="50" y="150" width="190" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="145.0" y="198.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">order</text>
+<text x="145.0" y="215.0" font-size="11.5" fill="#555555" text-anchor="middle">checkout aggregate, line items</text>
+<rect x="258" y="150" width="190" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="353.0" y="198.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">inventory</text>
+<text x="353.0" y="215.0" font-size="11.5" fill="#555555" text-anchor="middle">stock levels per SKU</text>
+<rect x="466" y="150" width="190" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="561.0" y="198.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">payment</text>
+<text x="561.0" y="215.0" font-size="11.5" fill="#555555" text-anchor="middle">charge capture against an order</text>
+<rect x="674" y="150" width="190" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="769.0" y="198.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">shipping</text>
+<text x="769.0" y="215.0" font-size="11.5" fill="#555555" text-anchor="middle">dispatch to an address</text>
+<rect x="882" y="150" width="190" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="977.0" y="198.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">notification</text>
+<text x="977.0" y="215.0" font-size="11.5" fill="#555555" text-anchor="middle">tell the customer what happened</text>
+<rect x="1090" y="150" width="190" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1185.0" y="198.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">review</text>
+<text x="1185.0" y="215.0" font-size="11.5" fill="#555555" text-anchor="middle">a rating on a purchased SKU</text>
+<rect x="480.0" y="428" width="340" height="44" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
+<text x="650.0" y="455.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">one schema, nine tables (Fig. 8.4)</text>
+<path d="M240.0,200.0 L258.0,200.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M240,200.0 L240,280" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M240,280 L674,280" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="463.0" y="274.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">in-process Python calls — no network hop between apps</text>
+<text x="463.0" y="274.0" font-size="11" fill="#2f5f3d" text-anchor="middle">in-process Python calls — no network hop between apps</text>
+<path d="M561.0,280 L561.0,250" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M769.0,280 L769.0,250" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M240,210.0 L977.0,250" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="614.5" y="224.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">async via outbox — not an in-process call</text>
+<text x="614.5" y="224.0" font-size="11" fill="#555" text-anchor="middle">async via outbox — not an in-process call</text>
+<path d="M240.0,247.02970297029702 L605.56,428.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M412.4,250.0 L623.864,428.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M578.8,250.0 L642.168,428.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M745.2,250.0 L660.472,428.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M911.6,250.0 L678.776,428.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1090.0,244.39252336448598 L697.08,428.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="650.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.08 — Six bounded contexts, one deployable: apps, not services</text>
+<text x="650.0" y="56" font-size="12" fill="#555555" text-anchor="middle">no process boundary, no network hop, no per-context database — the opposite of what ch.14 onward builds</text>
+<text x="40" y="514" font-size="10.5" fill="#555555" text-anchor="start">every context reads and writes the SAME schema directly — no context owns its tables exclusively (detail in monolith-shared-schema-er).</text>
+<text x="40" y="544" font-size="10.5" fill="#555555" text-anchor="start">Sourced from examples/00-monolith/ (app layout: order/, inventory/, payment/, shipping/, notification/, review/, common/, config/).</text>
+</svg>

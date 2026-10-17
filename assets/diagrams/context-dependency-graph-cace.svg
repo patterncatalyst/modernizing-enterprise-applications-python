@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 900" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
+<rect x="20" y="60" width="1260" height="480" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="80" font-size="12" font-weight="700" fill="#1d1d1d">Dependency graph, current monolith -- Ca/Ce per context</text>
+<rect x="20" y="560" width="1260" height="260" rx="12" fill="#eaf4ec" stroke="#ddd"/>
+<text x="32" y="580" font-size="12" font-weight="700" fill="#1d1d1d">Resolved extraction order -- matches stage/01-review .. stage/06-order, lowest coupling first</text>
+<rect x="560" y="90" width="200" height="80" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="660.0" y="120.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Review</text>
+<text x="660.0" y="137.5" font-size="11.5" fill="#555555" text-anchor="middle">Ca: ~0 (nothing calls in)</text>
+<text x="660.0" y="152.5" font-size="11.5" fill="#555555" text-anchor="middle">Ce: ~0 (no runtime dep)</text>
+<rect x="560" y="260" width="200" height="120" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="660.0" y="310.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Order</text>
+<text x="660.0" y="327.5" font-size="11.5" fill="#555555" text-anchor="middle">Ca: highest (3 inbound FKs)</text>
+<text x="660.0" y="342.5" font-size="11.5" fill="#555555" text-anchor="middle">Ce: highest = 3 sync + 1 async</text>
+<rect x="160" y="260" width="240" height="120" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="280.0" y="310.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Inventory</text>
+<text x="280.0" y="327.5" font-size="11.5" fill="#555555" text-anchor="middle">Ca: moderate (1 call + 1 FK join)</text>
+<text x="280.0" y="342.5" font-size="11.5" fill="#555555" text-anchor="middle">Ce: ~0</text>
+<rect x="900" y="260" width="240" height="120" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1020.0" y="310.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Notification</text>
+<text x="1020.0" y="327.5" font-size="11.5" fill="#555555" text-anchor="middle">Ca: low (1 async consume)</text>
+<text x="1020.0" y="342.5" font-size="11.5" fill="#555555" text-anchor="middle">Ce: ~0</text>
+<rect x="160" y="420" width="240" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="280.0" y="460.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Payment</text>
+<text x="280.0" y="477.5" font-size="11.5" fill="#555555" text-anchor="middle">Ca: moderate (1 inbound call)</text>
+<text x="280.0" y="492.5" font-size="11.5" fill="#555555" text-anchor="middle">Ce: ~0 today</text>
+<rect x="900" y="420" width="240" height="100" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1020.0" y="460.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Shipping</text>
+<text x="1020.0" y="477.5" font-size="11.5" fill="#555555" text-anchor="middle">Ca: moderate (1 inbound call)</text>
+<text x="1020.0" y="492.5" font-size="11.5" fill="#555555" text-anchor="middle">Ce: ~0 today; +1 post-ch.23</text>
+<rect x="40" y="640" width="190" height="110" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="135.0" y="693.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">1. Review -- ch.15</text>
+<text x="135.0" y="710.0" font-size="11.5" fill="#555555" text-anchor="middle">Ca~ 0, Ce~ 0 -- lowest score</text>
+<rect x="246" y="640" width="190" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="341.0" y="693.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">2. Notification -- ch.17</text>
+<text x="341.0" y="710.0" font-size="11.5" fill="#555555" text-anchor="middle">low Ca, low Ce</text>
+<rect x="452" y="640" width="190" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="547.0" y="693.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">3. Inventory -- ch.19</text>
+<text x="547.0" y="710.0" font-size="11.5" fill="#555555" text-anchor="middle">moderate Ca, Ce~ 0</text>
+<rect x="658" y="640" width="190" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="753.0" y="693.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">4. Payment -- ch.23</text>
+<text x="753.0" y="710.0" font-size="11.5" fill="#555555" text-anchor="middle">moderate Ca, Ce~ 0</text>
+<rect x="864" y="640" width="190" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="959.0" y="693.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">5. Shipping -- ch.24</text>
+<text x="959.0" y="710.0" font-size="11.5" fill="#555555" text-anchor="middle">moderate Ca, Ce~ 0</text>
+<rect x="1070" y="640" width="190" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="1165.0" y="693.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">6. Order -- ch.26</text>
+<text x="1165.0" y="710.0" font-size="11.5" fill="#555555" text-anchor="middle">highest Ca, highest Ce</text>
+<path d="M560.0,320.0 L400.0,320.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="456.0" y="306.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">inventory.services.reserve() call</text>
+<text x="456.0" y="306.0" font-size="11" fill="#2f5f3d" text-anchor="middle">inventory.services.reserve() call</text>
+<path d="M560.0,359.4736842105263 L400.0,422.63157894736844" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="486.0" y="375.0526315789474" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">payment.services.charge()</text>
+<text x="486.0" y="375.0526315789474" font-size="11" fill="#2f5f3d" text-anchor="middle">payment.services.charge()</text>
+<path d="M760.0,361.6666666666667 L900.0,420.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="836.0" y="374.83333333333337" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">shipping.services.dispatch()</text>
+<text x="836.0" y="374.83333333333337" font-size="11" fill="#2f5f3d" text-anchor="middle">shipping.services.dispatch()</text>
+<path d="M760.0,320.0 L900.0,320.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="836.0" y="304.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">outbox -&gt; async consume (SMELL #5/#6 cured)</text>
+<text x="836.0" y="304.0" font-size="11" fill="#555" text-anchor="middle">outbox -&gt; async consume (SMELL #5/#6 cured)</text>
+<path d="M400.0,422.63157894736844 L560.0,359.4736842105263" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="486.0" y="409.0526315789474" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Payment.order FK</text>
+<text x="486.0" y="409.0526315789474" font-size="11" fill="#555" text-anchor="middle">Payment.order FK</text>
+<path d="M900.0,420.0 L760.0,361.6666666666667" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="836.0" y="408.83333333333337" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Shipment.order FK</text>
+<text x="836.0" y="408.83333333333337" font-size="11" fill="#555" text-anchor="middle">Shipment.order FK</text>
+<path d="M900.0,320.0 L760.0,320.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="836.0" y="338.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Notification.order FK</text>
+<text x="836.0" y="338.0" font-size="11" fill="#555" text-anchor="middle">Notification.order FK</text>
+<path d="M900.0,470.0 L400.0,470.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="656.0" y="464.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">future -- 05-payment-service&#x27;s refund_consumer.py (r06)</text>
+<text x="656.0" y="464.0" font-size="11" fill="#555" text-anchor="middle">future -- 05-payment-service&#x27;s refund_consumer.py (r06)</text>
+<path d="M230.0,695.0 L246.0,695.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M436.0,695.0 L452.0,695.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M642.0,695.0 L658.0,695.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M848.0,695.0 L864.0,695.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<path d="M1054.0,695.0 L1070.0,695.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
+<text x="650.0" y="32" font-size="16" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.13 -- the dependency graph, scored by Ca/Ce, resolves into the extraction order</text>
+<text x="40" y="554" font-size="10.5" fill="#555555" text-anchor="start">Order&#x27;s own extraction can&#x27;t complete until each of the other five has removed one of its three outbound edges -- which is why order goes last, not first.</text>
+<text x="40" y="884" font-size="10.5" fill="#555555" text-anchor="start">Sourced from examples/00-monolith/order/services.py and each app&#x27;s models.py; extraction order matches the stage/01-review .. stage/06-order git tags.</text>
+</svg>

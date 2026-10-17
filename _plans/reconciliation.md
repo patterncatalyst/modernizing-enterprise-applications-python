@@ -1900,3 +1900,121 @@ back-matter or appendix chapters remain. ch.30's live minikube/Istio/LGTM
 evidence (DRQ-095) has since been landed (verified-live, 2026-10-17), so what's
 left across the whole project is just the front-matter chapters (ch.00–13) and
 the three decks (101/201/201-fastapi).
+
+## ch.00-13 — Front Matter: Parts 0-4, the On-Ramp (front-matter iteration, non-extraction)
+
+**Source:** `_plans/frontmatter-build-plan.md` — the project's last chapter
+gap. ch.14–33 (every extraction, Part 8–11) were already authored and merged;
+ch.00–13 (Parts 0–4, the framing/toolchain/ADLC/DDD on-ramp the back half
+assumes a reader has already absorbed) were still stubs. The mandate: read
+each Java sibling chapter for scope and arc, then write fresh Python-native
+prose — never translate SDKMAN/Maven/Spring/Quarkus/Camel/native-image
+vocabulary into a stack that doesn't have those things.
+
+**What shipped:** all 14 chapters (`_docs/00`–`13`) authored — Part 0 (the
+book's thesis, the toolchain, the project ledger itself as the first thing a
+reader learns to read), Part 1 (modernization as engineering, strategy and
+assessment), Part 2 (SDLC→ADLC, the agent/skill/MCP surface, a worked ADLC
+loop), Part 3 (designing, smelling, and testing the reference monolith), and
+Part 4 (strategic/tactical DDD plus hexagonal architecture, event storming,
+and the coupling taxonomy that frames why six contexts get extracted in a
+particular order). 33 new Python-native figures land in `assets/diagrams/`,
+registered in the catalogue. Voice is 0 ban-tier, FastAPI/Python-native
+throughout (Java/Quarkus/Camel/Maven named only for deliberate sibling
+contrast), no "final project" language misapplied to a front-matter chapter.
+Jekyll builds clean; nav runs contiguous `00`→…→`33`.
+
+### Real-code grounding: ch.08–10 cite a running example, not a narrative
+
+**Source:** DRQ-113. Unlike every other front-matter chapter, ch.08–10
+(Designing the Monolith, The Deliberate Smells, Testing the Monolith) describe
+`examples/00-monolith` — a reference application that already exists on disk,
+frozen on `reference/monolith-before` + tag `v0-monolith` since its extraction
+work (r02–r07) completed. The verification claim is checked against that code,
+not asserted from the chapter prose:
+
+- The six Django apps (order, inventory, payment, shipping, notification,
+  review) plus `common` and `config` match ch.08's architecture description —
+  one deployable, one shared Postgres schema, one DRF edge.
+- All 7 smells `SMELLS.md` tags (`# SMELL[ch.NN]:`) are grep-locatable at the
+  line ch.09 cites; smells #1/#2 (god checkout, the cross-context ACID
+  transaction) are cross-referenced as **struck** per DRQ-080 — ch.09 names
+  them as the "before" state the rest of the book cures, not as live defects
+  in the current topology.
+- `tests/` and `tooling/newman/GOLDEN-BASELINE.md` run pytest + Newman green,
+  matching ch.10's equivalence-suite description exactly.
+
+ch.08–10 carry a **verified** footer on this basis; ch.00–07 and 11–13 stay
+**unverified — conceptual**, since no other front-matter chapter runs code
+against a live example — they describe reasoning frameworks (engineering
+rationale, DDD vocabulary, event-storming method), not a system under test.
+
+### Three findings surfaced while writing the on-ramp, not invented for it
+
+Three load-bearing claims in ch.06/07/11 trace to things that already
+happened on this project's own branch history, not to narrative color added
+for the chapter:
+
+- **The monolith evolved in place.** Ch.09's smell map cross-references
+  DRQ-080: smells #5/#6 (sync notify, dual-write) were already cured inside
+  the monolith during the r03 notification extraction (the transactional
+  outbox), and smells #1/#2 were struck project-wide at r07 (ACID→ACD across
+  all six contexts). Ch.09 presents the smell map as of r01 (the walking
+  skeleton, before any extraction), with a forward note to where each smell
+  was later cured — not as a static diagram disconnected from the finished
+  book.
+- **The Phase A→B payoff is structural, not a performance number.** Ch.07's
+  worked loop and ch.11's hexagonal-architecture discussion both reference
+  DRQ-027's measured result: import/startup time between the review-service's
+  Phase A and Phase B is statistically indistinguishable (no native-image-style
+  win exists in CPython the way it does under GraalVM). The real payoff —
+  removing a `sync_to_async`-wrapped ORM call and a backwards build-time
+  dependency on the monolith — is named as a structural property, not
+  smoothed into a benchmark claim the Python stack can't produce.
+- **The MCP gap.** Ch.06 (DRQ-115) names, rather than omits, that this
+  stack has no Quarkus-Agent/Camel-MCP equivalent (DRQ-020's prior finding),
+  and lists the substitutes actually used across r01–r11: `lgtm-python`
+  scaffolds, manual reconnaissance of the monolith's own source, the generic
+  MCP tool surface, and the ASGI strangler proxy read as the first-principles
+  analog to a Camel content router.
+- **ch.07's worked loop is a real defect, not a stand-in.** DRQ-114: the
+  Frame→Reconcile loop walks the DRQ-026 chunked-body/empty-POST proxy bug —
+  an in-process `ASGITransport` test suite passed while a real socket run
+  against the strangler proxy failed — rather than re-narrating the Java
+  sibling's GraalVM/Spring-specific defect, which has no Python analog.
+
+### Figure parity: Option B, not the planner's recommendation
+
+**Source:** DRQ-112. `_plans/frontmatter-build-plan.md` recommended Option A
+(~10 curated anchor figures) as the lower-effort default; the user chose
+Option B instead — full ~30-figure parity with the Java sibling's front
+matter, realized as 33 new Python-native figures (one or more per chapter),
+each authored via `lgtm-diagram-generator` and registered in
+`assets/diagrams/README.md`. This is a deliberate reversal of the planner's
+own recommendation, recorded as a user decision rather than a synthesis
+default.
+
+**Named divergence:** the planner's "Rejected" list in
+`_plans/frontmatter-build-plan.md` called full parity "3× effort, over-
+illustrates the on-ramp" and recommended against it. The user's choice stands
+as the project's decision regardless — this reconcile pass records the
+reversal rather than silently treating Option A's rejected alternative as
+if it had been the plan all along.
+
+**Verdict:** CLEAN. The front-matter chapters re-author the Java sibling's
+structure without carrying forward its JVM-specific vocabulary (voice scan:
+0 ban-tier, 0 SDKMAN/Maven/Spring/Quarkus/Camel/native-image residue outside
+deliberate sibling contrast); ch.08–10's verified footer matches
+`examples/00-monolith`'s actual code and test results; every forward
+reference (extraction order, the saga topology, CQRS, the chassis scorecard,
+the schema registry, the mesh, OpenShift) matches the as-built ch.14–33 and
+this ledger; DRQ-112 through DRQ-116 are each traced to either a user
+decision or a synthesis default, not asserted without a source.
+
+**Forward reference:** with ch.00–13 landed, the book's chapter set is
+**complete end-to-end — ch.00 through ch.33 are all authored**, both the
+minikube and CRC cluster paths are verified-live, and the three decks
+(101/201/201-fastapi) are the only planned artifacts outside the chapter set.
+No chapter-level work remains open in this ledger; what's left is
+presentation polish and additional blog posts mined from the finished book,
+neither of which this ledger treats as required scope.
