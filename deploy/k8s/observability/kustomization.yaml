@@ -1,0 +1,22 @@
+# deploy/k8s/observability/kustomization.yaml -- ch.30 (additive, DRQ-099)
+#
+# The LGTM observability backend: one Deployment (all-in-one
+# grafana/otel-lgtm image), its two Services (ClusterIP for in-cluster
+# consumers, NodePort for host access to Grafana), the two ConfigMaps
+# (otelcol config + Grafana datasources, ported from infra/), and the RBAC
+# the otelcol Prometheus receiver's Kubernetes SD needs to scrape
+# istio-proxy sidecars.
+#
+# Composed as a sibling overlay on top of ../../base via
+# deploy/k8s/overlays/minikube/kustomization.yaml's ch.30 seam -- this
+# directory has no `resources: [../../base]` of its own; it is purely
+# additive new resources, no patches over existing ones.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - rbac.yaml
+  - otelcol-configmap.yaml
+  - grafana-datasources-configmap.yaml
+  - lgtm-deployment.yaml
+  - lgtm-service.yaml

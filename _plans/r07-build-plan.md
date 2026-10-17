@@ -19,14 +19,14 @@ Extraction 6 of 6 — the last and hardest. Decommissions the monolith; the stra
 - **Chapters:** ch.21 (Event Sourcing & CQRS — the `order_view` projection as the concrete example, rebuildable read models, outbox-as-event-log) + ch.26 (REST vs gRPC vs GraphQL, the data-less aggregation gateway, the final extraction + decommission, SMELL #2/#3 struck). Final-topology diagram.
 
 ## Lanes & dependency chain
-S1 ledgers/frame → {S2 newman FINAL baseline, S3 order scaffold} ; S3→S4 (command+reactions+outbox+gRPC client)→S5 (read model+projection)→S6 (gateway) ; S4→S7 (proxy flag + enrich re-point + reversibility proof)→S8 (irreversible decommission + flagless router + freeze + strike smells)→{S9 contract-suite convert→S10 CI} ; {S5,S6}→S11 chapters ; all→S12 reconcile+capstone.
+S1 ledgers/frame → {S2 newman FINAL baseline, S3 order scaffold} ; S3→S4 (command+reactions+outbox+gRPC client)→S5 (read model+projection)→S6 (gateway) ; S4→S7 (proxy flag + enrich re-point + reversibility proof)→S8 (irreversible decommission + flagless router + freeze + strike smells)→{S9 contract-suite convert→S10 CI} ; {S5,S6}→S11 chapters ; all→S12 reconcile+final project.
 
 ## Acceptance criteria (headline)
 - Order-service: 202 PENDING; reads from `order_view` incl. shippingAddress; 4 reactions drive the lifecycle with net-zero + refund preserved; redelivery no-op, Release ≤once; `order.placed` via own outbox; one local tx spans only `order` schema; view rebuildable; projection-disabled negative RED.
 - Gateway: `order(id)` stitches 5 sources (REST+gRPC); data-less; downstream-down→per-field null+errors[] not 500; depth-bomb rejected; contract folder green.
 - Decommission: reversibility proven BEFORE the irreversible step; after → proxy flagless (every /api/* → owner, unknown→404, no monolith backend); shipping enrich re-pointed + Scenario 4 green; monolith frozen + reference branch/tags; SMELL #2/#3 struck.
 - Contract suite green against the monolith-free mesh; 3 negatives each RED when broken.
-- order-gateway-contract-gate green (no live monolith) + red-then-green; code-ci-ok rewired. ch.21+26 at bar. Ledgers + capstone.
+- order-gateway-contract-gate green (no live monolith) + red-then-green; code-ci-ok rewired. ch.21+26 at bar. Ledgers + final project.
 
 ## Risks (+ Phase-3 detection)
 - CQRS read-your-writes / projection correctness → projection-disabled negative must go RED; grep read path for aggregate fallback (must be none).

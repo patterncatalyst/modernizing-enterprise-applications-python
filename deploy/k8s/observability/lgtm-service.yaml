@@ -1,0 +1,73 @@
+# lgtm-service.yaml -- ch.30 (additive)
+#
+# `lgtm` (ClusterIP): the in-cluster DNS name every in-mesh OTLP emitter
+# points at -- lgtm.mea.svc.cluster.local -- carrying all 6 signal ports.
+# This is what the 3 OTel-instrumented app services' OTEL_EXPORTER_OTLP_
+# ENDPOINT (base/app-config.yaml, wired by Wave-1 Agent A) and
+# deploy/k8s/istio/istio-install.yaml's `otel` extensionProvider both
+# target.
+#
+# Port name "grpc-otlp", not "otlp-grpc": Istio's port-protocol
+# auto-detection keys off the port name's prefix (the segment before the
+# first "-") being exactly one of its recognized tokens (grpc, http, http2,
+# tcp, tls, ...). "otlp-grpc" doesn't match ("otlp" isn't a recognized
+# prefix), so Envoy would silently treat the port as opaque TCP -- no
+# HTTP/2 cluster options -- and Istio's own OTLP/gRPC trace-export client
+# (the `otel` extensionProvider) would fail its export calls as a result.
+# Naming it "grpc-otlp" puts the recognized "grpc" token first.
+#
+# `lgtm-grafana` (NodePort): host-reachable access to the Grafana UI only,
+# mirroring compose.yaml's host port-mapping convention for this service.
+# strangler-proxy is the only other NodePort in this tree (see
+# overlays/minikube/kustomization.yaml).
+apiVersion: v1
+kind: Service
+metadata:
+  name: lgtm
+  namespace: mea
+  labels:
+    app.kubernetes.io/name: lgtm
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: lgtm
+  ports:
+    - name: grpc-otlp
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+    - name: grafana
+      port: 3000
+      targetPort: 3000
+    - name: prometheus
+      port: 9090
+      targetPort: 9090
+    - name: loki
+      port: 3100
+      targetPort: 3100
+    - name: tempo
+      port: 3200
+      targetPort: 3200
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lgtm-grafana
+  namespace: mea
+  labels:
+    app.kubernetes.io/name: lgtm
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: lgtm
+  ports:
+    - name: grafana
+      port: 3000
+      targetPort: 3000
+      # Fixed NodePort, published on 127.0.0.1:30300 when the minikube
+      # profile is created (deploy/k8s/scripts/setup-profile.sh), so Grafana
+      # is reachable at http://127.0.0.1:30300 with no port-forward or
+      # tunnel.
+      nodePort: 30300

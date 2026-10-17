@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 # deploy/k8s/scripts/setup-profile.sh -- create (or start) the `mea`
-# minikube profile for ch.29 (ch.30's mesh/observability overlays land at
-# r10 -- see overlays/minikube/kustomization.yaml's seam comment).
+# minikube profile for ch.29/ch.30 (the base topology plus the Istio mesh +
+# LGTM observability overlays activated at r10).
 #
-# `--driver=docker --container-runtime=containerd` (set CONTAINER_ENGINE=
-# podman and MINIKUBE_DRIVER=podman together for a podman-driven profile).
-# The NodePort in lib.sh is published on 127.0.0.1 at creation
-# (`--ports=127.0.0.1:30888:30888`), so the edge router is reachable at
-# http://127.0.0.1:30888 -- no port-forward, no tunnel, no `minikube
+# Minikube driver is always `--driver=docker --container-runtime=containerd`
+# -- docker+containerd is the only documented minikube driver for this
+# project. (CONTAINER_ENGINE is a SEPARATE knob: it selects which engine
+# build-images.sh uses to BUILD the container images -- docker (default) or
+# podman -- and has no effect on which minikube driver this script starts.)
+# The NodePorts in lib.sh are published on 127.0.0.1 at creation
+# (`--ports=127.0.0.1:30888:30888,127.0.0.1:30300:30300`), so the edge
+# router is reachable at http://127.0.0.1:30888 and Grafana at
+# http://127.0.0.1:30300 -- no port-forward, no tunnel, no `minikube
 # service`. Ports are fixed at creation: changing them means --replace.
 #
 # One local cluster at a time: refuses to run while another minikube profile

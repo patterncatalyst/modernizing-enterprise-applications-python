@@ -5,7 +5,7 @@
 ## Sub-iteration breakdown (grouped by verification class; isolate the one live-env chapter)
 - **r08 — Part 8: chassis + registry** — ch.27 (FastAPI Chassis, synthesis/prose) + ch.28 (Contracts & Service Registry, RUNNABLE). Adds `examples/09-schema-registry-demo/` (fastavro + aiokafka + Apicurio v3 REST), `apicurio` to compose, `demos/demo-schema-registry.sh`, a new additive `schema-registry.yml` CI gate (testcontainers Kafka+Apicurio). **CI-verifiable, no live cluster.**
 - **r09 — Part 9 deploy + Part 10 supply chain (both CI-verifiable headless)** — ch.29 (Deployment Patterns, `deploy/k8s/` kustomize base+overlays/minikube) + ch.31 (CI/CD + Supply Chain, `examples/10-supply-chain/` syft→grype→policy). New additive `deploy-manifests.yml` (`kubectl kustomize` + client dry-run) + `supply-chain.yml` (anchore sbom+scan). **No cluster.**
-- **r10 — mesh (live, user-run) + capstone (prose)** — ch.30 (Mesh/Observability/Tracing — Istio + LGTM on minikube, OTel added additively to 3 services) + ch.32 (Pattern Language Revisited, prose). ch.30 **needs the user's live minikube/Istio env** — document-or-user-run verification, no CI gate. ch.32 docs-only.
+- **r10 — mesh (live, user-run) + final project (prose)** — ch.30 (Mesh/Observability/Tracing — Istio + LGTM on minikube, OTel added additively to 3 services) + ch.32 (Pattern Language Revisited, prose). ch.30 **needs the user's live minikube/Istio env** — document-or-user-run verification, no CI gate. ch.32 docs-only.
 
 Rationale: ch.30 structurally depends on ch.29's `deploy/k8s/base`; isolating ch.30 keeps the un-CI-gateable chapter out of any CI-gated merge. (Diverges slightly from §J which lumped 29+30+31.)
 

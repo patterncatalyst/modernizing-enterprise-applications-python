@@ -118,3 +118,19 @@ data:
   # three want the same 1000ms default; set once here instead of three
   # identical per-Deployment literals. ──────────────────────────────────────
   OUTBOX_POLL_MS: "1000"
+
+  # ── OpenTelemetry (r10/ch.30, DRQ-096=A) -- ACTIVE in-cluster only. Only
+  # strangler-proxy/inventory-service/order-service are wrapped with
+  # `opentelemetry-instrument` (see each one's Containerfile); every other
+  # Deployment in this namespace just ignores these three keys (no matching
+  # `Settings.from_env()` field). This is the one place these flip from the
+  # `OTEL_SDK_DISABLED=true` no-op default in the repo's `.env.example` to
+  # active -- `lgtm.mea.svc.cluster.local:4317` is the ch.30
+  # `deploy/k8s/observability/` LGTM backend's OTLP ingest Service (gRPC).
+  # `OTEL_SERVICE_NAME` is NOT here (it needs a different value per
+  # service): set directly in each of the three instrumented Deployments'
+  # own `env:` block instead (strangler-proxy.yaml/inventory-service.yaml/
+  # order-service.yaml). ────────────────────────────────────────────────────
+  OTEL_SDK_DISABLED: "false"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://lgtm.mea.svc.cluster.local:4317"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
