@@ -112,7 +112,7 @@ content("WHY MODERNIZE · RESTRAINT", "And when not to modernize at all",
 
 // ===== SECTION 02 — THE ADLC + EQUIVALENCE GATE ===============================
 divider("02", "The ADLC + the Equivalence Gate", "The lifecycle — and the automated check — that make agent-driven change safe.",
-  "Introduces the AI Development Lifecycle this whole book was built with, and the automated equivalence gate every cutover has to pass before a flag is allowed to flip. This project itself — ten build iterations, three ledger files — is the worked example.");
+  "Introduces the Agentic Development Lifecycle this whole book was built with, and the automated equivalence gate every cutover has to pass before a flag is allowed to flip. This project itself — ten build iterations, three ledger files — is the worked example.");
 
 content("THE ADLC · FROM SDLC", "The human moves up a level",
   ["The agent authors the change; the human frames the seam, sets the acceptance bar, and gates the merge — the same division of labor across all ten build iterations behind this book.",

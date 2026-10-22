@@ -112,7 +112,7 @@ appendices) does not depend on the language.
 |---|---|---|
 | 0 | Setting Up | Toolchain is uv/Python 3.14/Django+DRF/FastAPI CLI, not SDKMAN/JDK/Maven/Quarkus+Camel CLI; the observability stack is `lgtm-docker-stack` (docker-primary, podman-compatible, DRQ-004), not `lgtm-podman-stack`. |
 | 1 | Why Modernize | Unchanged narrative; same strategy framing, same 2×2, same evolution arc. |
-| 2 | The AI Development Lifecycle (ADLC) | Same phase model (§F); the Map/Generate tooling column differs (no Camel/Quarkus MCP, DRQ-020). |
+| 2 | The Agentic Development Lifecycle (ADLC) | Same phase model (§F); the Map/Generate tooling column differs (no Camel/Quarkus MCP, DRQ-020). |
 | 3 | The Reference Monolith | Django 5.2 LTS + DRF "before," not Spring Boot; same shared-schema smell, same equivalence-suite approach. |
 | 4 | Finding the Seams | Unchanged — DDD/hexagonal/event-storming/coupling theory is language-agnostic. |
 | 5 | The Strangler Fig in Practice | The façade is a thin ASGI reverse proxy, not a Camel strangler proxy; same first-two-extractions sequencing. |

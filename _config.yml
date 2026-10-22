@@ -6,7 +6,7 @@
 
 # Site identity
 title: "Modernizing Enterprise Applications — Python"
-description: "A Django monolith strangled to FastAPI microservices, one seam at a time, driven by an AI Development Lifecycle (ADLC) and tested throughout."
+description: "A Django monolith strangled to FastAPI microservices, one seam at a time, driven by an Agentic Development Lifecycle (ADLC) and tested throughout."
 brand_emoji: "🏗️"   # Single emoji that appears next to the title in the header
 
 # GitHub identity for header link and example sourcing
