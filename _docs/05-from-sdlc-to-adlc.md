@@ -1,7 +1,7 @@
 ---
 title: "From SDLC to ADLC"
 order: 5
-part: "The AI Development Lifecycle (ADLC)"
+part: "The Agentic Development Lifecycle (ADLC)"
 description: "Why the traditional lifecycle breaks under agent-assisted work; the ADLC phases; which SDLC steps agents replace or augment; the human gates."
 ---
 
@@ -99,7 +99,7 @@ coding agent is in the loop. It doesn't, by itself, say where human
 judgment re-enters, what gets checked before a change is trusted, or how a
 team keeps a traceable record of why a given change was made — the things
 the old SDLC's slowness used to provide implicitly. This book's answer is
-the **AI Development Lifecycle (ADLC)**: a disciplined instance of the
+the **Agentic Development Lifecycle (ADLC)**: a disciplined instance of the
 agentic SDLC with seven named phases and exactly two places where a human
 must stop the loop and decide.
 
