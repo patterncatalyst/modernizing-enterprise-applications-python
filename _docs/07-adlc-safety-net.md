@@ -1,7 +1,7 @@
 ---
 title: "The ADLC Safety Net"
 order: 7
-part: "The AI Development Lifecycle (ADLC)"
+part: "The Agentic Development Lifecycle (ADLC)"
 description: "Tests, contracts, and reconciliation as the guardrails that make agentic generation trustworthy, with a full loop run end-to-end on a trivial change."
 ---
 

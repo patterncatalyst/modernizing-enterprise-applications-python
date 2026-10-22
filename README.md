@@ -2,7 +2,7 @@
 
 Incrementally strangle a **Django monolith** into **FastAPI microservices**, gated
 every step of the way by an executable behavior-equivalence suite, and driven by an
-**AI Development Lifecycle (ADLC)**.
+**Agentic Development Lifecycle (ADLC)**.
 
 This is the Python-language sibling of
 [modernizing-enterprise-applications](https://github.com/patterncatalyst/modernizing-enterprise-applications)

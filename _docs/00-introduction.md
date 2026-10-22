@@ -69,7 +69,7 @@ for how fast any of this can responsibly happen: the work in this book is not
 done the way a modernization project was done five years ago, with a
 requirements document, a design review, an implementation sprint, a QA pass,
 and a change-advisory board, each stage handed off to a different role over
-weeks. It is done through an **AI Development Lifecycle** — the **ADLC** —
+weeks. It is done through an **Agentic Development Lifecycle** — the **ADLC** —
 built around a small number of coding agents working inside a disciplined,
 seven-phase loop with exactly two places a human has to stop and decide. Part
 2 names that lifecycle in full; the short version is that an agent can read

@@ -1,7 +1,7 @@
 ---
 title: "Agents, Skills & MCP Tools in the Loop"
 order: 6
-part: "The AI Development Lifecycle (ADLC)"
+part: "The Agentic Development Lifecycle (ADLC)"
 description: "The agent-tier relay (plan, execute, validate); the MCP surface for Python tooling; the reusable skill map; when the human must decide."
 ---
 

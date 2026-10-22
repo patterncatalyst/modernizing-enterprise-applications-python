@@ -27,7 +27,7 @@ work: a human states what should happen, an agent does reconnaissance,
 produces a plan, writes code against that plan, verifies the result, rolls it
 out, and records the outcome. Part 2 names that shape precisely — the
 **Frame → Map → Plan → Generate → Verify → Operate → Reconcile** cycle this
-book calls the ADLC, the AI Development Lifecycle — and Part 2 is where you
+book calls the ADLC, the Agentic Development Lifecycle — and Part 2 is where you
 will see it defined phase by phase. This chapter is not that explanation. It
 exists because the ADLC's last phase, Reconcile, is not an abstraction; it is
 a few concrete files that a human can open, read, and trust, and you need to
