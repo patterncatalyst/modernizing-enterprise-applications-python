@@ -187,6 +187,32 @@ content("101 · CLOSE", "One monolith, six services, a method that verifies itse
    "For the full pattern set and the running system behind every idea on these slides, see the 201; for the async code underneath it, see the FastAPI deep dive."],
   "Bring it back to the one claim this whole deck exists to support: a coupled Django monolith became six independently deployable FastAPI services, each owning its own data and coordinating with the others without any central conductor, and every single cutover along the way stayed reversible until an automated suite proved it safe to commit to. That's the strangler fig's whole case in one sentence, incremental, verified, and reversible beats a single high-stakes rewrite bet, every time the system has to keep running while it changes. Everything on these slides maps to a real chapter and a real running service; nothing here was hypothetical. For the complete pattern set and the system behind every idea in this deck, the 201 is the next stop, and for the async code underneath the patterns themselves, that's the FastAPI deep dive.");
 
+
+/* --- Scan to explore (QR codes) --- */
+{
+  const s = S();
+  addContentTitle(s, "SCAN TO EXPLORE", "Take it with you");
+
+  s.addImage({ path: `${ASSETS}/qr-modernizing-site.png`, x: 2.30, y: 1.78, w: 3.10, h: 3.10 });
+  s.addText("The reference implementation", { x: 1.55, y: 4.98, w: 4.60, h: 0.40,
+    fontFace: FONT.title, fontSize: 18, bold: true, color: COLOR.ink, align: "center", valign: "middle" });
+  s.addText("Site, runnable FastAPI services, and the strangler-fig migration", { x: 1.45, y: 5.40, w: 4.80, h: 0.72,
+    fontFace: FONT.body, fontSize: 13, italic: true, color: COLOR.caption, align: "center", valign: "top" });
+  s.addText("patterncatalyst.github.io/modernizing-enterprise-applications-python", { x: 1.45, y: 6.12, w: 4.80, h: 0.32,
+    fontFace: FONT.mono, fontSize: 9, color: COLOR.red, align: "center", valign: "middle" });
+
+  s.addImage({ path: `${ASSETS}/qr-hub.png`, x: 7.93, y: 1.78, w: 3.10, h: 3.10 });
+  s.addText("Workshops & Tutorials", { x: 7.18, y: 4.98, w: 4.60, h: 0.40,
+    fontFace: FONT.title, fontSize: 18, bold: true, color: COLOR.ink, align: "center", valign: "middle" });
+  s.addText("The whole series: every workshop, tutorial, and deck in one place", { x: 7.08, y: 5.40, w: 4.80, h: 0.72,
+    fontFace: FONT.body, fontSize: 13, italic: true, color: COLOR.caption, align: "center", valign: "top" });
+  s.addText("patterncatalyst.github.io/patterncatalyst-workshops-tutorials-list", { x: 7.08, y: 6.12, w: 4.80, h: 0.32,
+    fontFace: FONT.mono, fontSize: 9, color: COLOR.red, align: "center", valign: "middle" });
+
+  addNotes(s, "This is the 101 deck. The two codes take it with you: on the left, the reference implementation: the site, the runnable FastAPI services, and the strangler-fig migration that decomposes the monolith step by step. On the right, the Workshops and Tutorials hub: every workshop, tutorial, and deck in the series in one place. Both are public on the Pattern Catalyst GitHub organization.");
+}
+
+
 pres.writeFile({ fileName: OUT })
   .then(p => console.log("WROTE", p, "slides:", pageNum))
   .catch(e => { console.error(e); process.exit(1); });

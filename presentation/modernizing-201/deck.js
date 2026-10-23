@@ -606,6 +606,32 @@ content("CLOSING · GO DEEPER", "Where to go from here",
    "The pattern-coverage matrix in build-plan.md section C is the single source of truth this deck's scorecard slides draw from — check any claim in this deck against it."],
   "This is the deck's actual last slide — leave it up during Q&A. If a question goes deeper than just-enough-code depth, the direct answer for most of them is '201-FastAPI covers that'; if a question is about whether to start a migration at all, the 101 is the better reference.");
 
+
+/* --- Scan to explore (QR codes) --- */
+{
+  const s = S();
+  addContentTitle(s, "SCAN TO EXPLORE", "Take it with you");
+
+  s.addImage({ path: `${ASSETS}/qr-modernizing-site.png`, x: 2.30, y: 1.78, w: 3.10, h: 3.10 });
+  s.addText("The reference implementation", { x: 1.55, y: 4.98, w: 4.60, h: 0.40,
+    fontFace: FONT.title, fontSize: 18, bold: true, color: COLOR.ink, align: "center", valign: "middle" });
+  s.addText("Site, runnable FastAPI services, and the strangler-fig migration", { x: 1.45, y: 5.40, w: 4.80, h: 0.72,
+    fontFace: FONT.body, fontSize: 13, italic: true, color: COLOR.caption, align: "center", valign: "top" });
+  s.addText("patterncatalyst.github.io/modernizing-enterprise-applications-python", { x: 1.45, y: 6.12, w: 4.80, h: 0.32,
+    fontFace: FONT.mono, fontSize: 9, color: COLOR.red, align: "center", valign: "middle" });
+
+  s.addImage({ path: `${ASSETS}/qr-hub.png`, x: 7.93, y: 1.78, w: 3.10, h: 3.10 });
+  s.addText("Workshops & Tutorials", { x: 7.18, y: 4.98, w: 4.60, h: 0.40,
+    fontFace: FONT.title, fontSize: 18, bold: true, color: COLOR.ink, align: "center", valign: "middle" });
+  s.addText("The whole series: every workshop, tutorial, and deck in one place", { x: 7.08, y: 5.40, w: 4.80, h: 0.72,
+    fontFace: FONT.body, fontSize: 13, italic: true, color: COLOR.caption, align: "center", valign: "top" });
+  s.addText("patterncatalyst.github.io/patterncatalyst-workshops-tutorials-list", { x: 7.08, y: 6.12, w: 4.80, h: 0.32,
+    fontFace: FONT.mono, fontSize: 9, color: COLOR.red, align: "center", valign: "middle" });
+
+  addNotes(s, "This is the 201 patterns deck. The two codes take it with you: on the left, the reference implementation: the site, the runnable FastAPI services, and the strangler-fig migration. On the right, the Workshops and Tutorials hub: every workshop, tutorial, and deck in the series in one place. Both are public on the Pattern Catalyst GitHub organization.");
+}
+
+
 pres.writeFile({ fileName: OUT })
   .then(p => console.log("WROTE", p, "slides:", pageNum, "main:", mainCount, "appendix:", appendixCount))
   .catch(e => { console.error(e); process.exit(1); });
