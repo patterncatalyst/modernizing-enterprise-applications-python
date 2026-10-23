@@ -341,6 +341,3 @@ the first.
 The next chapter, **"The Project Ledger,"** introduces the records this
 project uses as its own memory across the chapters you are about to read, and
 shows you how to keep the same kind of ledger for your own migration.
-
----
-*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — the toolchain and commands it describes are reproducible from the project's own tracked files (`compose.yaml`, `.env.example`, `scripts/stack-up.sh`/`stack-down.sh`, `examples/00-monolith/README.md`); bring the stack up and confirm the Newman run above is green on a fresh clone before continuing to Part 3.*

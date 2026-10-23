@@ -499,19 +499,3 @@ the behavior described, on a cluster where they've been asked to.
 > story kept this chapter's single connected trace real without first
 > building context-propagation plumbing this project's outbox was never
 > designed to carry.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>.
-`deploy/k8s/scripts/capture-ch30-evidence.sh` ran green on a live minikube
-cluster (docker driver + containerd, Istio v1.30.5, the LGTM stack): all eight
-app pods join the mesh 2/2, `istioctl x describe pod` reports `Workload mTLS
-mode: STRICT`, `istio_requests_total` returns live series from Mimir, and the
-hero trace resolves end to end in Tempo as **one connected trace** rooted at
-`strangler-proxy`'s `POST` server span, spanning `order-service` (FastAPI
-server span + two asyncpg writes) and `inventory-service`'s gRPC `Reserve` —
-Envoy mesh spans wrapping the app-level OTel spans, exactly as Figure 30.2
-describes. The scrubbed capture is committed under
-`deploy/k8s/observability/evidence/` (`ch30-hero-trace.json`,
-`ch30-istioctl-mtls.txt`, `ch30-metrics.txt`); every query runs in-cluster, no
-port-forward.*

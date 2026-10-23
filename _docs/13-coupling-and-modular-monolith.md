@@ -512,6 +512,3 @@ chapter with the mechanism — Fowler's strangler fig, the proxy, and the
 flag-gated cutover — that turns this ranked extraction plan into six real,
 individually reversible migrations, starting with the context this
 chapter's own scoring already named as the obvious first cut.
-
----
-*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — `examples/00-monolith/` is unchanged from Chapter 10; every coupling score and excerpt above is drawn from that tree's source and `SMELLS.md`, both checkable with `grep -rn 'SMELL\[ch\.' examples/00-monolith`.*

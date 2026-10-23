@@ -306,6 +306,3 @@ produces — as a template for the ledger you will want to keep on your own
 migration, starting with the first decision you make. From there, Part 1
 makes the case for why any of this modernization work is worth doing in the
 first place — and when it is not.
-
----
-*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — no runnable example of its own; its claims point at artifacts the `examples/` tree makes checkable elsewhere in this book, from the six-context monolith and its deliberate smells (Part 3) to the behavior-equivalence suite and its gate (Chapters 10 and 7).*

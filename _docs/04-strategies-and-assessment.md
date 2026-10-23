@@ -293,7 +293,3 @@ Monolith,"** then builds the six-context system this chapter has been
 describing in the abstract, including the deliberate smells each extraction
 above is designed to cure, and the test suite that becomes the
 behavior-equivalence suite every later chapter depends on.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — no runnable example of its own; its extraction-order argument is checkable against `examples/00-monolith/SMELLS.md`, and the strangler mechanics it names are built with running code in Parts 3 and 5.*

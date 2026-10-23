@@ -482,7 +482,3 @@ point without it.
 Appendix A, next, puts this same finished system on OpenShift — a
 different platform, the same eight services and the same manifests this
 chapter's scorecard already accounts for.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — a docs-only reconciliation with no new runnable example; every verdict cites the chapter that proved it (Chapters 14 through 31), re-confirmed against each rather than assumed.*

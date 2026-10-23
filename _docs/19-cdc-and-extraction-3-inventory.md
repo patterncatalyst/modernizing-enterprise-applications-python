@@ -611,16 +611,3 @@ tests actually need to be fast and deterministic in CI.
 Next: ch.20 turns from "how one more context left the monolith" back to the
 outbox pattern itself, generalizing beyond Notification's single `order.placed`
 event to the shape every future extraction in this book reuses.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>.
-`uv run pytest` passes 16/16 in `examples/04-inventory-service` (REST and
-gRPC, including a concurrency race test stable across 5 repeated runs),
-`ruff check` is clean, and `alembic upgrade head` seeds correctly. The full
-cutover is verified live in `tooling/newman/GOLDEN-BASELINE.md`'s
-NEWMAN-GRPC lane: 71/71 assertions green across both configurations,
-net-zero stock confirmed by direct query, and a negative check that fails
-strictly then recovers on restart. The Debezium CDC path is transition-only
-infrastructure, exercised manually against the compose stack rather than by
-the pytest/Newman CI gates.*

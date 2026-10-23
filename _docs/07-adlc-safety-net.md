@@ -346,7 +346,3 @@ chapter outline said so. Part 4 then goes looking for the seams those
 smells mark, using domain-driven design and event storming to decide where
 the next cut goes before the ADLC runs this same loop again, at rising
 difficulty, five more times.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — it narrates real, checked-in evidence rather than producing new evidence of its own. The defect it centers on is recorded in the project's own test notes under `tooling/newman/`, and the commands it cites are reproducible against `examples/00-monolith`, `examples/01-strangler-proxy`, and `examples/02-review-service`.*

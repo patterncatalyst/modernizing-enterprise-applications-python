@@ -366,13 +366,3 @@ without interference is the generalization claim made concrete.
 Next: ch.17 builds the extraction this chapter set up — notification's
 transactional outbox, its idempotent `aiokafka` consumer, and the two-flag
 cutover proven live against a real Kafka broker.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>.
-`tests/test_routing.py` (8 tests, including the two-flag independence case)
-and `ruff check` both pass, and the live two-flag toggle was driven end to
-end with `curl` against the real stack. The full Kafka-backed cutover
-evidence for the notification flag specifically is ch.17's own
-verification record; this chapter's own scope is the routing
-generalization and the ACL concept, confirmed above.*

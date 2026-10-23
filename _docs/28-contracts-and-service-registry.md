@@ -609,15 +609,3 @@ deployment takes — packaging, promoting, and rolling out eight independently
 versioned services (plus, now, one Apicurio-governed Avro artifact) across
 environments, without the registry this chapter just built becoming one more
 thing a deploy has to coordinate by hand.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>.
-The drift claim is read directly from the payment- and
-notification-service event schemas against `examples/07-order-service/
-EVENTS.md`'s reference shape. Every registry claim is proven in
-`examples/09-schema-registry-demo` under Testcontainers-managed Kafka and
-Apicurio: a field-for-field round trip and a compatibility suite confirming
-v2 accepted (`200`) and v3 rejected (`400`, `RuleViolationException`);
-`demos/demo-schema-registry.sh` reproduces the identical progression
-standalone.*

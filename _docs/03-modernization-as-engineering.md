@@ -273,7 +273,3 @@ this book's own monolith is run through, the strategic-value-versus-change-
 frequency framing that turns "should we modernize this" into a defensible,
 measured answer, and the specific strategy this book commits to for every
 chapter that follows.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — no runnable example of its own; the Phase A/B measurements it cites are recorded under `examples/02-review-service/`, and the smells and coupling vocabulary it gestures at are made concrete in Chapters 9 and 13.*

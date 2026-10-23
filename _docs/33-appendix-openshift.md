@@ -412,15 +412,3 @@ crc start; eval "$(crc oc-env)"
 ```
 
 {% include excalidraw.html file="openshift-crc-topology" alt="The mea project on OpenShift Local: strangler-proxy and graphql-gateway each behind their own Route under restricted-v2, the other six services under restricted-v2 with no external exposure, postgres and kafka under the mea-infra ServiceAccount bound to nonroot-v2, and otel-lgtm under anyuid with only runAsUser 0 set." caption="Figure 33.2 — The mea project on OpenShift Local: three SCC postures, two Routes as the only edge" %}
-
----
-
-*Verification status: <span class="status status--verified">verified</span>.
-`openshift/capture-evidence.sh` ran all six checks green on a live OpenShift
-Local 2.64.0 cluster (OpenShift 4.22.14): nine `:v1` ImageStream tags; every
-app pod Ready under restricted-v2, Postgres/Kafka under nonroot-v2, otel-lgtm
-under anyuid; both edge-TLS Routes answering; a happy-path checkout through the
-strangler-proxy Route reaching `CONFIRMED`; OSSM 3 (Istio v1.30.5) with STRICT
-mTLS rejecting a plaintext caller (exit 56) and Kiali reporting the namespace
-`MTLS_ENABLED`; and OTLP traces for the instrumented services in otel-lgtm's
-Tempo. The scrubbed run is committed under `openshift/evidence/2026-10-17/`.*
