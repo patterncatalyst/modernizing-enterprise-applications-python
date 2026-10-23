@@ -1,16 +1,16 @@
 ---
-title: "Extraction 1 — Review Service"
+title: "Extraction 1: Review Service"
 order: 15
 part: "The Strangler Fig in Practice"
-description: "REST-only, HTTP Basic auth, no sync dependency — proving the full loop: ACL, FastAPI scaffold, equivalence gate pass, flag-gated cutover, decommission."
+description: "REST-only, HTTP Basic auth, no sync dependency; proving the full loop: ACL, FastAPI scaffold, equivalence gate pass, flag-gated cutover, decommission."
 duration: 45 minutes
 ---
 
 ch.14 built the machinery: a reversible, flag-gated proxy that can hand any
 request to a different backend without the client noticing. This chapter
-puts it to work on the first real extraction — pulling the `review`
+puts it to work on the first real extraction: pulling the `review`
 bounded context out of the Django monolith and onto its own FastAPI
-service — and in doing so proves the whole loop end to end: capture the
+service, and in doing so proves the whole loop end to end: capture the
 contract, stand up the seam, migrate the implementation in two clearly
 measured phases, cut traffic over, and leave the fallback in place. Everything
 after this chapter (ch.17's Notification extraction, ch.19's Inventory,
@@ -31,7 +31,7 @@ anything inconvenient. `review/models.py` states the reason directly:
 > Note what review does NOT depend on: order, payment, shipping, or
 > notification.
 
-It's the least-coupled context in the monolith — REST-only, with no
+It's the least-coupled context in the monolith: REST-only, with no
 synchronous collaborator.
 
 Compare that to the smells ch.09 planted everywhere else: `order/services.py`
@@ -43,8 +43,8 @@ context shares one Postgres schema with direct cross-context foreign keys
 (smell #3/#4, cured starting ch.18). `review` has none of that. It's a REST
 leaf: clients read and write reviews, and nothing else in the system calls
 into `review` synchronously, or needs `review` to call out to it. That
-makes it the right chapter to prove the *mechanism* of extraction — the
-equivalence gate, the flag, the cutover, the two-phase migration — without
+makes it the right chapter to prove the *mechanism* of extraction: the
+equivalence gate, the flag, the cutover, the two-phase migration, without
 also having to solve a distributed-transaction problem in the same chapter.
 The hard problems (shared data, sagas, event-driven coordination) get their
 own chapters once this one has shown the baseline loop actually works.
@@ -52,18 +52,18 @@ own chapters once this one has shown the baseline loop actually works.
 `review` does still have one thing worth extracting *for*, not just
 extracting *despite*: SMELL #7. Despite having no runtime
 dependency on any other context, `review`'s write endpoint borrows the
-monolith's shared `django.contrib.auth` machinery — the same `auth_user`
+monolith's shared `django.contrib.auth` machinery: the same `auth_user`
 table and `BasicAuthentication` class every other context would reach for.
 `review/views.py` names this directly:
 
 > Review has no runtime dependency on order/inventory/payment/shipping/
 > notification ... yet here it is, borrowing that machinery anyway.
 
-That's not a bug — the monolith's behavior there is intentional, planted to
+That's not a bug: the monolith's behavior there is intentional, planted to
 be realized and then cured. This chapter's service keeps the *same external
 contract* (`POST /api/reviews` needs HTTP Basic; `GET` stays open) while
 giving `review` its own, independent verification path against that same
-shared table — no longer reusing Django's authentication class, just
+shared table, no longer reusing Django's authentication class, just
 verifying the same password hash format on its own terms. That's "Option
 B" in the service's own README: keep the contract, stop borrowing the
 mechanism.
@@ -80,22 +80,22 @@ order of operations this chapter follows, not a retrospective justification:
 `examples/02-review-service` was built against a collection that already
 specified exact status codes, exact JSON shapes (camelCase fields, the
 `{"error", "message", "timestamp"}` error envelope), and exact header
-behavior (`Location: /api/reviews/{id}` as a relative path, not absolute) —
+behavior (`Location: /api/reviews/{id}` as a relative path, not absolute),
 none of which were invented or adjusted after the fact to make the new
 service's actual output look correct.
 
 This matters because of what it rules out. Without a gate frozen ahead of
 time, it's easy for "the extracted service behaves the same" to quietly
-become "the extracted service behaves close enough that nobody noticed" —
+become "the extracted service behaves close enough that nobody noticed":
 the collection is what turns that into a yes/no question with a real
 answer, not a judgment call.
 
 ## Standing up the seam: the shape of the new service
 
 `examples/02-review-service` is FastAPI on `:8001`. It owns no schema of
-its own — `app/db.py` points at the exact same Postgres database and the
+its own: `app/db.py` points at the exact same Postgres database and the
 exact same tables (`reviews`, `customers`, `inventory_items`, `auth_user`)
-the monolith's `manage.py migrate`/`manage.py seed` create — because giving
+the monolith's `manage.py migrate`/`manage.py seed` create, because giving
 `review` its own database is a later chapter's problem (ch.18's shared-data-
 to-owned-data, ch.19's CDC backfill). For the walking skeleton, the goal
 is behavioral equivalence through a safe cutover, not a fully decoupled
@@ -123,7 +123,7 @@ def resolve_database_url(raw: str | None = None) -> str:
 ```
 
 The same `DATABASE_URL` environment variable the monolith's Django settings
-already read works unmodified for this service too — one fewer thing an
+already read works unmodified for this service too: one fewer thing an
 operator has to remember differs between the two.
 
 ## Phase A: lift onto FastAPI via the Django ORM (documented, never shipped)
@@ -131,8 +131,8 @@ operator has to remember differs between the two.
 The textbook first move in a strangler extraction is "lift and shift": put
 the new runtime in front, but reuse as much of the old implementation as
 possible, so the diff from the monolith's own behavior stays small. For a
-Python/Django monolith, that means reusing the Django ORM itself —
-`review.models.Review` — from inside a FastAPI app. `examples/02-review-service/MIGRATION.md`
+Python/Django monolith, that means reusing the Django ORM itself,
+`review.models.Review`, from inside a FastAPI app. `examples/02-review-service/MIGRATION.md`
 documents exactly what that would look like:
 
 ```python
@@ -165,7 +165,7 @@ async def list_reviews(sku: str | None = None):
 Getting this far costs two concrete things, and they're the actual argument
 for not shipping it: a `uv` **path dependency**
 on `../00-monolith` in Phase A's `pyproject.toml`, pulling in Django, DRF,
-and the entire monolith package — all six bounded-context apps — just to
+and the entire monolith package (all six bounded-context apps) just to
 reach one ORM model; and `django.setup()` run once in the FastAPI app's
 `lifespan`, which loads that entire app registry before the service can
 serve its first request.
@@ -175,7 +175,7 @@ names them directly rather than hand-waving past them:
 
 1. **The Django ORM is synchronous.** Every single query under this
    approach needs `sync_to_async(...)`, handing the call off to a
-   thread-pool executor — a real latency and concurrency cost under
+   thread-pool executor: a real latency and concurrency cost under
    FastAPI's async event loop, paid on every request, that an ORM built
    for async from the start simply doesn't incur.
 2. **The dependency direction is backwards for an extraction.** The whole
@@ -183,20 +183,20 @@ names them directly rather than hand-waving past them:
    A would instead give this service a hard *build-time* dependency ON the
    monolith's entire codebase, just to reach one model. A change to
    `00-monolith`'s Django version, or to an unrelated app like `payment` or
-   `shipping`, could break this service's build — the opposite of what an
+   `shipping`, could break this service's build: the opposite of what an
    extraction is supposed to buy.
 
 Given that the acceptance bar for this chapter's build was "Phase B is the
 live code, Phase A is documented," the decision was not to spend
 implementation and CI surface on a module built only to be deleted in the
-same iteration. Phase A's cost is still measured, though — not estimated —
+same iteration. Phase A's cost is still measured, though, not estimated,
 using a faithful proxy for its real weight: the actual combined import/
 startup cost of `django.setup()` against the monolith's real
 `config.settings` (all six apps installed) plus `import fastapi, uvicorn`,
 measured on the same machine. Those numbers appear in the "What Phase A
 would have cost" section below, measured, not guessed.
 
-{% include excalidraw.html file="review-phase-a-vs-phase-b" alt="Side by side comparison of Phase A (FastAPI routes calling the Django ORM via sync_to_async, behind a path dependency on the monolith) and Phase B (FastAPI routes calling native async SQLAlchemy and asyncpg directly, with no Django import), both reading and writing the same shared Postgres schema" caption="Figure 15.1 — Phase A (illustrative) vs Phase B (shipped)" %}
+{% include excalidraw.html file="review-phase-a-vs-phase-b" alt="Side by side comparison of Phase A (FastAPI routes calling the Django ORM via sync_to_async, behind a path dependency on the monolith) and Phase B (FastAPI routes calling native async SQLAlchemy and asyncpg directly, with no Django import), both reading and writing the same shared Postgres schema" caption="Figure 15.1: Phase A (illustrative) vs Phase B (shipped)" %}
 
 ## Phase B: the idiomatic FastAPI service (this is the live code)
 
@@ -225,7 +225,7 @@ class Review(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 ```
 
-Only the columns this service actually touches get mapped — `AuthUser`
+Only the columns this service actually touches get mapped: `AuthUser`
 carries just `id`, `username`, `password`, and `is_active`, because that's
 all a Basic-auth check needs, not Django's full user model. `Customer` and
 `InventoryItem` are similarly narrow: this service reads them (to validate
@@ -253,8 +253,8 @@ def _review_query():
     )
 ```
 
-Every join is written out by hand — `InventoryItem` for `sku`, `Customer`
-for `customerId` validation — matching the monolith's own direct
+Every join is written out by hand: `InventoryItem` for `sku`, `Customer`
+for `customerId` validation, matching the monolith's own direct
 cross-context foreign keys (SMELL[ch.18], the shared-schema smell ch.18
 exists to cure). There's no `Review.inventory_item` relationship attribute
 to lazily traverse; the query says exactly what it joins and why, which
@@ -287,13 +287,13 @@ async def create_review(
 ```
 
 `created_at` is set here, in Python, rather than left to a database
-server-side default — matching the monolith's own `default=timezone.now`,
+server-side default, matching the monolith's own `default=timezone.now`,
 which is also a Django-side default rather than a DB-side one. Getting that
 detail wrong (switching to a Postgres `DEFAULT now()`) would still produce
 a timestamp, just not necessarily one that matches what the equivalence
 suite recorded when it captured the monolith's behavior down to the second
 it ran. `session.flush()` (not just `session.add()`) is what makes
-`review.id` available before `commit()` — SQLAlchemy's async session needs
+`review.id` available before `commit()`: SQLAlchemy's async session needs
 an explicit flush to issue the `INSERT ... RETURNING` and populate the
 autogenerated primary key on the Python object, which the response (and
 the `Location` header) both need.
@@ -324,19 +324,19 @@ class ReviewOut(BaseModel):
 
 Every field maps explicitly via `Field(alias=...)`, the same convention the
 monolith's serializers use with `source=`. That's a deliberate choice, not
-an oversight — it would be possible to reach for a camelCase-rename
+an oversight: it would be possible to reach for a camelCase-rename
 middleware that transforms every response automatically, but the explicit
 per-field alias is what a reader can grep to find the exact wire contract
 for one field, without having to reason about a global transformation
 rule. `rating: int = Field(ge=1, le=5)` is the FastAPI-native expression of
-DRF's `min_value=1, max_value=5` — same constraint, same 1..5 bound, a
+DRF's `min_value=1, max_value=5`: same constraint, same 1..5 bound, a
 different framework's idiom for stating it.
 
 ### Auth: verifying Django's own password hash, without Django
 
 This is where the chapter's smell #7 gets realized and then given its
 independent cure. `app/auth.py` verifies submitted HTTP Basic credentials
-against the exact same `auth_user` table the monolith seeds — but without
+against the exact same `auth_user` table the monolith seeds, but without
 reusing DRF's `BasicAuthentication` class or importing Django at all:
 
 ```python
@@ -369,7 +369,7 @@ Four things here are each doing real work, not decoration:
 
 - **`passlib`'s `django_pbkdf2_sha256` scheme**, not a hand-rolled
   verification. Django's `auth_user.password` column stores
-  `pbkdf2_sha256$<iterations>$<salt>$<base64 hash>` — matching that format
+  `pbkdf2_sha256$<iterations>$<salt>$<base64 hash>`; matching that format
   correctly requires the exact iteration count, the exact salt encoding,
   and a constant-time comparison. Getting any of those wrong by hand is a
   real, easy mistake (CWE-327 territory: comparing hashes with `==` instead
@@ -395,7 +395,7 @@ Four things here are each doing real work, not decoration:
 - **The dummy-hash verify on a lookup miss.** When `credentials.username`
   doesn't match any row, the function still calls
   `_password_context.verify(credentials.password, _DUMMY_HASH)` before
-  raising `Unauthorized` — spending roughly the same wall-clock time a real
+  raising `Unauthorized`, spending roughly the same wall-clock time a real
   wrong-password check would cost. Skipping that call when the username is
   unknown would make a nonexistent-username response measurably faster
   than a wrong-password response, which is exactly the kind of timing
@@ -404,15 +404,15 @@ Four things here are each doing real work, not decoration:
   miss.
 - **`auto_error=False` on `HTTPBasic`.** FastAPI's `HTTPBasic` dependency
   raises its own 401 with Starlette's default `{"detail": ...}` body the
-  moment credentials are missing or malformed — before this function's body
+  moment credentials are missing or malformed: before this function's body
   ever runs. Disabling that default lets `require_basic_auth` raise its own
   `Unauthorized` instead, so a missing `Authorization` header gets the
   *same* uniform error body (`{"error", "message", "timestamp"}`, via
-  `app/errors.py`) a wrong password would — one error shape for every
+  `app/errors.py`) a wrong password would: one error shape for every
   authentication failure, not two different ones depending on which part
   of the stack caught it.
 - **Wired per-route, not globally.** `app/routes.py` attaches
-  `require_basic_auth` only to the `POST` handler's `Depends(...)` list —
+  `require_basic_auth` only to the `POST` handler's `Depends(...)` list:
   `GET /api/reviews` and `GET /api/reviews/{id}` carry no auth dependency
   at all. That mirrors the monolith's own `get_permissions()` gate
   (`IsAuthenticated()` on `POST`, `AllowAny()` on `GET`), which is itself
@@ -458,7 +458,7 @@ async def create_review(
     ...
 ```
 
-Same shape, same contract — `GET` wide open, `POST` gated — expressed in
+Same shape, same contract (`GET` wide open, `POST` gated), expressed in
 each framework's own idiom: Django/DRF's class-based `get_permissions()`
 override versus FastAPI's `Depends(...)` composition on the route function
 signature itself. Neither reaches for the other framework's trick; each
@@ -468,7 +468,7 @@ different gate than its siblings."
 ### Error mapping: the same uniform body, native FastAPI handlers
 
 `app/errors.py` is the FastAPI sibling of the monolith's
-`common/exceptions.py` — every non-2xx response this service returns is
+`common/exceptions.py`: every non-2xx response this service returns is
 `{"error": "<CODE>", "message": ..., "timestamp": ...}`, the same shape the
 Newman equivalence suite asserts on request by request:
 
@@ -486,13 +486,13 @@ async def _handle_validation_error(
 That status-code remap is a detail easy to miss and expensive to get
 wrong: FastAPI's own default for a Pydantic validation failure is `422
 Unprocessable Entity`, which is the more "correct" HTTP semantics by some
-readings — but it isn't what the monolith returns, and the equivalence
+readings, but it isn't what the monolith returns, and the equivalence
 suite was captured against the monolith. Shipping the "more correct"
 default here would be a real behavioral difference an equivalence gate
 exists specifically to catch. `Unauthorized` (401) maps to the
 catch-all `"ERROR"` code rather than a dedicated one, because that's what
 DRF's generic exception handling produces for an authentication failure on
-the monolith side — matching the *actual* contract, not the contract a
+the monolith side, matching the *actual* contract, not the contract a
 cleaner design might have chosen.
 
 ### Wiring: one engine, one session factory, one request-scoped session
@@ -527,7 +527,7 @@ async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
 ```
 
 That's the FastAPI-idiomatic version of "one connection pool for the
-process, one session per request" — the engine (and the pool underneath it)
+process, one session per request": the engine (and the pool underneath it)
 outlives every individual request; the session is scoped to exactly one.
 
 One more wiring detail is easy to miss, and the Newman suite would have
@@ -545,7 +545,7 @@ app = FastAPI(
 `redirect_slashes=False` means a trailing-slash request (`/api/reviews/`)
 404s instead of Starlette's default 307 redirect to the non-slash path.
 That matters because a 307 redirect on a `POST` can, in some HTTP clients,
-turn into a `GET` on the redirected request — silently dropping the
+turn into a `GET` on the redirected request, silently dropping the
 request body and changing the method, which would break the contract
 either way. The monolith's own routes have no trailing slash; this service
 matches that exactly rather than accepting the friendlier-looking default.
@@ -571,11 +571,11 @@ curl -i -X POST http://localhost:8001/api/reviews \
 ```
 
 The demo credentials (`reviewer` / `review-pw-r02`) are the fixed user
-`00-monolith`'s `manage.py seed` creates in the shared `auth_user` table —
+`00-monolith`'s `manage.py seed` creates in the shared `auth_user` table:
 the same credentials the monolith itself accepts for `POST /api/reviews`,
 because both services verify against the same row.
 
-## What Phase A would have cost — the measured numbers
+## What Phase A would have cost: the measured numbers
 
 Unlike the Java sibling project, where Phase A was a real, previously
 committed build that could be checked out and measured directly, this
@@ -583,7 +583,7 @@ project's Phase A was never shipped as code (see above). Its cost is
 measured here via a faithful proxy instead: the real, on-this-machine
 import/startup weight of `django.setup()` against the monolith's actual
 `config.settings` (all six apps installed) plus a real `import fastapi,
-uvicorn` in the same process — not an estimate, but not a running server
+uvicorn` in the same process, not an estimate, but not a running server
 either, since no Phase A server was ever built. "Phase B" numbers come from
 this service's actual shipped `app/main.py`, measured directly.
 
@@ -597,11 +597,11 @@ this service's actual shipped `app/main.py`, measured directly.
 
 **Reading these numbers as measured, not adjusted to tell a cleaner story:**
 Phase A and Phase B's import-time and import-RSS numbers are statistically
-indistinguishable at the proxy level — that's not the result expected going
+indistinguishable at the proxy level: that's not the result expected going
 in. FastAPI and Pydantic v2's own import graph (`pydantic-core` is a
 sizable compiled extension) dominates both columns, so swapping Django's
 ORM for SQLAlchemy barely moves process-startup granularity at all. The
-Java sibling project measured a real, dramatic win on this same comparison —
+Java sibling project measured a real, dramatic win on this same comparison,
 but on a completely different axis (native image versus JVM startup, a
 distinction with no Python equivalent), not on raw import time.
 
@@ -628,11 +628,11 @@ documents.
 - Flag off → flag on: **58/58 assertions green**, reviews now served by
   this service instead of the monolith, byte-identical in shape to the
   baseline run.
-- Flag back to off: **58/58 green again** — the monolith's `review` module
+- Flag back to off: **58/58 green again**: the monolith's `review` module
   is still present, unused, and still correct, so reverting costs nothing
   but a restart.
-- Negative check: flag on, this service killed, only the Review folder run
-  — **every assertion fails, exit code 1**, the proxy's own `502` surfacing
+- Negative check: flag on, this service killed, only the Review folder run:
+  **every assertion fails, exit code 1**, the proxy's own `502` surfacing
   through rather than a masked pass. Restarted: **16/16 green** again.
 
 That negative check is specifically this chapter's proof, not just ch.14's:
@@ -648,7 +648,7 @@ something plausible either way.
   extraction *mechanism* before harder chapters add distributed-transaction
   problems on top of it.
 - The equivalence suite is captured before the new service is written, and
-  it never changes per extraction — only {% raw %}`{{baseUrl}}`{% endraw %} moves. That ordering
+  it never changes per extraction: only {% raw %}`{{baseUrl}}`{% endraw %} moves. That ordering
   is what keeps "equivalent" an answerable yes/no question.
 - A two-phase migration can document a phase it never ships accurately: Phase
   A's real costs (a synchronous ORM bridged into an async framework, a
@@ -656,7 +656,7 @@ something plausible either way.
   measured by proxy, not glossed over because the code was never written.
 - Verifying someone else's password hash format correctly (Django's
   `pbkdf2_sha256`) is a job for a purpose-built library, not a hand-rolled
-  reimplementation — and a lookup miss should cost the same wall-clock time
+  reimplementation, and a lookup miss should cost the same wall-clock time
   as a wrong password, or the response timing itself becomes a username
   oracle.
 - A structural win (no sync-to-async bridging, no build-time coupling to
