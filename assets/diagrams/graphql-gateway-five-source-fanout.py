@@ -10,7 +10,7 @@ errors[], never a 500; an unknown order id is a plain null with no error.
 
 Sourced from examples/08-graphql-gateway/app/schema.py (OrderView/
 OrderItemView field resolvers, build_schema's depth/token limiters) and
-app/clients.py (DownstreamUnavailable, deliberately left uncaught).
+app/clients.py (DownstreamUnavailable, left uncaught).
 """
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts"))

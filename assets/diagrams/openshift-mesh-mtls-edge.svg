@@ -71,5 +71,5 @@
 <text x="770.0" y="24" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.33 -- OSSM 3 on OpenShift: STRICT mesh-wide, a PERMISSIVE carve-out at each Route, Kiali reading otel-lgtm</text>
 <text x="240" y="764" font-size="11" fill="#555555" text-anchor="start">Injection is by the istio.io/rev: default pod-template LABEL (app-deployment.yaml) -- Sail&#x27;s revisioned webhook ignores sidecar.istio.io/inject entirely.</text>
 <text x="240" y="782" font-size="11" fill="#555555" text-anchor="start">Without the per-Route PERMISSIVE PeerAuthentication, the STRICT default would 502 every Route request: the router is not a mesh member.</text>
-<text x="240" y="800" font-size="11" fill="#555555" text-anchor="start">postgres and kafka carry no istio.io/rev label -- deliberately unmeshed, same as the minikube path (ch.30).</text>
+<text x="240" y="800" font-size="11" fill="#555555" text-anchor="start">postgres and kafka carry no istio.io/rev label -- unmeshed, same as the minikube path (ch.30).</text>
 </svg>

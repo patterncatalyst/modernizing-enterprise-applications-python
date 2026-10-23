@@ -34,7 +34,7 @@
 <text x="550.0" y="512.5" font-size="11.5" fill="#555555" text-anchor="middle">bulkhead -- one saga&#x27;s enrich call</text>
 <text x="550.0" y="527.5" font-size="11.5" fill="#555555" text-anchor="middle">can&#x27;t yet starve another&#x27;s</text>
 <rect x="760" y="450" width="480" height="110" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
-<text x="1000.0" y="495.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Honesty discipline: stuck-* negative checks</text>
+<text x="1000.0" y="495.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Verification discipline: stuck-* negative checks</text>
 <text x="1000.0" y="512.5" font-size="11.5" fill="#555555" text-anchor="middle">make failures VISIBLE (RED, not a false green) --</text>
 <text x="1000.0" y="527.5" font-size="11.5" fill="#555555" text-anchor="middle">the AWAITING_SHIPMENT poll-script bug, found live</text>
 <path d="M597.6923076923077,50.0 L340.0,121.27659574468086" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
@@ -51,9 +51,9 @@
 <text x="546.3030303030303" y="419.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">not yet needed</text>
 <text x="546.3030303030303" y="419.0" font-size="11" fill="#555" text-anchor="middle">not yet needed</text>
 <path d="M680.0,392.6595744680851 L843.3333333333334,450.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
-<text x="767.6666666666667" y="415.32978723404256" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">made visible, not hidden</text>
-<text x="767.6666666666667" y="415.32978723404256" font-size="11" fill="#555" text-anchor="middle">made visible, not hidden</text>
-<text x="670.0" y="30" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.25 -- the resilience chassis: four mechanisms already load-bearing, one new one, two deliberately deferred</text>
+<text x="767.6666666666667" y="415.32978723404256" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">made visible</text>
+<text x="767.6666666666667" y="415.32978723404256" font-size="11" fill="#555" text-anchor="middle">made visible</text>
+<text x="670.0" y="30" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.25 -- the resilience chassis: four mechanisms already in use, one new one, two deferred</text>
 <text x="40" y="720" font-size="11" fill="#555555" text-anchor="start">Deferral is a decision, not an oversight: pybreaker/Semaphore solve problems this system doesn&#x27;t have yet (sustained failure, contention).</text>
 <text x="40" y="738" font-size="11" fill="#555555" text-anchor="start">6/6 consecutive stable runs after the poll-script fix -- a resilience lesson about the TEST SUITE, not just the system under test.</text>
 </svg>

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""ch.08 figure: monolith-shared-schema-er — the shared-database ER that
+"""ch.08 figure: monolith-shared-schema-er: the shared-database ER that
 makes SMELL #3/#4 (SMELLS.md: "shared single schema/DB" + "cross-context
 foreign keys") visceral: eight tables, one Postgres schema, seven foreign
-keys crossing bounded-context ownership lines freely. Deliberately drawn
+keys crossing bounded-context ownership lines freely. Drawn
 clean and general (table name + key columns only, no view/service framing)
 so it can be re-embedded unchanged in ch.18 ("From Shared Data to Owned
 Data") and referenced again from ch.09, ch.11, and ch.13. The transactional
 outbox table (`common.models.OutboxEvent`, the ch.17/r03 cure for smells #5
-and #6) is deliberately out of scope here — this figure is the "as planted"
+and #6) is out of scope here: this figure is the "as planted"
 smell schema, not the full current table list.
 
 Tables and every foreign key below are read directly from each app's
@@ -16,7 +16,7 @@ Tables and every foreign key below are read directly from each app's
 `shipping/models.py`, `notification/models.py`, `review/models.py`),
 cross-checked against `SMELLS.md`'s smell #3/#4 rows. One deliberate
 departure from a naive shared-schema design is called out explicitly:
-`order_items` carries no FK to `inventory_items` — `sku`/`item_name`/
+`order_items` carries no FK to `inventory_items`: `sku`/`item_name`/
 `unit_price_cents` are captured as a snapshot at checkout time instead (see
 `OrderItem`'s own docstring), so that particular cross-context join was
 already designed out from day one. No codenames; generic/public names only.
@@ -85,7 +85,7 @@ for src in ["payments", "shipments", "notifications"]:
     edges += dip_down(src, "orders")
 
 # bottom-row -> top-row: route through the clear lane between the two rows
-# (top row ends at TOP_Y+TOP_H; bottom row starts at BOT_Y — the gap between
+# (top row ends at TOP_Y+TOP_H; bottom row starts at BOT_Y: the gap between
 # them has no boxes in it).
 LANE_Y = TOP_Y + TOP_H + (BOT_Y - (TOP_Y + TOP_H)) / 2
 
@@ -110,18 +110,18 @@ edges += dip_up("reviews", "inventory_items")
 
 bands = [
     {"x": 20, "y": 70, "w": W - 40, "h": H - 100,
-     "label": "PostgreSQL — one shared schema (per-app Django migrations)", "fill": "#fafafa"},
+     "label": "PostgreSQL: one shared schema (per-app Django migrations)", "fill": "#fafafa"},
 ]
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.08 — Shared schema: eight tables, one Postgres schema, seven cross-context foreign keys",
+    {"x": W / 2, "y": 32, "text": "ch.08: Shared schema: eight tables, one Postgres schema, seven cross-context foreign keys",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56,
      "text": "SMELL #3/#4: every amber FK below crosses a bounded-context ownership boundary, enforced only because everything shares one database",
      "anchor": "middle", "size": 11.5, "color": "#555555"},
 
     {"x": 40, "y": DIP_DOWN_Y + 36,
-     "text": "order_items -> inventory_items is deliberately NOT one of these FKs: sku/item_name/unit_price_cents are captured as a snapshot at checkout time instead.",
+     "text": "order_items -> inventory_items is not one of these FKs: sku/item_name/unit_price_cents are captured as a snapshot at checkout time instead.",
      "anchor": "start", "size": 10, "color": "#777777"},
 
     {"x": 40, "y": H - 16,

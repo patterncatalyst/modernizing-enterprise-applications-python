@@ -13,7 +13,7 @@ registration, an unresolved import, a typo'd dependency signature -- the
 class of defect that would otherwise surface as a confusing traceback. It
 has no opinion about whether a routing predicate matches the right
 requests once real traffic flows through it -- that gap is named here
-explicitly, not hidden, because this project has no MCP-driven structural
+explicitly, because this project has no MCP-driven structural
 validator to close it the way the Java sibling does.
 
 BOTTOM -- the BEHAVIORAL gate: the Newman behavior-equivalence suite and

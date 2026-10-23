@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""ch.08 figure: place-order-transaction-sequence — the structural heart of
+"""ch.08 figure: place-order-transaction-sequence: the structural heart of
 the book's "before" picture: `order/services.py::_place_order_local` (the
 default checkout path: `INVENTORY_MODE=local`, `PAYMENT_MODE=synchronous`,
 `SHIPPING_MODE=inprocess`) as ONE `transaction.atomic()` spanning five
-bounded contexts, in-process, one database, atomic rollback for free. Reused
+bounded contexts, in-process, one database, atomic rollback automatically. Reused
 conceptually by ch.09 (Smells 1-4), ch.12 (event storming), ch.22 (ACID ->
 ACD), and ch.23/24 (sagas rebuild explicitly what Postgres gave away here
-for free).
+automatically).
 
 Call order and exception semantics sourced verbatim from
 `examples/00-monolith/order/services.py::_place_order_local` and
 `order/services.py::place_order`'s own module docstring. Notification is
-deliberately NOT a synchronous step here — SMELL #5/#6 (sync send,
+not a synchronous step here: SMELL #5/#6 (sync send,
 dual-write) are already CURED as of r03: the only notification-shaped thing
 this transaction does is write one `OutboxEvent` row; a separate relay +
 consumer pair (outside this transaction) carries it to `notification`
@@ -64,16 +64,16 @@ for a, b in zip(order_keys, order_keys[1:]):
     edges.append(connect(step_nodes[a], step_nodes[b]))
 edges.append(connect(step_nodes["commit"], response, amber=True, label="txn commits"))
 
-# ---- failure branch 1: insufficient stock — exits before any write --------
+# ---- failure branch 1: insufficient stock: exits before any write --------
 insufficient = node(step_nodes["reserve"]["x"] - 10, 480, 260, 90,
-                     ["409 Conflict", "OUT_OF_STOCK", "no writes yet — exits before persist"],
+                     ["409 Conflict", "OUT_OF_STOCK", "no writes yet: exits before persist"],
                      style="ghost")
 nodes.append(insufficient)
 edges.append(connect(step_nodes["reserve"], insufficient, dashed=True, label="quantity exceeds on-hand"))
 
-# ---- failure branch 2: payment decline — rolls back everything written ----
+# ---- failure branch 2: payment decline: rolls back everything written ----
 rollback = node(step_nodes["charge"]["x"] - 40, 480, 300, 100,
-                ["402 Payment Required", "PAYMENT_DECLINED", "ROLLBACK ALL — reserve + persist undone"],
+                ["402 Payment Required", "PAYMENT_DECLINED", "ROLLBACK ALL: reserve + persist undone"],
                 style="ghost")
 nodes.append(rollback)
 edges.append(connect(step_nodes["charge"], rollback, dashed=True, label="paymentMethod contains DECLINE"))
@@ -83,10 +83,10 @@ edges.append({"x1": rollback["x"] + 20, "y1": rollback["y"], "x2": step_nodes["p
 edges.append({"x1": rollback["x"] + 60, "y1": rollback["y"], "x2": step_nodes["reserve"]["x"] + 160,
               "y2": step_nodes["reserve"]["y"] + step_nodes["reserve"]["h"],
               "dashed": True, "amber": True,
-              "label": "one shared Postgres transaction — undone automatically, free", "ly": -8})
+              "label": "one shared Postgres transaction: undone automatically, free", "ly": -8})
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.08 — _place_order_local: one transaction.atomic() spans five bounded contexts",
+    {"x": W / 2, "y": 32, "text": "ch.08: _place_order_local: one transaction.atomic() spans five bounded contexts",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56,
      "text": "validate -> reserve -> persist -> charge -> confirm -> dispatch -> write outbox row -> commit, in-process, one database",

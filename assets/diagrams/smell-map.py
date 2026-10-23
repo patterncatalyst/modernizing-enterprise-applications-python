@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""ch.09 figure: smell-map — the visual form of SMELLS.md. All seven
-deliberately-planted smells overlaid on the monolith's six-context structure
+"""ch.09 figure: smell-map: the visual form of SMELLS.md. All seven
+planted smells overlaid on the monolith's six-context structure
 (the same skeleton as monolith-six-contexts), each annotated with where it
 lives and the chapter(s) that cure it. Smells #5 and #6 (synchronous
-notification send, dual-write hazard) are drawn as already CURED — r03's
-transactional outbox — and smell #7 (review tangled into shared auth) is
+notification send, dual-write hazard) are drawn as already CURED: r03's
+transactional outbox: and smell #7 (review tangled into shared auth) is
 drawn as the one still-open smell that review's own extraction (ch.15)
 resolves by giving review its own, independent auth configuration.
 
@@ -42,7 +42,7 @@ for i, (name, style) in enumerate(CONTEXTS):
 # ---- shared Postgres schema --------------------------------------------
 PG_Y, PG_H = 300, 80
 pg_band = {"x": 40, "y": PG_Y, "w": W - 80, "h": PG_H,
-           "label": "PostgreSQL — one shared schema", "fill": "#fafafa"}
+           "label": "PostgreSQL: one shared schema", "fill": "#fafafa"}
 pg_box = node(W / 2 - 160, PG_Y + 22, 320, 40, ["9 tables, cross-context FKs"], style="sub")
 nodes.append(pg_box)
 
@@ -54,14 +54,14 @@ left_x = cols["order"]["x"] + cols["order"]["w"] / 2
 right_x = cols["shipping"]["x"] + cols["shipping"]["w"] / 2
 bracket_edges = [
     {"x1": left_x, "y1": bracket_y, "x2": right_x, "y2": bracket_y, "dashed": True, "amber": True,
-     "label": "SMELL #2 — one transaction.atomic() spans these four contexts"},
+     "label": "SMELL #2: one transaction.atomic() spans these four contexts"},
     {"x1": left_x, "y1": bracket_y, "x2": left_x, "y2": bracket_y + 14, "dashed": True, "amber": True},
     {"x1": right_x, "y1": bracket_y, "x2": right_x, "y2": bracket_y + 14, "dashed": True, "amber": True},
 ]
 
 bands = [
     {"x": 20, "y": 70, "w": W - 40, "h": 210,
-     "label": "Django monolith — one deployable", "fill": "#ffffff"},
+     "label": "Django monolith: one deployable", "fill": "#ffffff"},
     pg_band,
 ]
 
@@ -73,23 +73,23 @@ cards_def = [
      "order/services.py::place_order() reaches directly into inventory/payment/shipping's services/models",
      "cures: ch.26 (hardest, last)", "sub"),
     ("#2 One ACID txn, five contexts",
-     "_place_order_local's transaction.atomic() — free rollback across order+inventory+payment+shipping+outbox",
+     "_place_order_local's transaction.atomic(): free rollback across order+inventory+payment+shipping+outbox",
      "cures: ch.22 (ACID->ACD), ch.23/24 (sagas)", "sub"),
     ("#3 Shared single schema/DB",
-     "config/settings.py — one Postgres schema, one set of Django migrations, all six apps deploy together",
+     "config/settings.py: one Postgres schema, one set of Django migrations, all six apps deploy together",
      "cures: ch.18 (owned data)", "sub"),
     ("#4 Cross-context FKs",
      "orders->customers, payments/shipments/notifications->orders, reviews->customers+inventory_items",
      "cures: ch.18, ch.19 (CDC)", "sub"),
-    ("#5 Sync notification — CURED",
+    ("#5 Sync notification: CURED",
      "place_order() used to call notification/services.py in-process; now it only writes an OutboxEvent row",
-     "ch.17 — cured at r03", "accent"),
-    ("#6 Dual-write hazard — CURED",
+     "ch.17: cured at r03", "accent"),
+    ("#6 Dual-write hazard: CURED",
      "DB row + provider call were two independent writes; outbox_relay now publishes at-least-once",
-     "ch.17 — cured at r03", "accent"),
+     "ch.17: cured at r03", "accent"),
     ("#7 Review tangled in shared auth",
      "review/views.py gates POST with HTTP Basic auth against the shared django.contrib.auth table",
-     "cures: ch.15 — review's own auth config", "sub"),
+     "cures: ch.15: review's own auth config", "sub"),
 ]
 
 cards = []
@@ -141,9 +141,9 @@ review_n = cols["review"]
 callout_edges += callout(cards[6], review_n["x"] + review_n["w"] / 2, review_n["y"] + review_n["h"])
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.09 — The seven deliberate smells, mapped onto the monolith's structure",
+    {"x": W / 2, "y": 32, "text": "ch.09: The seven deliberate smells, mapped onto the monolith's structure",
      "anchor": "middle", "bold": True, "size": 17},
-    {"x": W / 2, "y": 56, "text": "the visual form of SMELLS.md — five smells still standing, two already cured",
+    {"x": W / 2, "y": 56, "text": "the visual form of SMELLS.md: five smells still standing, two already cured",
      "anchor": "middle", "size": 12, "color": "#555555"},
 
     {"x": 40, "y": H - 16,

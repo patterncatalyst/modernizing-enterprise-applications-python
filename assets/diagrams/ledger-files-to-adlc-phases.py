@@ -5,7 +5,7 @@ reconciliation log) onto the ADLC's seven phases: "Frame -> Map -> Plan ->
 Generate -> Verify -> Operate -> Reconcile."
 
 Phase glosses are this project's own tooling column, which differs from the
-Java sibling on purpose: Map substitutes manual reconnaissance plus the
+Java sibling by design: Map substitutes manual reconnaissance plus the
 `lgtm-python` skill, because no Quarkus-Agent-MCP or Camel-MCP equivalent
 exists for this stack; Plan/Generate/Verify run through the `lgtm-relay`
 tiering (Opus plan -> Sonnet execute -> Opus validate).

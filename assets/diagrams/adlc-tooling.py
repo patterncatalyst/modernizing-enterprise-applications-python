@@ -5,7 +5,7 @@ tiering (Opus plan -> Sonnet execute -> Opus validate), the `lgtm-python`
 skill, and the three ledger files -- not a generic "coding assistant"
 label.
 
-This is a public repo naming its own tooling honestly, including the gap:
+This is a public repo naming its own tooling, including the gap:
 Map has no live, version-matched MCP server to lean on the way the Java
 sibling's Quarkus-Agent-MCP / Camel-MCP servers do (DRQ-020) -- it
 substitutes manual reconnaissance plus the `lgtm-python` skill's scaffold

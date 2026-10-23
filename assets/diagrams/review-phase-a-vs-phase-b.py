@@ -16,7 +16,7 @@ zero Django import anywhere in the service.
 
 Both phases still read/write the SAME shared Postgres schema (ch.18/19 give
 review its own database later) -- that line is the same in both panels,
-on purpose: this figure is about the code path, not the data topology.
+by design: this figure is about the code path, not the data topology.
 
 Sourced from examples/02-review-service/MIGRATION.md (the per-component
 refactor table and the "why Phase A isn't shipped as code" findings) and
