@@ -13,7 +13,7 @@ server span + asyncpg spans for the order aggregate write and the CQRS
 order_view write) -> inventory-service `Reserve` over gRPC (crossing the
 ch.19 ACL seam), with its own asyncpg reservation span. Each hop's Envoy
 mesh span wraps its app span(s); the async Kafka saga hops (order.placed ->
-payment -> shipping) are deliberately out of this picture -- mesh-visible,
+payment -> shipping) are out of this picture -- mesh-visible,
 app-level-deferred (see the chapter prose).
 
 Sourced from _plans/r10-build-plan.md section A.3 (DRQ-096=A), deploy/k8s/
@@ -77,7 +77,7 @@ notes = [
     {"x": 40, "y": 58, "text": "Real span IDs, durations, and the Tempo capture come from the user's live run -- see the chapter's verification footer, not this figure.",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 40, "y": H - 40,
-     "text": "The async Kafka saga hops (order.placed -> payment -> shipping) are deliberately out of this trace: mesh-visible in Kiali, app-level-deferred (same posture as the Java sibling).",
+     "text": "The async Kafka saga hops (order.placed -> payment -> shipping) are out of this trace: mesh-visible in Kiali, app-level-deferred (same posture as the Java sibling).",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 40, "y": H - 22,
      "text": "Grey = mesh span (Envoy sidecar, free on all 8 services). Green = app span (OTel SDK, only strangler-proxy / order-service / inventory-service). White = asyncpg child span.",

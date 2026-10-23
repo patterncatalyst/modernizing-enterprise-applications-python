@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """ch.19 figure: inventory-grpc-proto-acl -- the proto IS the anti-corruption
-layer for the synchronous order<->inventory seam. Two deliberately distinct
+layer for the synchronous order<->inventory seam. Two distinct
 vocabularies meet only at the wire: the monolith's domain vocabulary
 (sku/name/priceCents/quantityOnHand) on one side, inventory.proto's wire
 vocabulary (stock_keeping_unit/display_name/unit_price_cents/on_hand_qty)
@@ -42,11 +42,11 @@ edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 40, "text": "ch.19 -- the proto IS the ACL: two deliberately distinct vocabularies meet only at the wire",
+    {"x": W / 2, "y": 40, "text": "ch.19 -- the proto IS the ACL: two distinct vocabularies meet only at the wire",
      "anchor": "middle", "bold": True, "size": 18},
-    {"x": 40, "y": H - 60, "text": "Wire vocab (stock_keeping_unit/display_name/unit_price_cents/on_hand_qty) is deliberately distinct from domain vocab",
+    {"x": 40, "y": H - 60, "text": "Wire vocab (stock_keeping_unit/display_name/unit_price_cents/on_hand_qty) is distinct from domain vocab",
      "anchor": "start", "size": 11, "color": "#555555"},
-    {"x": 40, "y": H - 42, "text": "(sku/name/priceCents/quantityOnHand) so each side's translator earns its keep, instead of the shapes happening to agree.",
+    {"x": 40, "y": H - 42, "text": "(sku/name/priceCents/quantityOnHand) so each side's translator does the mapping, instead of the shapes happening to agree.",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 40, "y": H - 24, "text": "ReserveReply/StockReply carry the reply back through the SAME two translators, in reverse -- the boundary is symmetric.",
      "anchor": "start", "size": 11, "color": "#555555"},

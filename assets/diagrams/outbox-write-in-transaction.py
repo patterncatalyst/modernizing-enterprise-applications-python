@@ -10,7 +10,7 @@ since the DB commit and the external call are not atomic with each other.
 
 AFTER: the last step is an ordinary INSERT into this service's own
 `outbox` table, in the SAME transaction as everything else -- atomic with
-the inventory reservation, the order row, and the payment capture, for free,
+the inventory reservation, the order row, and the payment capture, automatically,
 using nothing but Postgres's own rollback.
 
 Sourced from examples/00-monolith/order/services.py::place_order,
@@ -45,7 +45,7 @@ after_steps = [
     node(70, 150 + PANEL_H + 40, 230, 110, ["Validate + reserve", "customer, inventory,", "create Order row"], style="box"),
     node(330, 150 + PANEL_H + 40, 230, 110, ["Charge payment", "(decline rolls back", "reservation + order)"], style="box"),
     node(590, 150 + PANEL_H + 40, 230, 110, ["Dispatch shipping", "(SHIP-FAIL rolls back", "everything above)"], style="box"),
-    node(850, 150 + PANEL_H + 40, 300, 110, ["OutboxEvent.objects.create(...)", "ONE ordinary row, SAME", "transaction, atomic for free"], style="accent"),
+    node(850, 150 + PANEL_H + 40, 300, 110, ["OutboxEvent.objects.create(...)", "ONE ordinary row, SAME", "transaction, atomic automatically"], style="accent"),
 ]
 after_edges = [connect(after_steps[i], after_steps[i + 1]) for i in range(len(after_steps) - 1)]
 after_edges[-1]["amber"] = True
@@ -55,7 +55,7 @@ notes = [
      "anchor": "middle", "bold": True, "size": 17},
     {"x": 50, "y": H - 40, "text": "BEFORE: a crash between the DB commit and the provider call loses the notification silently, or a naive retry duplicates it.",
      "anchor": "start", "size": 11, "color": "#555555"},
-    {"x": 50, "y": H - 22, "text": "AFTER: the outbox row rolls back for free with everything else; a separate relay publishes it at-least-once, independently.",
+    {"x": 50, "y": H - 22, "text": "AFTER: the outbox row rolls back automatically with everything else; a separate relay publishes it at-least-once, independently.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

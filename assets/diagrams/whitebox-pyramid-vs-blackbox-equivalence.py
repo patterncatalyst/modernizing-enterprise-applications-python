@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""ch.10 figure: whitebox-pyramid-vs-blackbox-equivalence — the chapter's one
+"""ch.10 figure: whitebox-pyramid-vs-blackbox-equivalence: the chapter's one
 new idea, drawn as a legitimate side-by-side.
 
-LEFT — white-box: the pytest-django pyramid from test-pyramid.py (50 tests,
+LEFT: white-box: the pytest-django pyramid from test-pyramid.py (50 tests,
 8 files). It imports `order.services.place_order`, `OrderItem`, and every
 other internal name directly, and in several tiers inspects real rows in a
 real (disposable) Postgres test database it is free to reset between runs.
 A white-box test can't even import a module that doesn't share the
 monolith's Python package names, let alone its database rows.
 
-RIGHT — black-box: the Newman behavior-equivalence suite
+RIGHT: black-box: the Newman behavior-equivalence suite
 (`tooling/newman/mea.postman_collection.json`, 12 folders / 39 requests)
 earns that name for a specific, concrete reason: every request targets the
 `{{baseUrl}}` collection variable rather than a hardcoded host, so the exact
@@ -17,7 +17,7 @@ same collection can point at this monolith on one run and at a freshly
 extracted FastAPI service (or the strangler proxy in front of it) on the
 next, with not one assertion edited in between. It sees a status code, a
 JSON body, and a second HTTP response it chose to fetch itself (the
-bounded-wait polls) — that restriction is the whole point.
+bounded-wait polls): that restriction is the whole point.
 
 Sourced from `examples/00-monolith/tests/` and
 `tooling/newman/mea.postman_collection.json`. No codenames; generic/public
@@ -34,10 +34,10 @@ g.OUT = os.path.dirname(__file__)
 W, H = 1560, 760
 
 # ============================================================================
-# LEFT band — white-box: the pytest-django pyramid, calling Python directly
+# LEFT band: white-box: the pytest-django pyramid, calling Python directly
 # ============================================================================
 band_left = {"x": 20, "y": 70, "w": 740, "h": 560,
-             "label": "White-box — pytest-django calls Python directly, inspects a real DB",
+             "label": "White-box: pytest-django calls Python directly, inspects a real DB",
              "fill": "#fafafa"}
 
 tier3m = node(270, 140, 240, 70, ["API / acceptance (21)", "APIClient, real Postgres"], style="box")
@@ -57,20 +57,20 @@ left_edges = [
 ]
 
 # ============================================================================
-# RIGHT band — black-box: the Newman behavior-equivalence suite
+# RIGHT band: black-box: the Newman behavior-equivalence suite
 # ============================================================================
 band_right = {"x": 800, "y": 70, "w": 740, "h": 560,
-              "label": "Black-box — the behavior-equivalence suite sees only HTTP",
+              "label": "Black-box: the behavior-equivalence suite sees only HTTP",
               "fill": "#eaf4ec"}
 
 newman = node(940, 140, 460, 120, [
-    "Newman — mea.postman_collection.json",
-    "12 folders, 39 requests — smoke, 4 checkout scenarios,",
+    "Newman: mea.postman_collection.json",
+    "12 folders, 39 requests: smoke, 4 checkout scenarios,",
     "6 per-context contracts, GraphQL gateway contract",
 ], style="accent")
 
 baseurl = node(990, 300, 360, 80, [
-    "baseUrl — collection variable",
+    "baseUrl: collection variable",
     "re-pointable: monolith today, an extracted service tomorrow",
 ], style="box")
 
@@ -86,14 +86,14 @@ extracted_target = node(1200, 440, 300, 110, [
 
 right_nodes = [newman, baseurl, monolith_target, extracted_target]
 right_edges = [
-    connect(newman, baseurl, label="HTTP only — status code + JSON body"),
+    connect(newman, baseurl, label="HTTP only: status code + JSON body"),
     connect(baseurl, monolith_target),
     connect(baseurl, extracted_target, dashed=True, label="re-pointed, zero assertions edited", amber=True),
 ]
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.10 — same system, two kinds of test: white-box pytest pyramid vs. black-box equivalence suite",
+     "text": "ch.10: same system, two kinds of test: white-box pytest pyramid vs. black-box equivalence suite",
      "anchor": "middle", "bold": True, "size": 16},
     {"x": W / 2, "y": 56,
      "text": "the pyramid imports Python package names; the equivalence suite only knows baseUrl and HTTP",
@@ -103,11 +103,11 @@ notes = [
      "text": "A white-box test can't import a module that doesn't share the monolith's package names,",
      "anchor": "start", "size": 10.5, "color": "#555555"},
     {"x": 110, "y": 591,
-     "text": "let alone its database rows — it proves the implementation, not the behavior, is correct.",
+     "text": "let alone its database rows: it proves the implementation, not the behavior, is correct.",
      "anchor": "start", "size": 10.5, "color": "#555555"},
 
     {"x": 940, "y": 575,
-     "text": "Every request targets {{baseUrl}}, not a hardcoded host — the same collection, unedited, can point",
+     "text": "Every request targets {{baseUrl}}, not a hardcoded host: the same collection, unedited, can point",
      "anchor": "start", "size": 10.5, "color": "#555555"},
     {"x": 940, "y": 591,
      "text": "at this monolith today or an extracted service tomorrow, with not one assertion changed in between.",

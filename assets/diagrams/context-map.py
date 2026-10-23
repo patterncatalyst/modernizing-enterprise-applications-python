@@ -1,31 +1,31 @@
 #!/usr/bin/env python3
-"""ch.11 figure: context-map — the six bounded contexts (order, inventory,
+"""ch.11 figure: context-map: the six bounded contexts (order, inventory,
 payment, shipping, notification, review) drawn as a DDD context map, with
 the relationship TYPE labelled on each edge.
 
-order -> inventory: conformist today — `order/services.py::_place_order_local`
+order -> inventory: conformist today: `order/services.py::_place_order_local`
 calls `inventory.services.get_by_sku()`/`reserve()` directly and gets back a
 live `InventoryItem` Django model instance, not a translated DTO (SMELL #1:
 "no anti-corruption layer at the seam"). The relationship this seam SHOULD
 have is customer/supplier (order is the downstream consumer of inventory's
-stock data, inventory is the upstream supplier) — and a stable, versioned
+stock data, inventory is the upstream supplier): and a stable, versioned
 contract for exactly that ALREADY EXISTS, just not on this path: `order/
 proto/.../inventory.proto` + `order/inventory_client.py::
 RemoteInventoryClient` is the gRPC ACL `INVENTORY_MODE=grpc` uses (r04/ch.19)
-— built, tested, and simply not the default.
+: built, tested, and simply not the default.
 
 order -> payment / shipping: direct, synchronous, in-process calls inside
-`_place_order_local`'s one `transaction.atomic()` — `order/services.py`
+`_place_order_local`'s one `transaction.atomic()`: `order/services.py`
 imports `payment.services`/`shipping.services` and calls their functions
 directly, four other contexts' concrete modules, not four ports.
 
 order -> notification: the ONE edge this chapter can point to as already
-cured — `_place_order_local` does not import `notification.services` at
+cured: `_place_order_local` does not import `notification.services` at
 all; it writes a `common.models.OutboxEvent` row and a separate relay +
 consumer pair (outside this transaction) carries it the rest of the way
 (SMELL #5/#6, CURED at r03).
 
-All six -> PostgreSQL: one shared schema — a shared kernel with no edges,
+All six -> PostgreSQL: one shared schema: a shared kernel with no edges,
 the whole database treated as if it belonged equally to all six contexts at
 once. Review's edge is read-only lookups against customers/inventory_items;
 review has zero outbound edges to its sibling contexts' code (SMELL #7's

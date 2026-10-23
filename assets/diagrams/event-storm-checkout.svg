@@ -109,9 +109,9 @@
 <path d="M1251.3461538461538,600.0 L675.0641025641025,910.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <path d="M1020.0,857.4271844660194 L773.8636363636364,910.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <path d="M636.5909090909091,880.0 L624.3181818181819,910.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
-<text x="800.0" y="30" font-size="18" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.12 — Event-storming the checkout flow: two readings of one call chain</text>
-<text x="40" y="65" font-size="14" fill="#1d1d1d" text-anchor="start" font-weight="700">TOP — today: _place_order_local, one transaction.atomic(), four contexts + an outbox write, synchronous calls</text>
-<text x="40" y="345" font-size="14" fill="#1d1d1d" text-anchor="start" font-weight="700">BOTTOM — the same process, event-stormed: actor -&gt; command -&gt; aggregate -&gt; domain events, policies/reactions, an external system, a read model</text>
+<text x="800.0" y="30" font-size="18" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.12: Event-storming the checkout flow: two readings of one call chain</text>
+<text x="40" y="65" font-size="14" fill="#1d1d1d" text-anchor="start" font-weight="700">TOP: today: _place_order_local, one transaction.atomic(), four contexts + an outbox write, synchronous calls</text>
+<text x="40" y="345" font-size="14" fill="#1d1d1d" text-anchor="start" font-weight="700">BOTTOM: the same process, event-stormed: actor -&gt; command -&gt; aggregate -&gt; domain events, policies/reactions, an external system, a read model</text>
 <text x="1020" y="360" font-size="10" fill="#555555" text-anchor="start">ch.25: timeout/retry sit here once this is a network call</text>
 <text x="1020" y="745" font-size="10" fill="#555555" text-anchor="start">ch.23: saga compensation releases the stock reservation here instead of an ACID rollback</text>
 <text x="380" y="505" font-size="9" fill="#3d7a4e" text-anchor="start">settings.ORDER_PLACED_TOPIC</text>
