@@ -544,6 +544,32 @@ content("201-FASTAPI · CLOSE", "The async stack, end to end",
    "The common thread across all three decks: async buys concurrency without a thread pool, the outbox buys a crash-safe handoff between a database commit and a Kafka publish, and a chassis built as a copied convention rather than a shared framework keeps every one of these eight services small enough to read start to finish in one sitting."],
   "Closing summary and hand-off back to the 201 and the 101. The point worth leaving the room with: nothing in this deck was special-cased for a slide — every code excerpt came from a file that's still sitting in examples/ today, runnable with uv sync and pytest exactly as shown. If there's time for one live demonstration, kill a shipping-service process mid-saga, as the crash-resume test does programmatically, and restart it against the same Postgres — watching the saga pick up from its persisted step_index is a more convincing close than any slide in this deck.");
 
+
+/* --- Scan to explore (QR codes) --- */
+{
+  const s = S();
+  addContentTitle(s, "SCAN TO EXPLORE", "Take it with you");
+
+  s.addImage({ path: `${ASSETS}/qr-modernizing-site.png`, x: 2.30, y: 1.78, w: 3.10, h: 3.10 });
+  s.addText("The reference implementation", { x: 1.55, y: 4.98, w: 4.60, h: 0.40,
+    fontFace: FONT.title, fontSize: 18, bold: true, color: COLOR.ink, align: "center", valign: "middle" });
+  s.addText("Site, runnable FastAPI services, and the strangler-fig migration", { x: 1.45, y: 5.40, w: 4.80, h: 0.72,
+    fontFace: FONT.body, fontSize: 13, italic: true, color: COLOR.caption, align: "center", valign: "top" });
+  s.addText("patterncatalyst.github.io/modernizing-enterprise-applications-python", { x: 1.45, y: 6.12, w: 4.80, h: 0.32,
+    fontFace: FONT.mono, fontSize: 9, color: COLOR.red, align: "center", valign: "middle" });
+
+  s.addImage({ path: `${ASSETS}/qr-hub.png`, x: 7.93, y: 1.78, w: 3.10, h: 3.10 });
+  s.addText("Workshops & Tutorials", { x: 7.18, y: 4.98, w: 4.60, h: 0.40,
+    fontFace: FONT.title, fontSize: 18, bold: true, color: COLOR.ink, align: "center", valign: "middle" });
+  s.addText("The whole series: every workshop, tutorial, and deck in one place", { x: 7.08, y: 5.40, w: 4.80, h: 0.72,
+    fontFace: FONT.body, fontSize: 13, italic: true, color: COLOR.caption, align: "center", valign: "top" });
+  s.addText("patterncatalyst.github.io/patterncatalyst-workshops-tutorials-list", { x: 7.08, y: 6.12, w: 4.80, h: 0.32,
+    fontFace: FONT.mono, fontSize: 9, color: COLOR.red, align: "center", valign: "middle" });
+
+  addNotes(s, "This is the async FastAPI implementation deck. The two codes take it with you: on the left, the reference implementation: the site, the runnable FastAPI services, and the strangler-fig migration. On the right, the Workshops and Tutorials hub: every workshop, tutorial, and deck in the series in one place. Both are public on the Pattern Catalyst GitHub organization.");
+}
+
+
 pres.writeFile({ fileName: OUT })
   .then(p => console.log("WROTE", p, "slides:", pageNum))
   .catch(e => { console.error(e); process.exit(1); });
