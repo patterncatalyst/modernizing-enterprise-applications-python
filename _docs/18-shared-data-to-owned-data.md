@@ -6,6 +6,19 @@ description: "Shared-database coupling as the hardest coupling to break; the dat
 duration: 30 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain why shared-database coupling (SMELL #3/#4) is harder to detect and break than any code-level smell, because a foreign key is a dependency Postgres enforces, not one application code declares.
+- Weigh what database-per-service buys (independent migrations, independent scaling, an uncontested row lock for Inventory's `Reserve`) against what it costs (referential integrity becomes a contract both sides keep by agreement, not a database guarantee). Decide which fits a given relationship.
+- Apply the core denormalization move on `order.OrderItem`: replace the live `inventory_item` foreign key with a `sku`/`item_name`/`unit_price_cents` snapshot captured once at checkout, using an add-then-backfill-then-drop migration sequence that never loses data.
+- Reframe `OrderItem`'s duplicated sku/name/price as a deliberate design choice rather than a normalization lapse, contrasting a historical snapshot (allowed to diverge) with the foreign key's one-fact-one-home guarantee, and name the cost: a later schema change has two places to land, not one.
+- Compare Review's deferred shared-table choice against Notification's own-schema-from-day-one choice and Inventory's hybrid (owned data behind a transition-only CDC backfill), and state the two-writer/split-brain argument that decides correctly between them.
+- Name the four problems ch.19 has to solve together, an owned schema, a synchronous `Reserve`/`Release` across a network boundary, a transition-only CDC backfill, and cutting `OrderItem`'s foreign key, before Inventory's extraction can be both correct and reversible.
+
+## Why this matters
+
 Every extraction this book has built so far has quietly deferred the same
 question. `examples/02-review-service` (ch.15) reads and writes the
 monolith's own shared Postgres tables directly, a database-per-service

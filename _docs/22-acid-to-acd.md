@@ -6,6 +6,20 @@ description: "The consistency just given up -- dirty reads, lost updates, non-re
 duration: 35 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- State SMELL #3 precisely (one `transaction.atomic()` block in `order/services.py::place_order` spanning order, inventory, payment, and shipping) and explain why it "works" today only because Postgres gives atomic rollback automatically.
+- Explain why the rollback ch.19 measured cannot survive decomposition: it was Postgres's locking and write-ahead log doing work the monolith's single-process architecture made invisible, work that stops the moment a write lands in a different service's database.
+- Define ACD (Atomic locally, Consistent, Durable, isolation dropped) and trace exactly what `_place_order_choreographed` keeps inside its smaller `transaction.atomic()` block versus what it gives up.
+- Explain a compensating action (`handle_payment_declined`, the `ShippingFailed` branch of `handle_payment_captured`) as a new, hand-written, forward-moving reaction, not a database rollback, and why nothing makes it fire automatically once a saga spans services.
+- Connect CAP and PACELC to the `PAYMENT_MODE` choice, and explain why "correctness" under ACD means bounded, exactly-once convergence rather than instantaneous, globally agreed state.
+- Identify the classic isolation anomalies (dirty read, lost update, non-repeatable read) that reappear once services commit independently, and explain why inventory's reservation stays synchronous while payment gets the full saga treatment.
+- Explain the stranded-payment gap as a named, ledgered deferral rather than a silent defect, and why it is left open for Chapter 24's orchestrated saga to close.
+
+## Why this matters
+
 Every extraction this book has built so far has been upfront about what it
 costs, and most of those costs have been bounded and local: a slower cold
 start, a second schema to migrate, a proto contract to keep in sync. ch.19

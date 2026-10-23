@@ -6,6 +6,20 @@ description: "The transactional outbox cures the dual-write hazard; an idempoten
 duration: 50 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain why SMELL #5/#6's synchronous, in-transaction notification call couples checkout's latency and failure domain to Kafka, and why curing it means changing *when* the work happens, not just where it runs.
+- Write an `OutboxEvent` row inside the same `@transaction.atomic()` as `place_order()`'s other writes, and state precisely where that atomicity guarantee stops: the separate, at-least-once hop `outbox_relay.py` makes from table to Kafka.
+- Build `OrderPlacedConsumer` as an `aiokafka` consumer and give `record_order_placed` two independent layers of idempotency: an application-level check-then-insert and a database partial unique index (`uq_notifications_order_id`) as the backstop for a race.
+- Justify why notification-service's owned schema must stay free of foreign keys into the monolith's tables, using the two-independent-writers/split-brain argument, and contrast it with review-service's defensible shared-table reads.
+- Design a bounded-wait eventual-consistency poll assertion (20 x 750ms) for `GET /api/notifications` that passes unedited whether the monolith's own consumer or notification-service's consumer currently answers.
+- Construct a negative check (kill notification-service to force the proxy's real 502 through the full poll budget, restart it to return to green) that proves the async assertion is testing the real pipeline rather than agreeing with whichever backend answers first.
+- Publish the same `order.placed` payload twice through a Testcontainers-managed Kafka broker and the real `OrderPlacedConsumer`, and assert exactly one `Notification` row survives, before trusting the idempotency claim made in prose.
+
+## Why this matters
+
 ch.16 named two ideas: content-based routing generalized past a URL path,
 and the anti-corruption layer as a contract rather than a request, without
 yet building the extraction that needed both. This chapter is that

@@ -6,6 +6,20 @@ description: "ACID gives way to ACD; checkout's synchronous 201/402 contract bec
 duration: 45 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain how payment's extraction retires the last request-thread crutch from SMELL[ch.22]: `_place_order_choreographed` never calls payment-service at all, so there is no `except` block left to compensate from.
+- Define choreography versus orchestration as two saga control styles, and explain why this chapter picks choreography: no coordinator, every participant reacting to an event and emitting the next one.
+- Explain why the checkout contract changes from `201 Created` with a terminal status to `202 Accepted` with a pollable resource, and why `202` is the accurate status code for a decision not yet known at response time.
+- Trace the two-outbox event topology (`order.placed` to `payment.captured`/`payment.declined`) and identify `order_saga_listener`, a Django management command, as the monolith's first saga consumer.
+- Explain how compensation moves from an in-line `except` block to `handle_payment_declined`, and why the pre-handoff and post-handoff compensation paths are disjoint by construction, not convention.
+- Apply the two-layer idempotency pattern (a client-side status-transition guard plus a database `ON CONFLICT DO NOTHING` ledger) at both hops of the chain, and explain how it bounds the compensating release to firing at most once per order.
+- Use a negative check (killing payment-service, disabling the compensation loop) to prove a bounded-wait assertion is testing the real pipeline rather than passing by coincidence.
+
+## Why this matters
+
 ch.22 named the cost: once payment moves to a service that reacts to an
 event instead of answering a call, checkout's single transaction can no
 longer span the whole business operation, and Isolation is the guarantee

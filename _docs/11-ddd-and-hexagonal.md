@@ -5,6 +5,20 @@ part: "Finding the Seams"
 description: "Subdomains, bounded contexts, context mapping, aggregates, and domain events: keeping the ORM out of the domain core so extraction is mechanical."
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Classify each of the monolith's six Django apps as core, supporting, or generic (order core; inventory, payment, and shipping supporting; notification and review generic), and explain why that classification predicts the book's own extraction order before the roadmap ever states it.
+- Explain why the monolith's shared `common` app and single Postgres schema violate a bounded context's defining property: a private model and a public contract.
+- Use context-mapping vocabulary (shared kernel, customer/supplier, conformist, anti-corruption layer) to diagnose the order-to-inventory relationship, `inventory_services.get_by_sku()`/`reserve()` called directly from `order/services.py`, as an undecided conformist coupling rather than a deliberate choice.
+- Distinguish a value-object snapshot from a live entity reference inside an aggregate, using `OrderItem`'s correct `sku`/`item_name`/`unit_price_cents` snapshot columns and its incorrect practice of reading three fields straight off a live `InventoryItem` instance at the call boundary.
+- Explain hexagonal architecture's ports-and-adapters discipline, and why it makes an already-decided boundary cheap to cut rather than substituting for the decision of where the boundary goes.
+- Read `examples/02-review-service`'s Phase A/B diff (`app/routes.py`'s driving adapter, `app/repository.py`'s async SQLAlchemy driven adapter) and explain why zero outbound edges to sibling business logic, not a textbook `Protocol`-declared port, is what actually made its extraction cheap, and why its still-shared `auth_user` table is a named deferral rather than a cured coupling.
+- Reconstruct the book's extraction order (review, notification, inventory, payment/shipping, order) from subdomain classification, context mapping, and outbound-edge counting alone.
+
+## Why this matters
+
 Chapter 9 catalogued the smells still standing in `examples/00-monolith/` and
 named, for each one, the chapter that will cut it. Chapter 10 built the
 behavior-equivalence suite that will prove each cut preserved behavior. Both

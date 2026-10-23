@@ -6,6 +6,19 @@ description: "Transactional outbox vs. dual-write; idempotent consumers as its n
 duration: 40 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain the dual-write problem structurally: two independent writes to two independent systems, with no sequencing that closes the gap between them, and why "exactly-once" is at-least-once delivery paired with an idempotent consumer.
+- Trace all four pieces of an outbox pipeline (the `OutboxEvent` row, the transactional write inside `@transaction.atomic()`, `outbox_relay.py`'s polling loop, and the idempotent consumer), and explain why `published_at` is stamped only after `send_and_wait()` succeeds, never before.
+- Implement payment-service's own outbox (`create_payment_with_outbox_event` plus `app/relay.py`) as the first consumer-and-producer pair in this book, and name the three idempotency idioms, check-then-insert with a unique-index backstop, `INSERT ... ON CONFLICT` upsert, and a status-transition guard, and which kind of write each one protects.
+- Key every outbox event by `aggregate_id` to get in-order delivery within one order without sacrificing Kafka's ability to parallelize across partitions.
+- Tune the relay's poll interval (`DEFAULT_POLL_MS`) as an explicit latency-versus-read-load trade-off, and name the retention and poison-message gaps, no dead-letter topic, no retry ceiling, no cleanup job, this project leaves open as documented future hardening rather than solved problems.
+- Decide between a polling relay and Debezium-style log-based CDC based on a specific, named latency or read-load requirement, using ch.19's retire-runbook accounting of what the trade costs, rather than defaulting to the more sophisticated-looking mechanism.
+
+## Why this matters
+
 Chapter 17 introduced the transactional outbox at the exact moment the
 monolith needed it: the Notification extraction had to stop running a
 synchronous, out-of-process side effect inside checkout's own

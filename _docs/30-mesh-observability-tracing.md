@@ -6,6 +6,20 @@ description: "Istio (mesh/mTLS/canary), Kiali, OpenTelemetry + the LGTM stack, s
 duration: 40 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain the sidecar mechanism a service mesh uses to add mTLS and observability to every request with zero application-code changes, and why Istio's injection webhook matches a Deployment's pod-template **label** (`sidecar.istio.io/inject`), not an annotation.
+- Configure a namespace-wide Istio `PeerAuthentication` policy set to `STRICT`, add a workload-scoped `PERMISSIVE` exception for `strangler-proxy`'s plaintext NodePort edge, and verify the live enforcement with `istioctl x describe pod` rather than trusting the committed YAML.
+- Distinguish the class of bugs a headless `kubectl kustomize`/`dry-run` pass cannot catch from what a live `kubectl apply -k` against a running minikube cluster reveals.
+- Explain why Envoy produces a trace span for every meshed hop regardless of whether the application inside it is instrumented, and why mesh tracing alone can amplify a trace but never start one or carry its business-level context.
+- Instrument a FastAPI service for distributed tracing by wrapping its entrypoint with `opentelemetry-instrument` and pinning `opentelemetry-distro`, `opentelemetry-exporter-otlp-proto-grpc`, and the resolved `opentelemetry-instrumentation-*` packages, with no manual span-creation code anywhere in the service's business logic.
+- Read a captured, causally connected distributed trace spanning REST, gRPC, and Envoy sidecar hops across `strangler-proxy`, `order-service`, and `inventory-service`, and distinguish application-level spans from Envoy-only spans produced by an uninstrumented service.
+- Identify what this chapter's observability setup does not cover (Loki log shipping and Kafka saga-hop tracing) and explain why those gaps are named in the chapter's own text rather than quietly omitted.
+
+## Why this matters
+
 Chapter 29 put this system on a cluster: eight Deployments, two StatefulSets,
 one namespace, reachable through a single NodePort. Nothing in that chapter
 changed how the services talk to each other: `httpx` still calls
