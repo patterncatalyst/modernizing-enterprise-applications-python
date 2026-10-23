@@ -1,5 +1,5 @@
 ---
-title: "CDC, Transaction Log Tailing & Extraction 3 — Inventory"
+title: "CDC, Transaction Log Tailing & Extraction 3: Inventory"
 order: 19
 part: "Data Across the Seam"
 description: "Debezium-style transaction-log tailing bridges the monolith's still-live table during the cutover window; a gRPC proto-as-ACL seam, an atomic conditional-UPDATE reserve, and an explicit compensating release replace the free rollback a shared transaction used to give away."
@@ -28,32 +28,32 @@ this chapter's end-to-end proof.
 ## Why Inventory leaves third, and why it's the hardest cut yet
 
 Extraction order in this book has never been arbitrary. Review (ch.15) went
-first because it has no synchronous collaborator — the mechanism could be
+first because it has no synchronous collaborator; the mechanism could be
 proven in isolation. Notification (ch.17) went second because, although it
 introduced a real distributed-systems problem (the dual-write hazard), that
 problem was solvable entirely on the *producer* side, with delivery
 semantics (at-least-once) that an idempotent consumer can absorb without the
 monolith ever needing a synchronous answer back. Inventory is the first
 extraction where the monolith needs to know, **before it can confirm an
-order**, whether a remote call succeeded — `place_order()` cannot return
-`201 CONFIRMED` until it knows stock was actually secured, and it cannot
+order**, whether a remote call succeeded: `place_order()` cannot return
+`201 CONFIRMED` until it knows stock was secured, and it cannot
 treat "the inventory service didn't answer" the same as "there wasn't
 enough stock." That requirement is what makes this extraction structurally
 different from the two before it, along three axes at once:
 
 1. **The seam is synchronous**, not fire-and-forget. A gRPC call, not a
-   Kafka topic, carries `Reserve`/`Release`/`CheckStock`/`GetStock` — this
+   Kafka topic, carries `Reserve`/`Release`/`CheckStock`/`GetStock`: this
    book's first synchronous *mutation* across a service boundary (Review's
    synchronous calls were read-only).
 2. **The data has to move out from under a live writer.** Review's and
-   Notification's data postures (ch.18) were each a clean case — shared by
+   Notification's data postures (ch.18) were each a clean case: shared by
    design, or owned from a blank slate. Inventory's `inventory_items` table
    has real rows the monolith has been writing to from the start, and a one-time
    transaction-log backfill has to bridge the gap during cutover without
    losing a reservation.
 3. **The free rollback disappears.** `examples/00-monolith/SMELLS.md`'s
-   smell #2 — one `transaction.atomic()` spanning all five contexts checkout
-   touches — has been "free" from the start because Postgres can unwind five
+   smell #2 (one `transaction.atomic()` spanning all five contexts checkout
+   touches) has been "free" from the start because Postgres can unwind five
    tables' writes with one `ROLLBACK`. The moment `Reserve` commits in
    Inventory's own database, that single write-ahead log no longer spans
    both writes, and the rollback this book has been getting for nothing has
@@ -61,8 +61,8 @@ different from the two before it, along three axes at once:
 
 ## The gRPC seam and the proto as a typed anti-corruption layer
 
-`examples/04-inventory-service/app/grpc_server.py` exposes four RPCs —
-`CheckStock`, `Reserve`, `Release`, `GetStock` — defined in
+`examples/04-inventory-service/app/grpc_server.py` exposes four RPCs:
+`CheckStock`, `Reserve`, `Release`, `GetStock`, defined in
 `proto/dev/patterncatalyst/inventory/v1/inventory.proto` and compiled into
 both the service's own `app/grpc_gen/` and the monolith's `order/grpc_gen/`
 from the same `.proto` source. The proto's own header comment states its
@@ -78,7 +78,7 @@ job directly:
 // happening to already agree.
 ```
 
-{% include excalidraw.html file="inventory-grpc-proto-acl" alt="The monolith's domain vocab, inventory.proto's distinct wire vocab, and inventory-service's own domain vocab, each translated by a client-side and server-side ACL" caption="Figure 19.1 — The proto IS the ACL: two separate vocabularies meet only at the wire" %}
+{% include excalidraw.html file="inventory-grpc-proto-acl" alt="The monolith's domain vocab, inventory.proto's distinct wire vocab, and inventory-service's own domain vocab, each translated by a client-side and server-side ACL" caption="Figure 19.1: The proto IS the ACL: two separate vocabularies meet only at the wire" %}
 
 This is ch.16's ACL argument carried one step further. Notification's ACL
 (`OrderPlacedEvent`) was a Pydantic model this service's own code owned,
@@ -88,9 +88,9 @@ contract enforces more at the type-system level: `inventory.proto`'s field
 names and numbers are frozen and versioned, generated into strongly-typed
 stub code on *both* sides, so a field rename on either side is a compile-
 time (code-generation-time) break, not a runtime surprise discovered by a
-malformed payload. Each side still owns its own translation, though — the
-proto itself does not collapse the two vocabularies into one shared shape,
-and that's deliberate. On the client side, `order/inventory_client.py::
+malformed payload. Each side still owns its own translation, though: the
+proto itself does not collapse the two vocabularies into one shared shape.
+On the client side, `order/inventory_client.py::
 RemoteInventoryClient` is the only place in the monolith that imports the
 generated `inventory_pb2` types at all:
 
@@ -122,12 +122,12 @@ class RemoteInventoryClient:
 
 On the server side, `app/grpc_server.py::InventoryGrpcServiceServicer`
 translates in the opposite direction, and its own module docstring names
-the same deliberate mismatch from the other end — `stock_keeping_unit`/
+the same mismatch from the other end: `stock_keeping_unit`/
 `on_hand_qty`/`unit_price_cents` on the wire, `sku`/`quantity_on_hand`/
 `price_cents` internally, "so the order-side ACL's message translator earns
 its keep converting between the two, instead of the two shapes happening to
-already agree." A `grpc.RpcError` on any call — a timeout, `UNAVAILABLE`, a
-dead connection — is translated by `_unary()` into this project's own
+already agree." A `grpc.RpcError` on any call (a timeout, `UNAVAILABLE`, a
+dead connection) is translated by `_unary()` into this project's own
 `InventoryServiceUnavailable`, a separate exception from
 `InsufficientStock`: a service that can't be reached and a sku that's
 actually out of stock are different failure modes with different HTTP
@@ -149,7 +149,7 @@ isn't: "Role: backfill + sync during the cutover window, retired after it."
 The mechanism is **transaction-log tailing**, not application-level
 polling. `infra/debezium/inventory-connector.json` configures a Debezium
 Postgres connector against `public.inventory_items` using Postgres's
-*logical replication* machinery — the same write-ahead log (WAL) Postgres
+*logical replication* machinery: the same write-ahead log (WAL) Postgres
 already maintains for crash recovery and streaming replication, repurposed
 as a change-event source:
 
@@ -170,18 +170,18 @@ as a change-event source:
 
 `snapshot.mode=initial` is what makes this a **backfill**, not just an
 ongoing sync: on first start, the connector emits one `op=r` ("read") event
-per row already in `public.inventory_items` — the one-time copy that
-populates Inventory's otherwise-empty schema — before switching to
+per row already in `public.inventory_items` (the one-time copy that
+populates Inventory's otherwise-empty schema) before switching to
 streaming `op=c`/`u`/`d` events for every subsequent insert, update, and
 delete. `scripts/register-debezium.sh` runs one extra step before
 registering the connector, `ALTER TABLE public.inventory_items REPLICA
 IDENTITY FULL`, which is what makes Postgres include a *complete*
-before-image on `UPDATE`/`DELETE` events rather than just the primary key —
+before-image on `UPDATE`/`DELETE` events rather than just the primary key;
 without it, a deleted row's change event would carry only an id, not the
 full row Inventory's consumer needs to apply the delete correctly.
 
 `app/cdc_consumer.py::InventoryCdcConsumer` is the subscriber on the other
-end — an `aiokafka` consumer, same library this project already uses for
+end: an `aiokafka` consumer, same library this project already uses for
 Notification's event pipeline, applying every event through a single
 idempotent upsert:
 
@@ -205,7 +205,7 @@ async def _upsert(session: AsyncSession, after: dict) -> None:
 ```
 
 `r`, `c`, and `u` events all funnel through this one `INSERT ... ON CONFLICT
-DO UPDATE` — a database-native upsert, not a check-then-insert pattern like
+DO UPDATE`: a database-native upsert, not a check-then-insert pattern like
 Notification's idempotency layer (ch.17), because there's no natural
 "already applied" marker for a row *update* the way there is for a
 notification keyed on `order_id`. `d` events funnel through a keyed
@@ -213,7 +213,7 @@ notification keyed on `order_id`. `d` events funnel through a keyed
 reason ch.17's dedupe is: applying the same upsert or the same delete twice
 produces the same end state as applying it once.
 
-{% include excalidraw.html file="cdc-backfill-then-retire" alt="Transaction-log tailing end to end: Postgres WAL, replication slot, Debezium Postgres connector, Kafka topic, and InventoryCdcConsumer's upsert into the owned schema, with the retire runbook ghosted as the step that follows cutover" caption="Figure 19.2 — CDC tails the WAL for a one-time backfill plus transition sync, then is retired" %}
+{% include excalidraw.html file="cdc-backfill-then-retire" alt="Transaction-log tailing end to end: Postgres WAL, replication slot, Debezium Postgres connector, Kafka topic, and InventoryCdcConsumer's upsert into the owned schema, with the retire runbook ghosted as the step that follows cutover" caption="Figure 19.2: CDC tails the WAL for a one-time backfill plus transition sync, then is retired" %}
 
 ## Owned data, then own seed: why you retire the tailed log
 
@@ -225,14 +225,14 @@ Inventory's schema directly, via `migrations/versions/0002_seed_inventory.py`,
 with the same three demo skus the monolith seeds (`SKU-WIDGET-001`/100,
 `SKU-GADGET-002`/50, `SKU-GIZMO-003`/5). CDC is a real operational concern
 for a *staged production rollout* where the monolith and Inventory run
-side by side for some period — not a testing concern — which is exactly why
+side by side for some period, not a testing concern, which is exactly why
 it ships disabled by default rather than on.
 
 `CUTOVER.md`'s retire runbook is explicit about the condition that makes the
 tailed log safe to tear down, and it's a conjunction, not either half alone:
 
 1. The monolith's checkout code calls Inventory's gRPC `Reserve`/`Release`
-   **exclusively** — Inventory's own table is now the only place stock
+   **exclusively**: Inventory's own table is now the only place stock
    mutations land, so there is nothing left on the monolith's side to
    stream from.
 2. The monolith's `public.inventory_items` table (and the Django
@@ -240,7 +240,7 @@ tailed log safe to tear down, and it's a conjunction, not either half alone:
    strangler end-state posture for every other extracted context.
 
 Once both hold, `scripts/retire-debezium.sh` deletes the connector and
-drops both the replication slot and the publication — not just the
+drops both the replication slot and the publication, not just the
 connector, because an un-drained replication slot retains WAL on the
 source Postgres indefinitely, a disk-fill risk with no further benefit once
 nothing is reading from it. The script is written defensively: deleting an
@@ -251,7 +251,7 @@ after the connector is deleted), rather than racing a `pg_drop_
 replication_slot` call that would otherwise fail loudly. This is the same
 discipline ch.17's outbox relay docstring stated about itself when it called
 out that CDC was a deferred alternative to its own polling
-loop — "CDC becomes worth its complexity once polling latency or database
+loop: "CDC becomes worth its complexity once polling latency or database
 load from polling itself becomes the bottleneck." Here, that complexity is
 finally worth paying, but only for the duration of a cutover window, and
 the runbook that retires it is as much a deliverable as the connector
@@ -260,7 +260,7 @@ config that registers it.
 ## Two phases, and a gRPC server with no Django original to lift
 
 Following the same two-phase discipline ch.15 established, `MIGRATION.md`
-measures what a Django-ORM-lifted Phase A would have cost — but this
+measures what a Django-ORM-lifted Phase A would have cost, but this
 extraction is a hybrid of Review's and Notification's stories, not a clean
 match for either. The **REST read surface** (`GET /api/inventory`) does have
 a monolith original to lift, so it gets the same Phase A/B treatment Review's
@@ -269,7 +269,7 @@ original at all, and the reason is structural, not incidental: the
 monolith's `reserve` concern lived against a pessimistic-lock derived query,
 running inside the same Django transaction as the rest of checkout. A
 faithful Phase A `Reserve` would have to call into that in-process mechanism
-from a separate FastAPI process over a network call — which is incoherent,
+from a separate FastAPI process over a network call, which is incoherent,
 because the monolith's mechanism is specifically "stay in one transaction,"
 and a gRPC call from a different process cannot join it. There is no
 smaller, less-idiomatic version of "atomic check-and-decrement exposed over
@@ -286,9 +286,9 @@ the same conclusion Notification's `MIGRATION.md` reached for its consumer.
 Taken at face value, this extraction lands closer to Notification's
 reading than Review's near-wash: Phase B costs noticeably more at both the
 import stage (`grpc`'s own C-extension, `aiokafka`'s import graph) and the
-running-server stage. That gap is not a regression to chase down — Phase A's
+running-server stage. That gap is not a regression to chase down: Phase A's
 proxy measures a read-only surface with no gRPC capability at all, while
-Phase B's running number reflects a *second, live network server* actually
+Phase B's running number reflects a *second, live network server*
 bound and accepting connections on `:9004` alongside the HTTP surface on
 `:8084`, real capability Phase A structurally could never have measured.
 
@@ -303,7 +303,7 @@ what happens to the free rollback smell #2 has been describing all along?
 between two checkout strategies, and reading them side by side is the
 clearest way to see exactly what changed:
 
-{% include codetabs.html langs="local mode (UNCHANGED) — free rollback|grpc mode (ch.19) — explicit compensation" %}
+{% include codetabs.html langs="local mode (UNCHANGED): free rollback|grpc mode (ch.19): explicit compensation" %}
 
 ```python
 # order/services.py -- _place_order_local, UNCHANGED from the monolith
@@ -349,25 +349,25 @@ def _place_order_remote(customer, items, payment_method, shipping_address):
 Reserve is not part of this process's Postgres transaction and cannot be
 rolled back by it." `local` mode's `reserve()` call sits *inside* the same
 `transaction.atomic()` as the order row, the payment charge, and the
-shipping dispatch — a `PaymentDeclined` three lines later unwinds the
+shipping dispatch; a `PaymentDeclined` three lines later unwinds the
 reservation along with everything else automatically, because all of it shares one
 write-ahead log. `grpc` mode's `client.reserve(sku, quantity)` call happens
 **before** that `transaction.atomic()` even opens, against a *different*
-process's Postgres instance — by the time a decline happens inside the
+process's Postgres instance. By the time a decline happens inside the
 local block, the remote `UPDATE` has already committed in Inventory's own
 database, on Inventory's own WAL, which this process has no way to touch.
 
-{% include excalidraw.html file="reserve-release-saga-lite" alt="Before and after panels: the single local transaction.atomic() giving a free rollback across reserve, order, payment, and shipping, versus the gRPC Reserve committing outside any local transaction with an explicit compensating Release wired to PaymentDeclined and ShippingFailed" caption="Figure 19.3 — Reserve/release across the boundary: where the free rollback went" %}
+{% include excalidraw.html file="reserve-release-saga-lite" alt="Before and after panels: the single local transaction.atomic() giving a free rollback across reserve, order, payment, and shipping, versus the gRPC Reserve committing outside any local transaction with an explicit compensating Release wired to PaymentDeclined and ShippingFailed" caption="Figure 19.3: Reserve/release across the boundary: where the free rollback went" %}
 
 This is why `Release` exists at all, and why `_place_order_remote`'s
 `except Exception: _release_reserved(client, reserved); raise` is not
-defensive boilerplate — it is the entire mechanism that keeps checkout's
+defensive boilerplate; it is the entire mechanism that keeps checkout's
 observable behavior identical between the two modes. `_reserve_lines_remote`
 tracks every `(sku, quantity)` pair this checkout has successfully reserved
-so far; the moment anything fails — a later line's `InsufficientStock`, a
-dead inventory service raising `InventoryServiceUnavailable`, or (caught by
-the outer `try`) a `PaymentDeclined`/`ShippingFailed` raised from inside the
-still-local atomic block — every sku reserved this checkout gets an explicit
+so far; the moment anything fails (a later line's `InsufficientStock`, a
+dead inventory service raising `InventoryServiceUnavailable`, or, caught by
+the outer `try`, a `PaymentDeclined`/`ShippingFailed` raised from inside the
+still-local atomic block), every sku reserved this checkout gets an explicit
 compensating `Release` call before the exception propagates to the caller.
 This is this book's first deliberate taste of a **choreographed saga**
 (forward-referenced to ch.23's full treatment): no central coordinator, no
@@ -377,7 +377,7 @@ responsibility for undoing it when a later step fails.
 ## Reserve's atomic conditional decrement, and Release its mirror
 
 The compensating `Release` only works because `Reserve` itself is correct
-under concurrency in the first place — a guarantee `app/repository.py::reserve`
+under concurrency in the first place: a guarantee `app/repository.py::reserve`
 earns with a single SQL statement, not a read-then-write:
 
 ```python
@@ -396,17 +396,17 @@ One conditional `UPDATE`, not a `SELECT` to check stock followed by a
 separate `UPDATE` to decrement it. That distinction is the entire
 concurrency-safety argument: a read-then-write has a window between the two
 statements where a second caller's own read-then-write can interleave,
-and both can believe they're decrementing from the same starting quantity —
+and both can believe they're decrementing from the same starting quantity:
 the classic lost-update race, oversold stock. A single conditional `UPDATE`
 has no such window, because Postgres takes a row-level write lock for the
 *duration of the statement itself*; two concurrent `Reserve(sku, 1)` calls
 against a sku with exactly one unit left serialize on that lock, and
 whichever commits first leaves `quantity_on_hand` below the other's
-`>= qty` predicate — so exactly one `UPDATE` affects a row (`rowcount == 1`,
+`>= qty` predicate, so exactly one `UPDATE` affects a row (`rowcount == 1`,
 `reservation_ok=true`) and the other affects none (`rowcount == 0`,
 `reservation_ok=false`, no partial or duplicate decrement). No application-
 level lock, no `SELECT ... FOR UPDATE`, no optimistic-locking version
-column — the database's own write-lock semantics are the entire mechanism.
+column: the database's own write-lock semantics are the entire mechanism.
 
 `tests/test_inventory_grpc.py::test_reserve_concurrent_requests_for_last_unit_exactly_one_succeeds`
 proves exactly this, against the real `InventoryGrpcServiceServicer` coroutine
@@ -422,19 +422,19 @@ assert outcomes.count(True) == 1   # never both oversold
 assert outcomes.count(False) == 1  # never both stuck/under-sold
 ```
 
-`Release` is the mirror statement — `UPDATE ... SET quantity_on_hand =
-quantity_on_hand + :qty WHERE sku = :sku` — but **unconditional**,
+`Release` is the mirror statement (`UPDATE ... SET quantity_on_hand =
+quantity_on_hand + :qty WHERE sku = :sku`) but **unconditional**,
 with no upper-bound check. The docstring in both `app/repository.py::release`
 and `app/grpc_server.py::InventoryGrpcServiceServicer.Release` names a
 documented limitation rather than quietly building around it: unlike `Reserve`'s
 conditional `UPDATE`, this increment carries no dedupe or idempotency key, so
 a *retried* `Release` call whose effect already landed server-side would
-over-restore stock. A full fix — an idempotency key per reservation,
-or a saga ledger recording reserve/release pairs — is deferred
+over-restore stock. A full fix (an idempotency key per reservation,
+or a saga ledger recording reserve/release pairs) is deferred
 to a later choreographed-saga chapter. This is this project's scope
 discipline doing its job: building that machinery now, for a flag this
 book's own exercised paths never need to retry against, would be
-speculative infrastructure ahead of the chapter that actually earns it.
+speculative infrastructure ahead of the chapter that earns it.
 
 ## `OrderItem`'s foreign key, finally cut
 
@@ -454,12 +454,12 @@ line_snapshots.append({
 ```
 
 There is no `inventory_item` FK left to populate even if this code wanted
-one — `OrderItem.inventory_item` doesn't exist anymore, in either mode.
+one: `OrderItem.inventory_item` doesn't exist anymore, in either mode.
 `local` mode still reads the row returned by `inventory_services.reserve()`
 in-process; `grpc` mode reads the same facts off `GetStock`'s reply, carried
 across the network instead of across a join. Both modes write the identical
 `OrderItem` shape, which is exactly why the two modes are observably
-indistinguishable to anything downstream — the snapshot ch.18 introduced is
+indistinguishable to anything downstream: the snapshot ch.18 introduced is
 what makes `OrderItem` agnostic to which mode wrote it.
 
 ## Cutover: two independent dimensions, not one
@@ -473,25 +473,25 @@ reasoning about this chapter:
 | Checkout-time reserve/release | `INVENTORY_MODE` (`local`\|`grpc`) | the monolith, `config/settings.py` | who answers the synchronous write path inside `place_order()` |
 | `GET /api/inventory*` reads | `STRANGLER_INVENTORY_ENABLED` | the strangler proxy, `examples/01-strangler-proxy/app/config.py` | who answers the read path |
 
-{% include excalidraw.html file="two-cutover-dimensions" alt="The two independent cutover flags as a 2x2 grid, marking the two exercised locked-together corners against the two split corners sound only during the CDC-backfilled transition window" caption="Figure 19.4 — Two independent cutover dimensions, locked together in this book's exercised runs" %}
+{% include excalidraw.html file="two-cutover-dimensions" alt="The two independent cutover flags as a 2x2 grid, marking the two exercised locked-together corners against the two split corners sound only during the CDC-backfilled transition window" caption="Figure 19.4: Two independent cutover dimensions, locked together in this book's exercised runs" %}
 
-They don't have to move together — a split combination (`grpc` reserve with
+They don't have to move together: a split combination (`grpc` reserve with
 monolith-served reads, or the reverse) is sound precisely during the
 CDC-backfilled transition window this chapter just built, when both copies
 of the data are being kept consistent by design. As a *steady-state*
 configuration, though, this book only exercises the two corners where both
 dimensions point the same direction, because that's the pair the CI gate
-below actually proves end to end.
+below proves end to end.
 
 `tooling/newman/GOLDEN-BASELINE.md`'s gRPC lane runs the unedited
 `mea.postman_collection.json` against both locked-together configurations:
 
 | Run | `INVENTORY_MODE` | `STRANGLER_INVENTORY_ENABLED` | Result |
 |---|---|---|---|
-| A — fully gRPC | `grpc` | `true` | **71/71 assertions green**, 0 failed |
-| B — fully local (reversibility) | `local` | unset | **71/71 assertions green**, 0 failed, byte-identical shape to A |
+| A: fully gRPC | `grpc` | `true` | **71/71 assertions green**, 0 failed |
+| B: fully local (reversibility) | `local` | unset | **71/71 assertions green**, 0 failed, byte-identical shape to A |
 
-Run A's result is the proof this chapter's compensation logic actually
+Run A's result is the proof this chapter's compensation logic
 fires, not just that the suite's own before/after assertions matched:
 querying `GET /api/inventory/SKU-WIDGET-001` **directly**, outside the
 suite's own assertions, around Scenario 3 (payment-declined) and Scenario 4
@@ -505,8 +505,8 @@ After ship-fail:   {"quantityOnHand": 96}   (SHIPPING_FAILED, 422)
 ```
 
 Net-zero stock here is not Postgres's free rollback doing the work, the way
-it was in `local` mode — it's `_place_order_remote`'s `except Exception:
-_release_reserved(...)` firing a genuine `Release` RPC, proven by direct
+it was in `local` mode. It's `_place_order_remote`'s `except Exception:
+_release_reserved(...)` firing a `Release` RPC, proven by direct
 query rather than inferred from the suite's own internal bookkeeping. Run
 B's byte-identical 71/71 confirms the flip is still fully reversible: the
 monolith's own in-process path (`SMELL[ch.22]`'s free rollback, intact)
@@ -517,13 +517,13 @@ whole point of routing both through the identical, unedited collection.
 
 With `INVENTORY_MODE=grpc` and `STRANGLER_INVENTORY_ENABLED=true` still
 active, killing `examples/04-inventory-service` outright has to break
-**both** surfaces this cutover touches, each in its own correct way — a
+**both** surfaces this cutover touches, each in its own correct way: a
 single negative check covering only one of them would leave the other
 unproven.
 
 **Reads**, through the strangler proxy: every request gets a real `502 Bad
 Gateway`, the same documented fail-safe ch.14 established for a dead
-upstream —
+upstream:
 
 ```
 01. AssertionError  Inventory list returns 200
@@ -532,7 +532,7 @@ upstream —
 
 **4/4 assertions failed, newman exit code 1.** **Checkout**, through the
 monolith's `grpc`-mode reserve: `POST /api/orders` gets a real `503 Service
-Unavailable`, not a hang and not a silently-confirmed order —
+Unavailable`, not a hang and not a silently-confirmed order:
 
 ```json
 {"error":"INVENTORY_UNAVAILABLE","message":"Inventory service unavailable: StatusCode.UNAVAILABLE failed to connect to all addresses; last error: UNKNOWN: ipv4:127.0.0.1:9004: Failed to connect to remote host: Connection refused","timestamp":"2026-10-16T14:08:22.850691+00:00"}
@@ -542,19 +542,19 @@ Unavailable`, not a hang and not a silently-confirmed order —
 `RemoteInventoryClient._unary()`'s `grpc.RpcError` → `InventoryServiceUnavailable`
 mapping working exactly as designed: a dead inventory service fails checkout
 cleanly with a 503, and that 503 is never confused with a logical 409
-`OUT_OF_STOCK` — a materially different failure mode `common/exceptions.py`'s
+`OUT_OF_STOCK`: a materially different failure mode `common/exceptions.py`'s
 docstring calls out explicitly, because an operator deciding whether to page
 someone needs to know the difference between "we're sold out" and "a
 dependency is down." Restarting the service returns both folders to fully
 green (`Inventory Context Contract: 3 requests, 11/11 assertions, 0 failed`;
-`Scenario 1 — Happy-Path: 4 requests, 14/14 assertions, 0 failed`) —
+`Scenario 1 — Happy-Path: 4 requests, 14/14 assertions, 0 failed`):
 recovery proven, not assumed.
 
 A no-flags control run (the plain default invocation, no `--env-var` at all)
 confirms the new Inventory folder is a true no-op for every pre-existing
 caller: all three Inventory requests fire as harmless, idempotent reads and
 assert nothing with their guard off, and critically the Notification folder
-is **not stranded** — it still fires and halts exactly where it always has,
+is **not stranded**: it still fires and halts exactly where it always has,
 at the identical 60/60 assertions the baseline established.
 A new folder that could strand an existing one would be a regression no
 amount of new coverage should be allowed to hide behind.
@@ -563,15 +563,15 @@ amount of new coverage should be allowed to hide behind.
 
 One detail in the numbers above is easy to miss: **no Kafka broker was
 started for the NEWMAN-GRPC lane at all.** Both Run A
-and Run B exercise the full checkout and read surfaces — including the
-compensating `Release` path — without the CDC consumer running, because by
+and Run B exercise the full checkout and read surfaces (including the
+compensating `Release` path) without the CDC consumer running, because by
 design, Inventory's end state never depends on it. The gRPC server and the
 REST read surface are backed entirely by Inventory's own, independently
 seeded `inventory` schema; Debezium's only job was bridging a transition
 window this CI posture doesn't need to simulate. A production rollout would
 run the real backfill during its own transition; this project's gate proves
 the steady state that transition leads to, which is the state this book's
-tests actually need to be fast and deterministic in CI.
+tests need to be fast and deterministic in CI.
 
 ## What you learned
 
@@ -587,24 +587,24 @@ tests actually need to be fast and deterministic in CI.
   two shapes happening to agree.
 - Transaction-log tailing (Debezium reading Postgres's WAL via a logical
   replication slot) is the correct tool for a one-time backfill plus
-  transition sync — and the correct discipline is retiring it, with an
+  transition sync; the correct discipline is retiring it, with an
   explicit runbook, the moment the condition that justified it (both
   dimensions of cutover complete) is met, not leaving it running as
   permanent infrastructure nobody owns.
 - Once `Reserve` commits in a different process's database, the free
   rollback a shared transaction used to provide is gone for good; a
   caller-tracked, explicitly-invoked compensating `Release` is what rebuilds
-  it — proven not by inference but by directly querying stock before and
+  it, proven not by inference but by directly querying stock before and
   after a declined/failed checkout and finding it unchanged.
 - `Reserve`'s single conditional `UPDATE` is concurrency-safe without any
   application-level lock because Postgres's own row-level write lock
-  serializes concurrent callers for the statement's duration — proven
+  serializes concurrent callers for the statement's duration, proven
   against two real concurrent RPC calls racing the last unit of stock, not
   asserted in prose.
 - Inventory's cutover has two independent dimensions (checkout-time
   reserve/release, and `GET /api/inventory*` reads) that can move
   separately during a transition but are only exercised, end to end, as two
-  locked-together configurations in this project's CI gate — and a dead
+  locked-together configurations in this project's CI gate, and a dead
   downstream has to fail loudly on *both* surfaces it touches, each with
   its own correct status code, for the gate to mean anything.
 
