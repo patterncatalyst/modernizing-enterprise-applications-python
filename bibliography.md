@@ -1,5 +1,5 @@
 ---
-title: "Reading List"
+title: "Bibliography"
 layout: plan
 permalink: /bibliography/
 description: "The reference books this modernization course's patterns, rigor, and vocabulary draw on — nothing here is ported from them."
