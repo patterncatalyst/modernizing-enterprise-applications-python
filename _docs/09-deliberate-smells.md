@@ -6,6 +6,20 @@ description: "The coupling, god-service, shared-table, and transaction-scope sme
 duration: 30 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Locate every `# SMELL[ch.NN]:` tag with `grep -rn 'SMELL\[ch\.' examples/00-monolith` and map each of the seven to the chapter that cures it.
+- Explain why a "seam" is a conceptual boundary the implementation currently welds shut, not an arbitrary place where code could be split.
+- Diagnose the shared-schema smell (one Postgres schema, one Django migration history across six apps) and explain why cross-context foreign keys stay invisible until a migration from another app breaks a query it never knew it was leaning on.
+- Diagnose the god `place_order()` function using the "describe it in one sentence without 'and'" heuristic, and explain why no change local to `place_order()` itself, only removing other contexts' direct calls, can cure it.
+- Explain why one `transaction.atomic()` block spanning five contexts is correct only because every context shares one Postgres instance, and name what has to replace it (sagas, ch.22-24) once those contexts get separate databases.
+- Diagnose the synchronous-notification and dual-write-hazard smells, already cured, and name the pattern (transactional outbox plus an idempotent consumer) that cures each.
+- Use review's already-cured smell 7 (shared Basic-auth coupling) as the existence proof that "tag it, name the cure, extract it" survives contact with a real codebase, verified by ch.15's 11/11 passing pytest suite.
+
+## Why this matters
+
 Ch.8 built the monolith as a defensible "before." This chapter reads the
 same codebase a second time, this time hunting: seven smells, planted by
 design, each one tagged in-code with a comment of the exact shape

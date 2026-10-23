@@ -6,6 +6,20 @@ description: "The six bounded contexts as one Django deployable: domain model, l
 duration: 35 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain why the monolith's six bounded contexts (order, inventory, payment, shipping, notification, review) are split along Django app lines, and name the conceptual boundary each one models.
+- Read the views-services-serializers-urls layering shared across all six contexts and explain why business logic lives in `services.py`, kept out of DRF's `views.py`, with no hexagonal ports drawn yet.
+- Trace `order/services.py::place_order()` call by call and explain how the row-level lock in `inventory/services.py::find_with_lock_by_sku` (a Postgres `SELECT ... FOR UPDATE` via `select_for_update()`), used by `reserve()`, prevents two concurrent checkouts from overselling the same SKU.
+- Identify where cents-as-integer currency (`total_cents`, `unit_price_cents`), Django's `TextChoices` enum (`Order.Status`), and a cascading `OrderItem.order` foreign key with `on_delete=models.CASCADE` are used, and state the bug each one avoids.
+- Explain why this chapter chose mainstream Django 5.2 LTS and DRF over an exotic framework or hand-rolled ASGI app, so the book's modernization lesson comes from the shape of the deployment (one process, one schema) rather than from a framework choice.
+- Recognize that DRF's camelCase serializers (`OrderCreateSerializer`, `OrderSerializer`) already do the translation job a hand-rolled FastAPI Pydantic schema will do later, once a context leaves the monolith, and that each app's `services.py` is what becomes that extracted service's own application layer.
+- Read the shared-schema ER diagram and name the cross-context foreign keys (`orders.customer_id`, `payments.order_id`, `shipments.order_id`, `notifications.customer_id`/`order_id`, `reviews.customer_id`/`inventory_item_id`) that Chapter 9 tags as smells and later chapters (ch.18/19) cut.
+
+## Why this matters
+
 Every chapter before this one has been setup: toolchain, ledger, strategy,
 the ADLC itself. This is the first chapter with a running system behind it.
 `examples/00-monolith` is a Django 5.2 LTS project: one process, one

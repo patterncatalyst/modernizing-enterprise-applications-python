@@ -6,6 +6,19 @@ description: "Schema/API/shared-data-type registry use cases and enterprise requ
 duration: 35 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain what problem a schema registry solves that a hand-maintained Pydantic contract cannot (centralized governance and compatibility enforcement with teeth) and why `payment_method` silently drifted out of notification-service's copy of `OrderPlacedEvent`.
+- Author an Avro `.avsc` schema that is a field-for-field mirror of an existing Pydantic model, including a logical type (`timestamp-millis`) that documents a field's meaning the Pydantic model only carried in a comment.
+- Build a pure-Python Avro producer/consumer path with `fastavro` and `aiokafka` against Apicurio's v3 REST API directly, with no Confluent or Apicurio SDK serde to lean on, and explain why that path exists.
+- Trace the register/serialize/deserialize flow: idempotent registration on first publish via `register_or_resolve`, a global schema id packed into a hand-rolled wire envelope, and a consumer-side lookup of that id against the registry.
+- Configure an Apicurio compatibility rule (BACKWARD, FORWARD, FULL) and predict whether a given schema evolution (a new optional field with a default versus a retyped existing field) will be accepted or rejected at registration time.
+- Justify why this chapter proves the registry as an isolated, parallel demonstrator (`examples/09-schema-registry-demo`) rather than retrofitting the live `order.placed` topic, and name what a real cutover would additionally require.
+
+## Why this matters
+
 Chapter 17 introduced `order.placed` as a JSON Kafka event and, in the same
 breath, introduced a cost this book has been carrying ever since: there is
 no shared package between any two of this project's eight independently

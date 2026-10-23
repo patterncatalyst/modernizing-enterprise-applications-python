@@ -6,6 +6,20 @@ description: "Unit and pytest/Testcontainers integration tests plus the Newman c
 duration: 30 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain the two-layer equivalence proof (a pytest/pytest-django whitebox suite that knows the monolith's internals, and a Newman blackbox contract collection that knows only its HTTP surface) and state the one question each layer answers that the other structurally can't.
+- Read `tests/conftest.py`'s shared fixtures and the seven test files under `tests/`, and explain why `test_smoke.py`, `test_checkout.py`, `test_outbox.py`, and `test_review_auth.py` are the chapter's core four, with the remaining three earning their own file as later chapters flip `INVENTORY_MODE`/`PAYMENT_MODE`/`SHIPPING_MODE`.
+- Explain why every test in the suite runs against `pytest.mark.django_db` with a real Postgres database rather than a mocked ORM, and why mocking out `payment_services.charge()` would delete the exact transactional rollback the suite exists to prove.
+- Define the behavior-equivalence suite's role as a blackbox contract (`tooling/newman/mea.postman_collection.json`) captured against the unmodified monolith before any extraction begins, and explain why `GOLDEN-BASELINE.md`'s frozen run (14 requests, 28 scripts, 42 assertions) is that captured "before."
+- Explain why the Newman collection's `{{baseUrl}}` variable and `local.postman_environment.json`/`proxy.postman_environment.json` environment files, rather than hardcoded request targets, let the same unedited collection run safely against both the monolith and a freshly extracted service.
+- Explain why Scenario 1-4's failure-injection paths (`CARD-DECLINE`, `SHIP-FAIL`) capture their own "before" stock level as a collection variable instead of asserting an absolute number, and why that makes the collection safe to re-run against a long-lived process rather than a fresh database every time.
+- State the operating rule Part 5 builds on this collection starting in ch.14: the collection is never rewritten per extraction, only re-pointed, and explain why a green run of the exact same unedited JSON file, not a modified or subset version, is what makes an extraction "done."
+
+## Why this matters
+
 Ch.9 named seven smells and pointed each one at the chapter that cures it.
 None of those cures are safe to make without a way to prove, afterward,
 that nothing observable changed. That proof has two layers in this project:

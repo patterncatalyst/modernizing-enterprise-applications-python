@@ -6,6 +6,20 @@ description: "Compose to cluster: a kustomize base/overlay split for the 8-servi
 duration: 35 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain the two separate moves this chapter makes: containerizing eight processes that previously ran under `docker compose`, and relocating Postgres/Kafka from compose-reachable `localhost` ports into in-cluster StatefulSets, and why they carry different costs.
+- Read a kustomize `base`/`overlays/minikube` tree and explain why this project chose kustomize's patch-a-base model over Helm's templating for a single-target-environment deployment.
+- Distinguish a shared `ConfigMap` (`mea-app-config`) from a per-service `env:` override and a `secretKeyRef`-sourced secret, and trace how a frozen-dataclass `Settings.from_env()` reads whichever value Kubernetes injects with zero code change.
+- Map a service's `GET /health` route to its probe shape: real `httpGet /health` checks for the 6 of 8 services that expose one versus a `tcpSocket` fallback for `inventory-service`'s gRPC-only and `graphql-gateway`'s liveness-only surface.
+- Configure a rolling-update strategy (`maxUnavailable: 0`/`maxSurge: 1`) alongside graceful Kafka-consumer shutdown (a `preStop` sleep plus an extended `terminationGracePeriodSeconds`) to avoid a full rebalance delay.
+- Explain why only the `strangler-proxy` Service is exposed as `NodePort` while every other Service stays `ClusterIP`-only, and how that enforces the strangler fig as the system's one edge router at the Kubernetes layer.
+- State precisely what `kubectl kustomize` plus `kubectl apply --dry-run=client` does and does not verify about a live cluster, and why that boundary is a stated scope limit rather than a gap in rigor.
+
+## Why this matters
+
 Every chapter since ch.14 has run this system through `docker compose`:
 eight Containerfiles, a shared Postgres, a single-broker Kafka, all wired
 together by `compose.yaml` and reached on `localhost`. That has been the

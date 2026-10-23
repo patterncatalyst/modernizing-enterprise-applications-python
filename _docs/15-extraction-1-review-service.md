@@ -6,6 +6,19 @@ description: "REST-only, HTTP Basic auth, no sync dependency; proving the full l
 duration: 45 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain why Review is the right first bounded context to extract (REST-only, no synchronous collaborator) and how that ordering proves the extraction mechanism before harder chapters add distributed-transaction problems on top of it.
+- Capture the Newman equivalence collection *before* any code moves, and use it as the gate that turns "the extracted service behaves the same" into a checkable yes/no answer rather than a judgment call.
+- Stand up `examples/02-review-service` against the monolith's own shared Postgres tables, so ch.14's strangler proxy flag can cut traffic over without a migration step in the loop.
+- Run the two-phase migration template: document (never ship) a Phase A that bridges the Django ORM via `sync_to_async`, then ship Phase B's idiomatic FastAPI service with independent SQLAlchemy mappings (`app/models.py`) and `passlib`'s `django_pbkdf2_sha256` auth check.
+- Measure Phase A's cost through a faithful import/startup proxy rather than a shipped server, and explain why Python's real win (no `sync_to_async` tax, no build-time dependency on the monolith) doesn't show up as a startup-time number the way a native-image comparison would.
+- Perform the flag-gated, reversible cutover (58/58 assertions in both directions) and read the negative check, service killed, every assertion failing through the proxy's own 502, as proof the equivalence gate tests this service's actual presence.
+
+## Why this matters
+
 ch.14 built the machinery: a reversible, flag-gated proxy that can hand any
 request to a different backend without the client noticing. This chapter
 puts it to work on the first real extraction: pulling the `review`

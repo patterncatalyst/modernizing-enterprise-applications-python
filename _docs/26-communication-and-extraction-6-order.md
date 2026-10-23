@@ -6,6 +6,20 @@ description: "REST, gRPC, async sagas, and GraphQL (Strawberry) aggregation side
 duration: 45 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain why order had to be extracted last: it is both the god service reaching into every other context and the last context still inside SMELL[ch.22]'s shared transaction, and name what `SMELLS.md` marks STRUCK once it leaves.
+- Trace what disappeared from `place_order()`'s body (direct calls to payment, shipping, and notification) versus what remains (a gRPC reservation, persist, and outbox write), and explain why what remains is the CQRS write model ch.21 already proved.
+- Explain the same-schema `order_view` projection and precisely what read-after-write consistency it does and does not buy once `order-service` owns both its write and read models outright.
+- Use a negative check (a projection-disabled scenario and its live cutover repeat) to prove reads come only from the projection and never silently fall back to the write model.
+- Compare the four communication styles now standing side by side in one system (REST, gRPC, asynchronous choreographed and orchestrated sagas, and GraphQL aggregation) and state the distinct problem each one solves.
+- Explain how `examples/08-graphql-gateway` aggregates five services through lazy, nullable Strawberry resolvers while owning no data itself, why a broken gRPC channel nulls just that field instead of crashing the request, and why bounding query depth and token count and fixing every downstream target in configuration matter for an aggregation layer's attack surface.
+- Explain how freezing, rather than deleting, the decommissioned monolith lets the equivalence suite convert into a contract suite with zero assertions changed, and why reversibility is proven exhaustively right before the one irreversible decommission step.
+
+## Why this matters
+
 Every extraction before this one carved a single slice off the monolith's
 `order/services.py` and left the rest of it standing. ch.15 removed review.
 ch.17 removed notification. ch.19 removed inventory behind a gRPC seam.

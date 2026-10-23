@@ -6,6 +6,19 @@ description: "The GitHub Actions workflows this repo actually ships (the equival
 duration: 35 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Enumerate the four GitHub Actions workflows this repo ships (`code-ci.yml`, `schema-registry.yml`, `supply-chain.yml`, `pages.yml`) and explain why `code-ci.yml`'s single `contract-gate` replaced six separate `*-equivalence-gate` jobs once ch.26 retired every `STRANGLER_*_ENABLED` flag.
+- Explain why this project's flag-gated strangler cutovers constitute progressive delivery, and how an all-or-nothing reversible flag differs from a weighted-canary traffic split.
+- Build a CycloneDX software bill of materials with `syft`, and explain why a scanner should run against the SBOM rather than the image a second time.
+- Configure a policy-as-code gate (`policy.yaml`'s `fail-on`/`gate-on` keys) that turns a fixable High-or-Critical finding into a non-zero exit, and read a `grype` scan's severity tally for two differently-gated images, `order-service` (`gate: required`) and the monolith (`gate: reported`).
+- Explain why `gate-on: fixable` turns an otherwise-unfixable permanent red into a workable gate, and why a CVE scan is a point-in-time claim against a moving vulnerability database that argues for running the supply-chain gate on every push rather than once at release.
+- Name the GitOps components this project does not run (an image-registry push, an Argo CD/Flux reconciliation loop, and Istio weighted canary) and the scope-discipline reason each is a named next step rather than a half-wired demo.
+
+## Why this matters
+
 Chapter 29 put this system on a cluster; Chapter 30, still ahead, puts a
 mesh and an observability stack around it. This chapter steps back from
 both to ask a question neither one answers: how does a change get from a
