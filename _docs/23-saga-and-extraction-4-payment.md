@@ -455,7 +455,3 @@ This closes Extraction 4. Part 7 continues with ch.24, where shipping leaves
 the monolith under the opposite control-flow shape — an orchestrated saga,
 with a coordinator that can finally close the refund gap ch.22 and this
 chapter both named and left open.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>. The full choreographed topology — monolith, payment/inventory/review/notification services, the strangler proxy, and a real Kafka broker — was brought up live for the cutover run in `tooling/newman/`: 95/95 and 89/89 assertions green across the forward and reversed runs, the negative check fails strictly then self-heals on restart, and double-delivery idempotency is proven independently at both the saga and inventory layers. No integration bug surfaced; the known stranded-payment-on-ship-fail gap (ch.22) remains open by design, deferred to the next extraction (ch.24).*

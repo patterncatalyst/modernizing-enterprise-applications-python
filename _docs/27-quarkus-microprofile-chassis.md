@@ -490,7 +490,3 @@ and the service registry a system this size eventually needs once
 "whichever base URL is in `application.properties`'s Python sibling,
 `config.py`, today" stops being a sufficient answer for who's allowed to
 call whom, and with what guarantee the shape won't change underneath them.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — no new runnable example; its scorecard is read directly from the services' own source (`config.py`/`main.py`/`errors.py` and the dependency declarations across the services), checkable with `grep -rl tenacity examples/*/pyproject.toml` and the matching checks for OpenTelemetry, Prometheus, and `pydantic_settings`.*

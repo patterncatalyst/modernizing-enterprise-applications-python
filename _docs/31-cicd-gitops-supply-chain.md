@@ -450,13 +450,3 @@ patterns this project actually needed, which were named and scoped out
 as not-yet-needed (a shared chassis library, GitOps among them), and what the
 ADLC discipline this chapter's own callout practiced one more time looked
 like end to end.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>.
-`examples/10-supply-chain/demo.sh` was run live with `syft`/`grype` against
-both the order-service and monolith Containerfiles: it generated both
-CycloneDX SBOMs, scanned both with the project's grype policy, and exited
-`0`. The required order-service gate passed clean (0 fixable Critical/
-High); the reported-only monolith gate failed as expected, without
-affecting the script's exit code.*

@@ -356,14 +356,3 @@ at a time.
 Next: ch.9 reads this same codebase again, this time hunting on the record —
 naming all seven smells by their `# SMELL[ch.NN]:` tags and the exact
 chapter each one gets cured in.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>.
-`examples/00-monolith` runs (`uv sync && manage.py migrate && manage.py seed
-&& runserver`); its pytest suite and the Newman contract collection
-(`tooling/newman/mea.postman_collection.json`) both pass green against it.
-The monolith is now frozen and decommissioned from the live topology
-(break-glass only); the pristine pre-extraction state this chapter
-describes is preserved on `reference/monolith-before` and tag
-`v0-monolith`.*

@@ -554,7 +554,3 @@ actually up.
 > services' `search_path` logic it describes, is what kept this chapter's
 > "one `DATABASE_URL`" claim grounded in code instead of in the pattern the
 > Java sibling happened to use.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>. Both the base and the minikube overlay render with `kubectl kustomize` (23 resources each) and pass `kubeconform -strict` with zero invalid. Applying to a live cluster is out of scope for this chapter — the exact limit its own "Verifying without a cluster" section describes — not a manifest defect.*

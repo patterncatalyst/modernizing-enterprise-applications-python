@@ -256,7 +256,3 @@ draws on, and a plain accounting of what substitutes for the MCP surface
 this project's stack doesn't have. **Chapter 7** then runs the whole loop
 once, end to end, on real work, and shows exactly what its safety net
 caught.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — no runnable example of its own; the phases, gates, and ledger artifacts it describes are the ones this project actually uses, and Chapter 7 exercises them against checked-in evidence.*

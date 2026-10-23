@@ -666,13 +666,3 @@ something plausible either way.
 Next: ch.16 generalizes what this chapter built into content-based routing
 and an anti-corruption layer, the pattern every later extraction in Part 5
 reuses to cut its own seam.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>.
-`uv run pytest` passes 11/11 against a real, throwaway Postgres container,
-`ruff check` passes clean, and a live run on `:8001` was driven end to end
-with `curl` covering list, filter, get, and both auth-failure and
-authenticated-create paths. The flag cutover itself is verified separately
-at the proxy/Newman level (ch.14); the Phase A numbers here are a measured
-proxy, since Phase A code was never built, by design.*

@@ -291,6 +291,3 @@ gestured at — Frame, Map, Plan, Generate, Verify, Operate, and the Reconcile
 phase that writes to the files you just read about — gets defined properly,
 with this project's own ledger as its running, working example rather than a
 diagram. Chapter 3, "Modernization as Engineering, Not Fashion," is next.
-
----
-*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — it describes the project's decision-and-plan ledger; those artifacts are tracked in the repository, and the chapter itself runs no code.*
