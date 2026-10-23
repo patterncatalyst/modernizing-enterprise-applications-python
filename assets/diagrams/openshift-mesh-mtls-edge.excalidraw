@@ -2293,13 +2293,13 @@
    "updated": 1,
    "link": null,
    "locked": false,
-   "text": "postgres and kafka carry no istio.io/rev label -- deliberately unmeshed, same as the minikube path (ch.30).",
+   "text": "postgres and kafka carry no istio.io/rev label -- unmeshed, same as the minikube path (ch.30).",
    "fontSize": 11,
    "fontFamily": 1,
    "textAlign": "left",
    "verticalAlign": "top",
    "containerId": null,
-   "originalText": "postgres and kafka carry no istio.io/rev label -- deliberately unmeshed, same as the minikube path (ch.30).",
+   "originalText": "postgres and kafka carry no istio.io/rev label -- unmeshed, same as the minikube path (ch.30).",
    "lineHeight": 1.25,
    "baseline": 11
   }

@@ -3,7 +3,7 @@
 "today": payment-service's and notification-service's own hand-authored
 copies of the order.placed Pydantic model, each independently maintained,
 with notification's copy missing paymentMethod (it never needed the field,
-so it was never added -- the honest cost of no shared module between three
+so it was never added -- the cost of no shared module between three
 independently deployable services, DRQ-036). Right, "ch.28's demonstrator":
 one order-placed-v1.avsc registered once with Apicurio, a producer and
 consumer both resolving the SAME artifact by global id, with a BACKWARD

@@ -2,7 +2,7 @@
 
 Thin helpers on top of scripts/generate_diagram.py: octagon layouts for
 8-step loops, and a box-edge connector so arrows terminate on the boundary
-of the box they're pointing at (not its center) — per the diagram-generator
+of the box they're pointing at (not its center): per the diagram-generator
 skill's "every edge must terminate on a box edge" rule.
 
 Not part of the vendored generator; local to this diagram set.
@@ -15,7 +15,7 @@ def node(x, y, w, h, lines, style="box"):
 
 
 def octagon_positions(cx, cy, rx, ry):
-    """8 (x, y) centers around an ellipse: N, NE, E, SE, S, SW, W, NW — clockwise from top."""
+    """8 (x, y) centers around an ellipse: N, NE, E, SE, S, SW, W, NW: clockwise from top."""
     angles = [-90, -45, 0, 45, 90, 135, 180, -135]
     return [(cx + rx * math.cos(math.radians(a)), cy + ry * math.sin(math.radians(a))) for a in angles]
 

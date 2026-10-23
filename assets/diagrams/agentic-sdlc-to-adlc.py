@@ -5,7 +5,7 @@ Maps the 8-step agentic SDLC onto this book's 7-phase ADLC (Frame -> Map ->
 Plan -> Generate -> Verify -> Operate -> Reconcile, per `_plans/build-
 plan.md` section F.1), marking the two human gates: plan approval and
 equivalence sign-off. Phase glosses are this project's own tooling column,
-which differs from the Java sibling on purpose: Map has no Quarkus-Agent-
+which differs from the Java sibling by design: Map has no Quarkus-Agent-
 MCP / Camel-MCP equivalent to lean on (DRQ-020), so it substitutes manual
 reconnaissance plus the `lgtm-python` skill.
 """

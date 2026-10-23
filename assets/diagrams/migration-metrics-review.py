@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ch.03 figure: migration-metrics-review -- the Review-extraction
 measurement table turned into a comparison figure. Unlike a dramatic
-before/after speedup, this project's own honest finding is that Phase A
+before/after speedup, this project's own finding is that Phase A
 (illustrative: FastAPI routes bridged onto the monolith's Django ORM via
 `sync_to_async`, never shipped as code) and Phase B (the real, shipped
 idiomatic FastAPI + async SQLAlchemy service) are STATISTICALLY
@@ -12,7 +12,7 @@ swapping the ORM barely moves the needle at process-startup granularity.
 This is a box/band/edge generator, not a charting library -- the "bars"
 below are plain node() rectangles whose WIDTH is scaled to the measured
 value. Because the two builds measure almost the same, the bars are drawn
-nearly equal length ON PURPOSE -- that near-equality IS the finding, not a
+nearly equal length by design; that near-equality is the finding, not a
 rendering quirk. The real Phase A -> Phase B payoff is called out
 separately, as structural: no synchronous ORM bridged into an async
 framework via `sync_to_async` on every query, and no hard build-time
@@ -79,10 +79,10 @@ band2_y = band1_y + band1_h + 40
 band2_h = 170
 
 band_startup = {"x": 20, "y": band1_y, "w": 1460, "h": band1_h,
-                "label": "Import/startup time -- own scale; nearly equal, on purpose (that's the finding)",
+                "label": "Import/startup time -- own scale; nearly equal by design (that is the finding)",
                 "fill": "#fafafa"}
 band_memory = {"x": 20, "y": band2_y, "w": 1460, "h": band2_h,
-               "label": "Import-only RSS -- own scale; nearly equal, on purpose (that's the finding)",
+               "label": "Import-only RSS -- own scale; nearly equal by design (that is the finding)",
                "fill": "#eaf4ec"}
 
 nodes1, notes1, bottom1 = bars_for_band(band1_y, startup_vals, startup_labels)
@@ -115,7 +115,7 @@ notes += notes1 + [callout1] + notes2 + [callout2]
 notes.append({
     "x": LABEL_X, "y": H - 28,
     "text": "Sourced from examples/02-review-service/MIGRATION.md's measured table. This stack has no compiled-vs-native-image axis to "
-            "show a dramatic win on -- the honest finding is reported as measured, not adjusted for a cleaner story.",
+            "show a dramatic win on -- the finding is reported as measured, not adjusted for a cleaner story.",
     "anchor": "start", "size": 10, "color": "#777777",
 })
 

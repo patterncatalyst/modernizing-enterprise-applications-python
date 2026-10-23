@@ -4,7 +4,7 @@
 BEFORE (INVENTORY_MODE=local, r01-r03): reserve/order/payment/shipping/
 outbox all run inside ONE `transaction.atomic()`. A PaymentDeclined or
 ShippingFailed anywhere in that chain unwinds EVERYTHING, including the
-inventory decrement, for free -- Postgres's own rollback, SMELL[ch.22]'s
+inventory decrement automatically -- Postgres's own rollback, SMELL[ch.22]'s
 "free rollback."
 
 AFTER (INVENTORY_MODE=grpc, ch.19): the gRPC Reserve commits in

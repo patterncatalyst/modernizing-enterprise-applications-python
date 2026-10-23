@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.08 figure: monolith-architecture — the reference monolith "before"
+"""ch.08 figure: monolith-architecture: the reference monolith "before"
 picture. One Django project (`config/`) containing six bounded-context apps
 (order, inventory, payment, shipping, notification, review), each drawn as a
 DRF view -> services.py -> models.py stack, all built against ONE shared
@@ -73,7 +73,7 @@ for ctx, c in cols.items():
 # Drawn as one highlighted "bus": a drop from order's services.py right     --
 # edge into a lane below the context stacks, a trunk line across, and a    --
 # branch rising into each target service's left edge -- so the arrows      --
-# never cross through an intervening box. Notification is deliberately     --
+# never cross through an intervening box. Notification is kept apart     --
 # NOT one of the bus targets -- see the outbox lane below.
 BUS_Y = 400
 order_svc = cols["order"]["svc"]

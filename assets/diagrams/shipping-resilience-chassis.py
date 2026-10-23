@@ -4,7 +4,7 @@ system (gRPC deadline, outbox at-least-once + two-layer idempotency, the
 proxy's 502 fail-safe, the saga timeout/crash-resume) plus the ONE concrete
 new mechanism r06 adds (tenacity retry-with-timeout on the enrich call), with
 pybreaker (circuit breaker) and asyncio.Semaphore (bulkhead) named as
-deliberately deferred.
+deferred.
 
 Sourced from examples/00-monolith/order/inventory_client.py (DEFAULT_TIMEOUT_
 SECONDS=5.0, grpc.RpcError -> InventoryServiceUnavailable), examples/06-
@@ -45,7 +45,7 @@ n_breaker = node(60, 450, 300, 110,
 n_bulkhead = node(400, 450, 300, 110,
                    ["DEFERRED: asyncio.Semaphore", "bulkhead -- one saga's enrich call", "can't yet starve another's"], style="ghost")
 n_honesty = node(760, 450, 480, 110,
-                  ["Honesty discipline: stuck-* negative checks", "make failures VISIBLE (RED, not a false green) --", "the AWAITING_SHIPMENT poll-script bug, found live"], style="accent")
+                  ["Verification discipline: stuck-* negative checks", "make failures VISIBLE (RED, not a false green) --", "the AWAITING_SHIPMENT poll-script bug, found live"], style="accent")
 
 nodes = [n_client, n_deadline, n_outbox, n_proxy, n_sagatimeout,
          n_retry, n_breaker, n_bulkhead, n_honesty]
@@ -58,11 +58,11 @@ edges = [
     connect(n_outbox, n_retry, dashed=True, label="shipping's enrich step"),
     connect(n_retry, n_breaker, dashed=True, label="not yet needed"),
     connect(n_retry, n_bulkhead, dashed=True, label="not yet needed"),
-    connect(n_retry, n_honesty, label="made visible, not hidden"),
+    connect(n_retry, n_honesty, label="made visible"),
 ]
 
 notes = [
-    {"x": W / 2, "y": 30, "text": "ch.25 -- the resilience chassis: four mechanisms already load-bearing, one new one, two deliberately deferred",
+    {"x": W / 2, "y": 30, "text": "ch.25 -- the resilience chassis: four mechanisms already in use, one new one, two deferred",
      "anchor": "middle", "bold": True, "size": 15},
     {"x": 40, "y": H - 40, "text": "Deferral is a decision, not an oversight: pybreaker/Semaphore solve problems this system doesn't have yet (sustained failure, contention).",
      "anchor": "start", "size": 11, "color": "#555555"},

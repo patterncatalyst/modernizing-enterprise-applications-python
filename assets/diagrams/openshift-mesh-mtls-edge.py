@@ -88,7 +88,7 @@ notes = [
      "text": "Without the per-Route PERMISSIVE PeerAuthentication, the STRICT default would 502 every Route request: the router is not a mesh member.",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 240, "y": H - 20,
-     "text": "postgres and kafka carry no istio.io/rev label -- deliberately unmeshed, same as the minikube path (ch.30).",
+     "text": "postgres and kafka carry no istio.io/rev label -- unmeshed, same as the minikube path (ch.30).",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

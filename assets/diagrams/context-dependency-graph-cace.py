@@ -15,7 +15,7 @@ efferent edge). `payment.Payment.order` and `shipping.Shipment.order` each
 carry a direct `order_id` foreign key back into order (order's afferent
 edges); so does `notification.Notification.order`, even though notification
 is reached asynchronously. Review has neither -- "no runtime dependency on
-order/inventory/payment/shipping/notification," SMELL #7's one honest
+order/inventory/payment/shipping/notification," SMELL #7's one
 exception being the shared `django.contrib.auth` table, not a context
 dependency. The one dashed edge (shipping -> payment) is not part of today's
 monolith graph: it is the real dependency `05-payment-service`'s own

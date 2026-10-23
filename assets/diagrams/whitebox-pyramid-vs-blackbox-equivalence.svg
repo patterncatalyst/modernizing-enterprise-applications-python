@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1560 760" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
 <defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
 <rect x="20" y="70" width="740" height="560" rx="12" fill="#fafafa" stroke="#ddd"/>
-<text x="32" y="90" font-size="12" font-weight="700" fill="#1d1d1d">White-box — pytest-django calls Python directly, inspects a real DB</text>
+<text x="32" y="90" font-size="12" font-weight="700" fill="#1d1d1d">White-box: pytest-django calls Python directly, inspects a real DB</text>
 <rect x="800" y="70" width="740" height="560" rx="12" fill="#eaf4ec" stroke="#ddd"/>
-<text x="812" y="90" font-size="12" font-weight="700" fill="#1d1d1d">Black-box — the behavior-equivalence suite sees only HTTP</text>
+<text x="812" y="90" font-size="12" font-weight="700" fill="#1d1d1d">Black-box: the behavior-equivalence suite sees only HTTP</text>
 <rect x="270" y="140" width="240" height="70" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
 <text x="390.0" y="173.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">API / acceptance (21)</text>
 <text x="390.0" y="190.0" font-size="11.5" fill="#555555" text-anchor="middle">APIClient, real Postgres</text>
@@ -18,11 +18,11 @@
 <text x="390.0" y="502.5" font-size="11.5" fill="#555555" text-anchor="middle">order.services.place_order, live Postgres rows</text>
 <text x="390.0" y="517.5" font-size="11.5" fill="#555555" text-anchor="middle">called directly in-process; every tier needs a real test database</text>
 <rect x="940" y="140" width="460" height="120" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
-<text x="1170.0" y="190.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Newman — mea.postman_collection.json</text>
-<text x="1170.0" y="207.5" font-size="11.5" fill="#555555" text-anchor="middle">12 folders, 39 requests — smoke, 4 checkout scenarios,</text>
+<text x="1170.0" y="190.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Newman: mea.postman_collection.json</text>
+<text x="1170.0" y="207.5" font-size="11.5" fill="#555555" text-anchor="middle">12 folders, 39 requests: smoke, 4 checkout scenarios,</text>
 <text x="1170.0" y="222.5" font-size="11.5" fill="#555555" text-anchor="middle">6 per-context contracts, GraphQL gateway contract</text>
 <rect x="990" y="300" width="360" height="80" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
-<text x="1170.0" y="338.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">baseUrl — collection variable</text>
+<text x="1170.0" y="338.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">baseUrl: collection variable</text>
 <text x="1170.0" y="355.0" font-size="11.5" fill="#555555" text-anchor="middle">re-pointable: monolith today, an extracted service tomorrow</text>
 <rect x="830" y="440" width="300" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
 <text x="980.0" y="493.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">This Django monolith (today)</text>
@@ -36,17 +36,17 @@
 <text x="396.0" y="419.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">direct Python calls, DB inspection</text>
 <text x="396.0" y="419.0" font-size="11" fill="#2f5f3d" text-anchor="middle">direct Python calls, DB inspection</text>
 <path d="M1170.0,260.0 L1170.0,300.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
-<text x="1176.0" y="274.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">HTTP only — status code + JSON body</text>
-<text x="1176.0" y="274.0" font-size="11" fill="#555" text-anchor="middle">HTTP only — status code + JSON body</text>
+<text x="1176.0" y="274.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">HTTP only: status code + JSON body</text>
+<text x="1176.0" y="274.0" font-size="11" fill="#555" text-anchor="middle">HTTP only: status code + JSON body</text>
 <path d="M1120.967741935484,380.0 L1047.4193548387098,440.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <path d="M1216.4516129032259,380.0 L1286.1290322580644,440.0" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
 <text x="1257.2903225806451" y="404.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">re-pointed, zero assertions edited</text>
 <text x="1257.2903225806451" y="404.0" font-size="11" fill="#2f5f3d" text-anchor="middle">re-pointed, zero assertions edited</text>
-<text x="780.0" y="32" font-size="16" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.10 — same system, two kinds of test: white-box pytest pyramid vs. black-box equivalence suite</text>
+<text x="780.0" y="32" font-size="16" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.10: same system, two kinds of test: white-box pytest pyramid vs. black-box equivalence suite</text>
 <text x="780.0" y="56" font-size="12" fill="#555555" text-anchor="middle">the pyramid imports Python package names; the equivalence suite only knows baseUrl and HTTP</text>
 <text x="110" y="575" font-size="10.5" fill="#555555" text-anchor="start">A white-box test can&#x27;t import a module that doesn&#x27;t share the monolith&#x27;s package names,</text>
-<text x="110" y="591" font-size="10.5" fill="#555555" text-anchor="start">let alone its database rows — it proves the implementation, not the behavior, is correct.</text>
-<text x="940" y="575" font-size="10.5" fill="#555555" text-anchor="start">Every request targets {{baseUrl}}, not a hardcoded host — the same collection, unedited, can point</text>
+<text x="110" y="591" font-size="10.5" fill="#555555" text-anchor="start">let alone its database rows: it proves the implementation, not the behavior, is correct.</text>
+<text x="940" y="575" font-size="10.5" fill="#555555" text-anchor="start">Every request targets {{baseUrl}}, not a hardcoded host: the same collection, unedited, can point</text>
 <text x="940" y="591" font-size="10.5" fill="#555555" text-anchor="start">at this monolith today or an extracted service tomorrow, with not one assertion changed in between.</text>
 <text x="20" y="728" font-size="10" fill="#777777" text-anchor="start">Sourced from examples/00-monolith/tests/ (test-pyramid.py&#x27;s own counts) and tooling/newman/mea.postman_collection.json.</text>
 <text x="20" y="744" font-size="10" fill="#777777" text-anchor="start">Collection: tooling/newman/mea.postman_collection.json (12 folders, 39 requests).</text>

@@ -80,7 +80,7 @@
 <text x="936.0" y="506.1395348837209" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">app OTLP (depth)</text>
 <text x="936.0" y="506.1395348837209" font-size="11" fill="#2f5f3d" text-anchor="middle">app OTLP (depth)</text>
 <text x="770.0" y="24" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.30 -- the meshed mea namespace: mTLS STRICT inside, one PERMISSIVE edge, two unmeshed backends</text>
-<text x="240" y="764" font-size="11" fill="#555555" text-anchor="start">Green boxes (strangler-proxy, order-service, inventory-service) are the 3 OTel-instrumented services -- app depth. All 8 get mesh breadth for free via Envoy.</text>
+<text x="240" y="764" font-size="11" fill="#555555" text-anchor="start">Green boxes (strangler-proxy, order-service, inventory-service) are the 3 OTel-instrumented services -- app depth. All 8 get mesh breadth automatically via Envoy.</text>
 <text x="240" y="782" font-size="11" fill="#555555" text-anchor="start">postgres, kafka, and the lgtm backend itself carry no sidecar.istio.io/inject label -- meshing their own TLS/plaintext would collide with the injected sidecar&#x27;s mTLS wrapping.</text>
 <text x="240" y="800" font-size="11" fill="#555555" text-anchor="start">PeerAuthentication: default (STRICT, namespace-wide) + strangler-proxy-edge (PERMISSIVE, inbound only) -- deploy/k8s/istio/peer-authentication*.yaml.</text>
 </svg>

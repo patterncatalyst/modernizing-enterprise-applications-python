@@ -58,7 +58,7 @@ notes = [
      "anchor": "middle", "bold": True, "size": 18},
     {"x": 50, "y": H - 40, "text": "Panel A's shared-schema reach is a deliberate, named deferral (ch.18/19 give review its own schema) --",
      "anchor": "start", "size": 11, "color": "#555555"},
-    {"x": 50, "y": H - 22, "text": "Panel B's OrderPlacedEvent is what makes notification-service genuinely independent of the monolith's schema.",
+    {"x": 50, "y": H - 22, "text": "Panel B's OrderPlacedEvent is what makes notification-service independent of the monolith's schema.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

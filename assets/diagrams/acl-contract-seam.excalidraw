@@ -1545,13 +1545,13 @@
    "updated": 1,
    "link": null,
    "locked": false,
-   "text": "Panel B's OrderPlacedEvent is what makes notification-service genuinely independent of the monolith's schema.",
+   "text": "Panel B's OrderPlacedEvent is what makes notification-service independent of the monolith's schema.",
    "fontSize": 11,
    "fontFamily": 1,
    "textAlign": "left",
    "verticalAlign": "top",
    "containerId": null,
-   "originalText": "Panel B's OrderPlacedEvent is what makes notification-service genuinely independent of the monolith's schema.",
+   "originalText": "Panel B's OrderPlacedEvent is what makes notification-service independent of the monolith's schema.",
    "lineHeight": 1.25,
    "baseline": 11
   }

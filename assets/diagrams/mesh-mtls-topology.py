@@ -6,7 +6,7 @@ injected Envoy sidecar; PeerAuthentication STRICT (deploy/k8s/istio/
 peer-authentication.yaml) makes every meshed-to-meshed hop mTLS; the one
 PERMISSIVE exception is strangler-proxy's own plaintext NodePort inbound
 edge (peer-authentication-edge.yaml). postgres + kafka carry no inject label
--- deliberately unmeshed, so their own TLS/plaintext story is unchanged.
+-- unmeshed, so their own TLS/plaintext story is unchanged.
 The LGTM backend (deploy/k8s/observability/) is unmeshed too (DRQ-099) and
 receives two different kinds of telemetry in plaintext: Envoy's own spans +
 the istio-proxy Prometheus scrape (mesh breadth, all 8 services free) and
@@ -85,7 +85,7 @@ notes = [
     {"x": W / 2, "y": 24, "text": "ch.30 -- the meshed mea namespace: mTLS STRICT inside, one PERMISSIVE edge, two unmeshed backends",
      "anchor": "middle", "bold": True, "size": 15},
     {"x": 240, "y": H - 56,
-     "text": "Green boxes (strangler-proxy, order-service, inventory-service) are the 3 OTel-instrumented services -- app depth. All 8 get mesh breadth for free via Envoy.",
+     "text": "Green boxes (strangler-proxy, order-service, inventory-service) are the 3 OTel-instrumented services -- app depth. All 8 get mesh breadth automatically via Envoy.",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 240, "y": H - 38,
      "text": "postgres, kafka, and the lgtm backend itself carry no sidecar.istio.io/inject label -- meshing their own TLS/plaintext would collide with the injected sidecar's mTLS wrapping.",
