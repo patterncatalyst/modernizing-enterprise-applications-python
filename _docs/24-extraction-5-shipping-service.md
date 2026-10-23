@@ -6,6 +6,20 @@ description: "Shipping becomes a bounded, orchestrated saga: a single FastAPI sa
 duration: 40 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain how shipping's extraction cashes in the second clause of SMELL[ch.22]: dispatch no longer rides inside any checkout or payment `transaction.atomic()` block at all.
+- Contrast orchestration (a single DB-backed `app/orchestrator.py` coordinator that sequences steps and owns the compensation decision) with Chapter 23's choreography, and explain why the `STEPS` table, one declared list, is the entire saga's shape in a way choreography has no equivalent for.
+- Walk the four disciplines a DB-backed orchestrator needs to be safe under concurrency and crashes: a row lock per step (`FOR UPDATE`), an idempotent status guard before executing anything, one transaction per step rather than one for the whole saga, and reassigning (not mutating) a JSONB context column so SQLAlchemy's change tracking sees the update.
+- Explain why cross-context compensation is delegated rather than performed directly: the shipping service emits `shipment.failed`, and `order_saga_listener`, which owns the reserved-line snapshot, issues the actual gRPC `Release`.
+- Trace the new order lifecycle states `AWAITING_SHIPMENT` and `SHIPPING_FAILED`, and explain how `SHIPPING_MODE` makes a previously invisible window observable without changing the external `202`/pollable contract.
+- Explain how persisting `status`/`step_index`/`context` as a row, rather than tracking saga progress in memory the way the Java sibling's Camel coordinator does, turns a crash mid-saga into a resumable condition, and how the resulting `shipment.failed` event finally lets payment-service's refund hop close the stranded-payment gap Chapters 22 and 23 left open.
+- Use the suite's live cutover (a deterministic `SHIP-FAIL` sentinel, a redelivered `shipment.failed` against an already-refunded payment) to prove the orchestrated compensation and the refund each fire exactly once rather than merely appearing to.
+
+## Why this matters
+
 ch.23 built a saga with no coordinator at all: three services, each
 reacting only to an event it already subscribed to, the sequence emerging
 rather than being directed. This chapter builds the opposite shape for the

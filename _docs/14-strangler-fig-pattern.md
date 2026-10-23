@@ -6,6 +6,20 @@ description: "Fowler's pattern, the three steps, the proxy/redirection/shared-da
 duration: 35 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain the strangler fig pattern's three mechanics, asset capture, intercept, and reversible cutover, and why retiring the old code before a cutover is proven is the one move that breaks the pattern's safety property.
+- Read the Starlette + httpx reverse proxy in `app/main.py` end to end: the catch-all `Route("/{path:path}", proxy_handler)`, the `_select_backend()` content-based routing function, and the exclusion-list header forwarding that makes it a transparent reverse proxy.
+- Explain why `_select_backend()` reads only from a frozen `Settings` dataclass rather than request data, and how pinning the forwarding target to operator configuration closes an SSRF seam by construction.
+- Diagnose the chunked-body bug: why `httpx.ASGITransport`'s in-process test suite stayed green while forwarding `request.stream()` unread silently emptied every POST/PUT/PATCH the proxy sent to Django's WSGI stack.
+- Design the 502 fail-safe and the reversibility-window negative check (killing review-service to force a real 502) that prove a routing decision is correct independent of whether two backends happen to agree.
+- Match the full `request.url.path` rather than a route-relative path segment, and explain why that distinction is what a sibling project's predicate bug got wrong.
+- Explain why decommissioning the monolith's `review` app is deferred to a later, separate step, and why it is the one irreversible move in the whole sequence.
+
+## Why this matters
+
 Every extraction in Part 5 depends on one piece of plumbing getting built
 first: something that sits in front of the monolith, sees every request,
 and can hand any one of them to a different backend without the client

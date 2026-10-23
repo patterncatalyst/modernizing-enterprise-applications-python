@@ -6,6 +6,20 @@ description: "Debezium-style transaction-log tailing bridges the monolith's stil
 duration: 60 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain why a synchronous, mutating collaborator (Inventory's `Reserve`/`Release`) is harder to extract than Review's read-only leaf or Notification's asynchronous consumer, and what breaks the instant the shared transaction no longer spans both sides of the write.
+- Design `inventory.proto`'s gRPC contract with a wire vocabulary (`stock_keeping_unit`/`on_hand_qty`) held distinct from the monolith's (`sku`/`quantity_on_hand`), and read `RemoteInventoryClient` and `InventoryGrpcServiceServicer` as the client-side and server-side translators that earn the ACL's keep.
+- Configure Debezium's Postgres connector for logical replication (`plugin.name: pgoutput`, `snapshot.mode: initial`, `REPLICA IDENTITY FULL`) and explain why each setting is required for the one-time backfill to work at all.
+- Build `InventoryCdcConsumer`'s idempotent upsert (`INSERT ... ON CONFLICT DO UPDATE`) that absorbs Kafka's at-least-once redelivery of Debezium's read/create/update/delete events without double-applying a change.
+- Replace the monolith's pessimistic-lock reservation with `app/repository.py::reserve`'s atomic conditional `UPDATE` and its unconditional mirror `release`, and explain why Postgres's own row-level write lock, not application code, serializes concurrent reservations.
+- Replace the free rollback a shared ACID transaction used to provide with `_place_order_remote`'s explicit compensating `Release` call on checkout failure, and verify the replacement by directly querying `quantityOnHand` before and after a declined or failed checkout, across two independent databases.
+- Run the hard negative check across the gRPC seam, killing inventory-service to force both the proxy's 502 on reads and the monolith's 503 `INVENTORY_UNAVAILABLE` on checkout, and interpret the documented CDC-free, Debezium-free green gate as evidence of the steady state, not a defect to paper over.
+
+## Why this matters
+
 ch.18 named the plan: give Inventory its own schema, move `reserve`/
 `release` across a real network boundary, bridge the transition without
 losing a reservation, and cut `OrderItem`'s foreign key loose. This chapter

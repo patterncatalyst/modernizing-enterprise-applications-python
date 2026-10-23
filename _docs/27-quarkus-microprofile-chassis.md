@@ -6,6 +6,20 @@ description: "A used/partial/deferred scorecard for the cross-cutting platform t
 duration: 30 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Audit which chassis capabilities (configuration, logging, health, error handling, resilience) a FastAPI service actually wires into its own code versus which ones a `pyproject.toml` dependency merely makes available.
+- Explain the frozen-dataclass `Settings.from_env()` pattern and why this project chose it over `pydantic-settings`' `BaseSettings`, without changing which environment variable or default a service reads.
+- Identify why this project uses a `tenacity` retry wrapper in exactly one call site (`shipping-service`'s `enrich_client.py`) instead of a pybreaker-based circuit breaker, and what adding one would require once traffic justified it.
+- Explain the `GET /health` convention present in 6 of 8 services and why `strangler-proxy` and `graphql-gateway` leave it out by a stated choice rather than ship a decorative route.
+- Recognize why there is no single shared chassis package across the eight services, only a convention copied by hand into each `app/config.py`, `app/errors.py`, and `_configure_logging()`, and what a real shared library would cost to build.
+- Distinguish a capability present in a Containerfile or `pyproject.toml` from one proven by a wired-in code path and a passing test.
+- Read a capability-by-capability chassis scorecard that separates used, partial, and deferred, and explain why deferred is a stated choice rather than an oversight.
+
+## Why this matters
+
 Chapter 26 turned off the monolith for good: six independently deployable
 services plus a data-less GraphQL gateway, reached through one flagless
 edge router with nothing left to fall back to. What hasn't been asked yet,

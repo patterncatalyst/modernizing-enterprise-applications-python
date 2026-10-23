@@ -6,6 +6,20 @@ description: "Partial-failure taxonomy; timeouts, retry + jitter, circuit breake
 duration: 35 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- State the partial-failure taxonomy this book names for a distributed saga (total unavailability, slow-but-alive, transient blips, sustained degradation, resource exhaustion, process-level interruption, and a broken verifier), and explain why applying the wrong mitigation, retrying a permanent failure or timing out a call that needed a breaker instead, makes a system worse, not better.
+- Explain what `RemoteInventoryClient`'s five-second gRPC timeout buys (a bounded wait, a fast `InventoryServiceUnavailable`) and why a timed-out RPC maps to a `503`, never to the `422` an insufficient-stock business outcome gets.
+- State the rule "a retry is only as safe as the idempotency behind it," and trace it through the outbox relay's at-least-once publish paired with the three idempotent-consumer idioms this book uses: check-then-insert-plus-unique-index, a status-transition guard, and `INSERT ... ON CONFLICT DO NOTHING`.
+- Explain what a circuit breaker (`pybreaker`) and a bulkhead (an `asyncio.Semaphore`) would add beyond a deadline, where each would wrap in this codebase, and why this project defers both rather than adding them speculatively.
+- Explain the strangler proxy's `502` fail-safe, never a swallowed `200` on `httpx.HTTPError`, as the mechanism that makes every negative check in this book's equivalence suite actually mean something.
+- Walk the four choices behind `tenacity`'s retry policy on `enrich_client.py` (retry scoped to exactly two transient exception types, three attempts, exponential backoff, reraise) and explain why each is a direct answer to the taxonomy rather than an arbitrary default.
+- Explain why a negative check (kill the dependency, confirm RED, restart, confirm GREEN) is the only evidence in this book's toolkit that converts a resilience claim from asserted to demonstrated, and why a check that can pass vacuously is not a check at all.
+
+## Why this matters
+
 Every chapter since ch.14 has quietly been building a resilience mechanism
 without calling it that: a bounded gRPC timeout here, an at-least-once outbox
 there, a proxy that fails loud instead of swallowing an error. This chapter

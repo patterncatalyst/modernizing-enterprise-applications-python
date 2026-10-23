@@ -5,6 +5,20 @@ part: "Finding the Seams"
 description: "Khononov's three dimensions of coupling; the modular monolith and decomposed-DB monolith as legitimate destinations; the distributed-monolith trap."
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- State Constantine's cohesion/coupling pairing and explain why coupling, not cohesion, is the dimension this book builds a sequencing strategy on.
+- Place each of Chapter 9's remaining smells on the Constantine coupling ladder (content, common, control, stamp, data) with its concrete Python code example: the live `InventoryItem` handoff in `get_by_sku()`/`reserve()` (content and stamp), the shared Postgres schema (common), `paymentMethod` threaded into `payment.services.charge` (control), and the serializers' DTO output (data).
+- Compute afferent (Ca) and efferent (Ce) coupling for a Django app from its import graph and foreign keys, and explain why low-Ca, low-Ce contexts should extract first.
+- Reconstruct the six-context extraction ranking (review, notification, inventory, payment/shipping, order) purely from Ca/Ce scores, independent of narrative preference.
+- Explain Khononov's strength/distance/volatility balancing-coupling model and why splitting strong, volatile coupling across a network produces a distributed monolith instead of a fix.
+- Describe the three disciplines of a Python-native modular monolith (`import-linter`-enforced import-boundary isolation, no cross-module `ForeignKey` references in favor of a plain id field plus a published function, and module-owned tables named by `db_table`) and when that destination is preferable to further distribution.
+- Recognize the distributed-monolith trap and state the precondition every extraction in this book satisfies before cutting a seam: an ACL, an outbox, a CDC pipeline, or a saga already in place.
+
+## Why this matters
+
 Chapter 11 gave you bounded contexts and aggregates as the *conceptual*
 vocabulary for a seam, and Chapter 12 gave you event storming as a *process*
 for discovering where those seams sit in a system that never shipped with a

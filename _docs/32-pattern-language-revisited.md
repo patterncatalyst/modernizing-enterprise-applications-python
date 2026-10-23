@@ -6,6 +6,19 @@ description: "The microservices pattern catalog re-walked against the completed 
 duration: 35 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Re-evaluate each pattern this migration adopted (strangler fig, bounded contexts/anti-corruption layer, database-per-service, transactional outbox, CQRS, choreographed and orchestrated saga, GraphQL composition, schema registry, the chassis) against the specific pain it solved, and state why it earned, adapted, or deferred that role.
+- Explain why full event sourcing, a pybreaker-based circuit breaker, and a GitOps operator were deferred, and name the pain each would address if this system ever had it.
+- Recognize the over-decomposition anti-pattern (nanoservice sprawl collapsing into a distributed monolith) and apply the rule that a bounded context splits further only when a real seam demands it, never to hit a service count.
+- Trace the ADLC's Frame/Plan/Generate/Verify/Reconcile cycle across the whole migration and explain why the behavior-equivalence suite was the Verify-phase artifact that made agent-driven change safe to merge.
+- Read the completed system's pattern scorecard by concern (decomposition, data, communication, reliability/chassis) and distinguish "earned," "adapted," and "named, deferred."
+- Name the book's remaining clearly-scoped horizons (closing the delivery loop, durable sagas, observability's remaining corners, security past the supply-chain gate) as a bounded list rather than an open-ended todo.
+
+## Why this matters
+
 Thirty-one chapters ago this book opened a single Django monolith with six
 apps and five seeded smells. Chapter 26 closed the last extraction: six
 independently deployable services plus a data-less GraphQL gateway, reached

@@ -5,6 +5,20 @@ part: "Finding the Seams"
 description: "Discovering seams from behavior, not schema; the decomposition backlog this produces, run as an ADLC reconnaissance step."
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain why event storming finds seams from behavior (a timeline of past-tense domain events) rather than from schema, and what schema hides that behavior reveals.
+- Name and apply the event-storming color grammar (domain event, command, actor, aggregate, policy/reaction, read model, external system) in the order a real session introduces each one.
+- Distinguish the three storming altitudes (big-picture, process-level, design-level) and explain why conflating them produces a wall that's either too shallow or too narrow to act on.
+- Run a process-level storm of the checkout flow and produce its six-event timeline: `OrderPlaced`, `StockReserved`, `PaymentCaptured`/`PaymentDeclined`, `ShipmentDispatched`, `OrderConfirmed`, `NotificationSent`.
+- Explain how storming catches a gap a straight code read misses: `_place_order_local`'s single `order.placed` outbox write, fired at the end of checkout, sometimes carries the `OrderConfirmed` fact under the `OrderPlaced` name.
+- Map each event-boundary gap on the wall to the specific extraction chapter and mechanism that cuts it (inventory's gRPC anti-corruption layer in ch.19, payment's choreographed saga via an aiokafka consumer in ch.23, shipping's orchestrated saga in ch.24, notification's transactional outbox already cured).
+- Explain why a finished wall only answers *where* a seam is, not *in what order* to cut it, setting up Chapter 13's coupling analysis.
+
+## Why this matters
+
 Chapter 11 gave you the vocabulary (subdomain, bounded context, aggregate,
 ubiquitous language) and the promise that goes with it: if you can name the
 boundaries correctly, extraction becomes mechanical instead of

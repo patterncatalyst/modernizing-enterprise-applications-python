@@ -6,6 +6,20 @@ description: "The strangler proxy's routing decision generalized past a URL path
 duration: 30 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Distinguish what content-based routing decides (which backend answers a request) from what an anti-corruption layer decides (what is safe to carry across once routing gets it there), even though both sit at the same seam.
+- Generalize `_select_backend()`'s path-prefix `if` into a header-based or payload-based predicate, while keeping its one invariant fixed: a forwarding target must always come from operator configuration, never from caller-supplied data.
+- Explain why review-service's shared-table reads need no ACL (a synchronously-consistent REST leaf) while notification-service's Kafka consumer does, using the two-independent-writers/split-brain argument.
+- Read `OrderPlacedEvent` in `app/schemas.py` as a contract rather than a request: a service-owned Pydantic model that validates and raises on a mismatch instead of silently deserializing into a half-populated value.
+- Apply the decorating-collaborator pattern: the monolith's own `order_placed_consumer.py` becomes a peer subscriber to `order.placed` rather than keeping a privileged synchronous path, which is what makes the ACL necessary instead of ceremony.
+- Explain why the routing change is additive and symmetric (one more `Settings` field pair, one more `if`) while the ACL side has no "before" to diff against, since `OrderPlacedEvent` is net-new for the first extraction that actually needs one.
+- Verify the generalized routing claim by running `pytest -k routing` against all three flag combinations and driving the live proxy with both flags toggled independently.
+
+## Why this matters
+
 ch.15 cut one seam and proved the extraction loop end to end: capture the
 contract, stand up the service, flip a flag, watch the equivalence suite go
 green. That chapter's routing decision was a single `if`: one path prefix,

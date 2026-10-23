@@ -6,6 +6,20 @@ description: "CQRS read/write split, central to the gateway read side; event sou
 duration: 40 minutes
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Define CQRS and explain why splitting a write model from one or more read models pays off when commands and queries need different shapes, scaling, and consistency.
+- Identify `examples/03-notification-service` as an already-running CQRS read model and explain exactly why it qualifies: its own schema, no foreign key into the monolith, populated by idempotently folding `order.placed` events.
+- Explain `order_view` as this book's clearest CQRS example: a read model owned by the same service as its write model, projected inside the same transaction rather than by a separate consumer reacting to a topic.
+- Distinguish a CQRS read model (a materialized view) from full event sourcing, where the event log itself is the system of record and current state is computed by replay.
+- Explain the real, ongoing costs of event sourcing (perpetual event schema evolution and upcasting, a snapshot strategy to bound replay cost, and tooling and team unfamiliarity) and why this book declines to pay them.
+- Apply the bounded-wait-poll-plus-negative-check technique to verify a read model is current within a stated window, and use the projection-disabled negative check to prove a read path never silently falls back to the aggregate.
+- Distinguish two legitimate forms of rebuildability: notification's topic-retention-bounded replay versus `order_view`'s on-demand recompute from the current aggregate, with the write side remaining the durable source of truth either way.
+
+## Why this matters
+
 ch.20 generalized the outbox past Notification's single case and answered
 the question "how do I get a fact out of one service and onto a log
 reliably." This chapter asks the question on the other side of that log:
