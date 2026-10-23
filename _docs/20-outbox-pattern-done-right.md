@@ -404,7 +404,3 @@ pipeline with an idempotent consumer is supposed to provide.
 Next: ch.21 splits reads from writes with CQRS, then ch.22 turns from the mechanism to its cost — what the ACID guarantee
 checkout used to take for granted actually loses once a saga, not a single
 transaction, is what resolves an order.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>. Every mechanism this chapter describes is live, already-shipped code exercised by the live cutover run in `tooling/newman/` against a real Postgres and Kafka broker — the redelivery and negative-check numbers cited above are quoted directly from that run's output. The ordering/cleanup/poison-message gaps are documented limitations confirmed by reading the relay code's own exception handling, not claims requiring a further run.*

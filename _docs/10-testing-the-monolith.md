@@ -251,13 +251,3 @@ Next: Part 4 steps back from this running code to the design vocabulary
 behind it — subdomains, bounded contexts, aggregates, and why review's lack
 of coupling (smell 7, ch.9) is also the reason it leaves the monolith
 first.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>.
-`uv run pytest` passes against `examples/00-monolith`'s real, throwaway
-Postgres-backed test database; `tooling/newman/mea.postman_collection.json`
-run against the live monolith is recorded green in `tooling/newman/
-GOLDEN-BASELINE.md` (14 requests, 42 assertions, two consecutive clean
-runs). The monolith is now frozen/break-glass; this chapter describes the
-state preserved on `reference/monolith-before` and tag `v0-monolith`.*

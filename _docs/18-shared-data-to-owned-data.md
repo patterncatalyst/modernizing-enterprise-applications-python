@@ -381,12 +381,3 @@ Next: ch.19 builds the extraction this chapter planned — Inventory's own
 schema, the gRPC seam and its proto-as-ACL, the transaction-log backfill
 that bridges the transition, and the compensating `Release` that rebuilds
 the free rollback a shared transaction used to give away for nothing.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>.
-This is a planning and analysis chapter with no new code of its own; every
-artifact it cites — `order/models.py::OrderItem`, its migration, and the
-prior services' own shared-vs-owned docs — is real, already-built code,
-confirmed via `manage.py migrate`/`sqlmigrate`. The extraction this chapter
-plans is verified built and cut over in ch.19's own verification record.*

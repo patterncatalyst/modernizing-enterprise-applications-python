@@ -324,14 +324,3 @@ exactly one of these smells into the open and cures it, by design.
 Next: ch.10 looks at how this same monolith is tested — and why the test
 suite built for it today is the thing that will later prove every
 extraction behaves identically to what it replaced.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>.
-All seven smells are grep-locatable in `examples/00-monolith` via
-`grep -rn 'SMELL\[ch\.' .`; the two deterministic failure injections
-(`CARD-DECLINE` → 402, `SHIP-FAIL` → 422) are exercised live by `tests/
-test_checkout.py`, and the outbox cure is exercised by `tests/
-test_outbox.py`. The monolith is frozen/break-glass only; this chapter
-describes the pre-extraction "before" preserved on `reference/
-monolith-before` and tag `v0-monolith`.*

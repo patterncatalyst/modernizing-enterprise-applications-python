@@ -708,14 +708,3 @@ the real client library and a real broker rather than taken on faith.
 Next: Part 6 turns from *how a service gets extracted* to *who owns the
 data once it's extracted* — ch.18 starts dismantling the shared schema this
 chapter's notification-service was the first to opt entirely out of.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>.
-`uv run pytest` passes 8/8 against a real, throwaway Postgres container
-plus a Testcontainers integration test proving redelivery-yields-one-row
-against a real Kafka broker; `ruff check` is clean and `alembic upgrade
-head` creates the schema cleanly. The full async cutover is verified live
-end to end in `tooling/newman/GOLDEN-BASELINE.md`'s NEWMAN-ASYNC lane:
-66/66 assertions green in both flag states, and the negative check (service
-killed) fails strictly then recovers to green on restart.*

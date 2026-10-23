@@ -441,12 +441,3 @@ result alone.
 Next: ch.15 puts this proxy to work against the live stack, pulling the Review bounded
 context out from behind it and proving, with the same Newman suite, that
 nothing on the outside can tell the difference.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>.
-The proxy's pytest suite and the live Newman equivalence run
-(`tooling/newman/GOLDEN-BASELINE.md`) both pass against a real stack:
-58/58 assertions green with the flag off, on, and reverted, and the
-review-service-down negative check fails loudly as required, then recovers
-once restarted.*

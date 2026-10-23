@@ -375,6 +375,3 @@ Chapter 13 takes this wall and asks the question left open here: given
 several candidate seams, which is safest to cut first, measured
 by how strongly coupled it is to everything around it — and which, measured
 the same way, might be better left uncut.
-
----
-*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — every excerpt is quoted verbatim from `examples/00-monolith/`, and the `config/settings.py` topic constants are greppable in that tree.*

@@ -478,6 +478,3 @@ everything this chapter just did by classification: instead of reading code
 and sorting it into subdomains, it discovers seams from *behavior* — walking
 the checkout process as a sequence of facts and decisions — and produces the
 decomposition backlog the rest of Part 4 and Part 5 draw from.
-
----
-*Verification status: <span class="status status--verified">verified</span>. Conceptual chapter — no new code runs here; every excerpt is quoted verbatim from `examples/00-monolith/` and `examples/02-review-service/`, independently checkable with `grep -rn 'SMELL\[ch\.' examples/00-monolith`.*

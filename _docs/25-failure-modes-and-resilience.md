@@ -447,15 +447,3 @@ taxonomy with real, cited mitigations. ch.26 moves to Part 8 and the sixth
 and final extraction: the order context itself, and the communication
 patterns that tie every extracted service back together as one coherent
 system.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>.
-Every mechanism this chapter inventories is cited against a live run
-already recorded in a prior chapter or `tooling/newman/GOLDEN-BASELINE.md`:
-the gRPC deadline/503 translation, the two-layer outbox idempotency, the
-proxy's 502 bridge, and the saga crash-resume proof. The new `tenacity`
-retry in `enrich_client.py` is unit- and integration-tested, but its
-retry-on-transient-failure branch was not independently fault-injected
-against a live, killed-and-restarted monolith — that run remains the
-highest-value thing a future iteration should confirm.*

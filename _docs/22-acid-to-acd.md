@@ -317,7 +317,3 @@ Next: ch.23 builds the mechanism that lives inside the window this chapter
 just named — the choreographed saga itself, the event topology that
 replaces the transaction, and the proof that the equivalence suite stays
 sound across a contract it can no longer verify in a single round trip.
-
----
-
-*Verification status: <span class="status status--verified">verified</span>. The synchronous-mode free-rollback claim is the same direct-query proof ch.19 already recorded. The ACD-mode claims — the PENDING window's real latency, the reachable stranded-payment deferral, and the isolation-anomaly analogs — are quoted from the live cutover run in `tooling/newman/` and the order service's own docstring, not re-derived here; the PACELC framing is analysis of that already-verified behavior.*
