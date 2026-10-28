@@ -1,6 +1,6 @@
-// deck.js — "Modernizing Enterprise Applications (Python)" — 101 (the ideas).
+// deck.js: "Modernizing Enterprise Applications (Python)", 101 (the ideas).
 // Concept-forward companion: the case for moving Django to FastAPI, one seam
-// at a time. No deep code — that lives in the 201-fastapi deep dive.
+// at a time. No deep code; that lives in the 201-fastapi deep dive.
 // Red Hat house style, 16:9. Build: export NODE_PATH=$(npm root -g) && node deck.js
 //
 // Covers the authored chapters (strangler fig, content-based routing/ACL,
@@ -82,7 +82,7 @@ twoCol("101 · THE IDEAS", "The whole argument, in one sitting",
    "Where to stop, and where the deeper material lives"],
   "The agenda runs three acts. The first act makes the case for modernizing and is equally clear about when not to. Restraint is as much a part of this method as action. The second act walks the migration itself as a sequence of ideas: a reversible proxy in front of the monolith, bounded contexts as the place seams actually live, data ownership as the hardest coupling to break, and two different ways to coordinate a workflow once a single database transaction can no longer coordinate alone. The third act steps back from any one extraction to cover how the finished system is operated, what the modernization measurably bought, and which patterns from the wider catalog earned their place versus which stayed named and deferred.");
 
-// ===== ACT A — WHY & HOW ======================================================
+// ===== ACT A: WHY & HOW =======================================================
 divider("A", "Why, and How", "The case for change, and the method that makes it safe.",
   "This act opens the why-modernize argument and closes by introducing the strangler fig as the method that makes changing a live system safe. The throughline is that modernization is a means to an end, removing the coupling that makes real change expensive, never a goal in its own right, and the strangler fig is what lets that removal happen without betting the whole system on a single cutover event.");
 
@@ -103,7 +103,7 @@ diagram("THE STRANGLER FIG · THE METHOD", "Grow the new system around the old",
   "Four ordered moves: intercept, route, replace, retire, with one reversibility window spanning the first three; retiring the old code is the single move this method refuses to let you make early.",
   "This diagram introduces the strangler fig as the alternative to a rewrite. The name comes from the tree that germinates around a host and grows into a free-standing structure while the host keeps doing its job the entire time. The metaphor fits because a big-bang rewrite has nothing equivalent: it bets the whole migration on one cutover event, and if something was missed, there is usually no way back. The strangler fig instead replaces that one high-stakes bet with many small, independently reversible ones: stand up a new service, prove it behaves identically to the piece of the monolith it replaces, cut traffic over, and only retire the old code once the cutover has held. Nothing is deleted until it no longer needs to exist, so nothing has to be rebuilt to recover from a bad cutover.");
 
-// ===== ACT B — THE MIGRATION ==================================================
+// ===== ACT B: THE MIGRATION ===================================================
 divider("B", "The Migration", "Grow the new system around the old, one seam at a time.",
   "This act is the migration told as a sequence of ideas rather than a sequence of code changes: a proxy that can hand any request to a different backend without a client noticing, a domain that tells you where its own seams already are, data ownership as the half of decomposition that actually hurts, and two different ways to coordinate a workflow once a single database transaction is no longer available to hold it together.");
 
@@ -137,7 +137,7 @@ diagram("THE CUTOVER TIMELINE", "Six seams, in dependency order", "strangler-cut
   "Each of the six seams stays behind its own reversible setting until an automated equivalence suite proves the new service matches the old one, request for request: only then does the old code path retire for good.",
   "This is the evidence trail that makes every claim in this deck checkable rather than asserted. The same behavior-equivalence test suite, captured once against the original monolith, gets re-pointed at whichever backend is live for a given seam, never rewritten per cutover, only re-targeted. Flip a setting on, run the suite, see it pass against the new service; flip it back off, run the suite again, see it pass against the monolith exactly as before. That symmetry is the proof that the cutover is reversible in practice, not just in theory. Only the very last step in this timeline is irreversible by design: deleting the old code once every seam has held in production long enough that falling back to it is no longer a live option anyone needs.");
 
-// ===== ACT C — OPERATING & REFLECTION =========================================
+// ===== ACT C: OPERATING & REFLECTION ==========================================
 divider("C", "Operating & Reflection", "Run the result, measure the win, and know when to stop.",
   "This act steps back from any single extraction and asks what the finished system does as a whole: how it runs day to day once every service exists side by side, what the modernization actually measures, and which patterns from the wider catalog earned a lasting role versus which were named and left for later. It closes with the discipline that keeps six services from drifting into twenty.");
 

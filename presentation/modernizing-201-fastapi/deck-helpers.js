@@ -2,7 +2,7 @@
 // Carries the visual conventions from the existing Python deck:
 //   - 13.333 x 7.5 LAYOUT_WIDE
 //   - Eyebrow 12pt bold red EE0000, charSpacing 4
-//   - Title 30pt Overpass SemiBold #151515
+//   - Title 30pt Red Hat Display SemiBold #151515
 //   - Content 17pt Red Hat Text #242424
 //   - Code box fill #151515, code 11pt Red Hat Mono, fg #E6E6E6, comments #8FB98F
 //   - Section dividers: bg #AB0000 with section-panel.png on left and white logo
@@ -46,7 +46,7 @@ const COLOR = {
 };
 
 const FONT = {
-  title:   "Overpass",
+  title:   "Red Hat Display",
   titleFb: "Calibri",
   body:    "Red Hat Text",
   bodyFb:  "Calibri",
