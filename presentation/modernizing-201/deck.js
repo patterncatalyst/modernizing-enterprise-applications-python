@@ -1,11 +1,11 @@
-// deck.js — "Modernizing Enterprise Applications (Python)" — 201 (the patterns).
+// deck.js: "Modernizing Enterprise Applications (Python)", 201 (the patterns).
 // Full technical pattern set across the strangler-fig migration; just-enough
 // code (the async mechanics live in 201-fastapi). MAIN body: 50 slides across
 // 10 sections, plus Appendix A (OpenShift/CRC, 4), B (extended figures, 23),
 // C (reference, 5) = 82 slides.
 // Red Hat house style, 16:9. Build: export NODE_PATH=$(npm root -g) && node deck.js
 //
-// WAVE 2 CONTENT PASS — every slide is authored against the real chapters
+// WAVE 2 CONTENT PASS: every slide is authored against the real chapters
 // (_docs/14-33), the reconciliation ledger (_plans/reconciliation.md), the
 // pattern-coverage matrix (_plans/build-plan.md §C), and the real examples/
 // source files named in each code slide's caption. Diagram captions are
@@ -94,7 +94,7 @@ function code(eyebrow, title, lang, codeLines, caption, notes, opts) {
   addNotes(s, "Ten sections, same order the book builds in: why/how, the ADLC, the monolith, DDD seam-finding, the strangler fig, data, coordination, contracts, operating, and the pattern-language retrospective. Appendix A carries OpenShift/CRC parity; B carries every figure that didn't fit the 50-slide main body; C is the examples index, stack pins, and a glossary. Cross-references in this deck are by concept, never by slide number, so the deck stays correct if a section is trimmed for time.");
 }
 
-// ===== SECTION 01 — WHY MODERNIZE =============================================
+// ===== SECTION 01: WHY MODERNIZE ==============================================
 divider("01", "Why Modernize", "The case for change, and the discipline to leave most of it alone.",
   "Opens with the why-modernize case, then immediately the restraint case: this project extracted six services because five concrete smells demanded it, not because a target architecture was decided up front. That discipline is the throughline for the whole deck.");
 
@@ -108,9 +108,9 @@ content("WHY MODERNIZE · RESTRAINT", "And when not to modernize at all",
   ["Stable, low-value contexts are the cheapest ones to leave alone: encapsulate a seam before extracting it, and extract only when a concrete change gets safer or cheaper.",
    "Every extraction in this project traces to a named coupling smell already in the monolith, not to a target architecture decided in advance.",
    "The test at every seam: does this specific change get safer or cheaper, never whether the result looks more modern."],
-  "This is the restraint case, and it matters because the next 48 slides could otherwise read as 'decompose everything.' Six services came out of five documented smells, not a service-count plan. The pattern-language retrospective in section 10 returns to this with the receipts: six extractions against five smells, applied consistently, not invoked once and abandoned.");
+  "This is the restraint case, and it matters because this deck could otherwise read as 'decompose everything.' Six services came out of five documented smells, not a service-count plan. The pattern-language retrospective returns to this with the receipts: six extractions against five smells, applied consistently, not invoked once and abandoned.");
 
-// ===== SECTION 02 — THE ADLC + EQUIVALENCE GATE ===============================
+// ===== SECTION 02: THE ADLC + EQUIVALENCE GATE ================================
 divider("02", "The ADLC + the Equivalence Gate", "The lifecycle, and the automated check, that make agent-driven change safe.",
   "Introduces the Agentic Development Lifecycle this whole book was built with, and the automated equivalence gate every cutover has to pass before a flag is allowed to flip. This project itself, ten build iterations and three ledger files, is the worked example.");
 
@@ -118,13 +118,13 @@ content("THE ADLC · FROM SDLC", "The human moves up a level",
   ["The agent authors the change; the human frames the seam, sets the acceptance bar, and gates the merge, the same division of labor across all ten build iterations behind this book.",
    "The method rests on an automated equivalence gate, not on trust in a model's output: every cutover re-runs the same Newman contract suite the monolith already had to pass.",
    "No Quarkus Agent MCP or Camel MCP equivalent exists for this Python stack; unlike the Java sibling's tooling, the Map and Generate phases here substitute manual reconnaissance plus the lgtm-python skill's scaffold conventions, named as a real difference rather than glossed over."],
-  "This is the one place in the deck that explicitly contrasts with the Java sibling book, and it's worth saying out loud: there's no live dev-mode reload loop as tight as Quarkus's for this stack, and no MCP server that already knows FastAPI/aiokafka the way quarkus-agent knows Quarkus. The gap is named in the chapter rather than worked around quietly.");
+  "This is the one place in the deck that explicitly contrasts with the Java sibling book: there's no live dev-mode reload loop as tight as Quarkus's for this stack, and no MCP server that already knows FastAPI/aiokafka the way quarkus-agent knows Quarkus. That gap is named directly rather than worked around quietly.");
 
 content("THE ADLC · THE LOOP", "Frame, Map, Plan, Generate, Verify, Operate, Reconcile",
   ["Seven phases, one seam at a time: Frame states the outcome, Map does reconnaissance, Plan produces a gated step plan, Generate writes the code, Verify runs the gated equivalence check, Operate rolls out behind a flag, Reconcile records what shipped against what was planned.",
    "Two human gates carry the whole method: approve the plan before any code exists, and sign off on equivalence before the flag flips.",
    "Reconcile is where the record lives: three real corrections surfaced across ten iterations (a configuration mechanism, a ConfigMap's real shape, a harder-than-expected CVE scan) because the validation pass read the actual files, not the plan's description of them."],
-  "Walk the seven phases against a concrete example if there's time: the ch.27 chassis chapter's own plan assumed pydantic-settings as the configuration mechanism; the Verify/Reconcile phase caught that no service ever adopted it (every service uses a frozen @dataclass with from_env()) by grepping all eight config.py files directly, not by re-trusting the plan. That correction is itself evidence the loop works.");
+  "Walk the seven phases against a concrete example if there's time: the chassis extraction's own plan assumed pydantic-settings as the configuration mechanism; the Verify/Reconcile phase caught that no service ever adopted it (every service uses a frozen @dataclass with from_env()) by grepping all eight config.py files directly, not by re-trusting the plan. That correction is itself evidence the loop works.");
 
 code("THE ADLC · THE EQUIVALENCE GATE", "The behaviour-equivalence suite pins observable behaviour",
   "python · pytest",
@@ -149,11 +149,11 @@ code("THE ADLC · THE EQUIVALENCE GATE", "The behaviour-equivalence suite pins o
    "    response = api_client.get(\"/api/inventory\")",
    "    assert response.status_code == 200"],
   "examples/00-monolith/tests/test_checkout.py + test_smoke.py: the suite every cutover re-runs, old position and new, before a flag is allowed to flip",
-  "This is the same unedited Newman/pytest suite re-run at every single cutover across all six extractions. The point isn't that it's a big suite, it's that it never gets edited to make a cutover pass. test_ship_fail_sentinel is the one worth lingering on: it proves the whole checkout's transaction.atomic() rolls back, including the inventory reservation, leaving stock net-zero: the exact behavior ACID→ACD in section 06 has to replace with an explicit compensation.");
+  "This is the same unedited Newman/pytest suite re-run at every single cutover across all six extractions. The point isn't that it's a big suite, it's that it never gets edited to make a cutover pass. test_ship_fail_sentinel is the one worth lingering on: it proves the whole checkout's transaction.atomic() rolls back, including the inventory reservation, leaving stock net-zero: the exact behavior the ACID→ACD shift has to replace with an explicit compensation.");
 
-// ===== SECTION 03 — THE REFERENCE MONOLITH + SMELLS ===========================
+// ===== SECTION 03: THE REFERENCE MONOLITH + SMELLS ============================
 divider("03", "The Reference Monolith", "Six bounded contexts, one shared schema, and planted coupling smells.",
-  "Introduces the Django reference monolith this whole migration starts from: a fresh Django 5.2 LTS + DRF build, not a decomposed system with the extractions undone. Six smells, each tagged in the code, each cured by a specific later chapter.");
+  "Introduces the Django reference monolith this whole migration starts from: a fresh Django 5.2 LTS + DRF build, not a decomposed system with the extractions undone. Six smells, each tagged in the code, each cured by a named pattern.");
 
 code("THE MONOLITH · ARCHITECTURE", "One Django project, six apps, one shared schema",
   "python · django",
@@ -177,16 +177,16 @@ code("THE MONOLITH · ARCHITECTURE", "One Django project, six apps, one shared s
    "        \"USER\": _parsed_db_url.username or \"monolith\",",
    "    }",
    "}"],
-  "examples/00-monolith/config/settings.py: six Django apps, one shared Postgres schema, the coupling every later chapter unwinds",
-  "Every app in INSTALLED_APPS is a full bounded context, not a module convenience: order/inventory/payment/shipping/notification/review map 1:1 onto the six services this book eventually extracts, in rising order of difficulty. The DATABASES block is the smell this deck's data section (06) spends the most slides curing.");
+  "examples/00-monolith/config/settings.py: six Django apps, one shared Postgres schema, the coupling this book unwinds one seam at a time",
+  "Every app in INSTALLED_APPS is a full bounded context, not a module convenience: order/inventory/payment/shipping/notification/review map 1:1 onto the six services this book eventually extracts, in rising order of difficulty. The DATABASES block is the smell the data-ownership material spends the most slides curing.");
 
 content("THE MONOLITH · SMELLS", "Each smell maps to the pattern that removes it",
   ["Six smells, each tagged # SMELL[ch.NN] in the code: a shared schema, a god checkout service, one ACID transaction spanning every context, a synchronous notification call inside that transaction, no anti-corruption layer, and auth tangled into an otherwise independent context.",
-   "Each smell maps to the chapter and pattern that cures it: the shared schema to owned data (06), the single transaction to a saga (07), the synchronous call to an outbox (06).",
+   "Each smell maps to the pattern that cures it: the shared schema to owned data, the single transaction to a saga, the synchronous call to an outbox.",
    "By the end of the extraction roadmap every smell but the two kept for the frozen baseline is struck through in the project's own SMELLS.md, crossed out as each cure landed rather than just described as fixed."],
-  "This slide is the map the rest of the main body keeps returning to: section 05 cures smell #5 (no ACL) and #6 (review tangled in auth), section 06 cures #1 and #4 (shared schema, synchronous send), section 07 cures #2 and #3 (god service, one ACID transaction). If time is short, this is the one slide worth not skipping: everything downstream is a cure for something named here.");
+  "This slide is the map the deck keeps returning to: the anti-corruption layer cures smell #5 (no ACL) and #6 (review tangled in auth), owned data and the outbox cure #1 and #4 (shared schema, synchronous send), and the saga cures #2 and #3 (god service, one ACID transaction). If time is short, this is the one slide worth not skipping: everything downstream is a cure for something named here.");
 
-// ===== SECTION 04 — FINDING THE SEAMS (DDD) ===================================
+// ===== SECTION 04: FINDING THE SEAMS (DDD) ====================================
 divider("04", "Finding the Seams", "Event storming, bounded contexts, and the coupling ladder.",
   "Introduces domain-driven seam-finding as the technique that precedes every extraction in this book. The six bounded contexts aren't an architecture diagram handed down from above; they're what falls out of event storming the checkout flow.");
 
@@ -200,9 +200,9 @@ content("FINDING THE SEAMS · BOUNDED CONTEXTS", "A real seam has a clean bounda
   ["A real seam has a boundary the domain already respects: the data crossing it is data the domain already exchanged, so the anti-corruption layer at that boundary has almost nothing left to translate.",
    "Service count follows the domain, not the other way around: this project stopped at six contexts plus a data-less gateway because that's where the real seams ran out, not because a target number was hit.",
    "The modular-monolith-with-decomposed-databases trap is the warning sign for the opposite failure: splitting a schema before splitting the coupling that made it one schema in the first place."],
-  "Section 10's pattern-language retrospective returns to this trap by name: a database split with no corresponding code split is strictly worse than the monolith it replaced, because it gives up atomic consistency and gets independent deployability back for nothing. Flag that connection now so it lands later.");
+  "The pattern-language retrospective returns to this trap by name: a database split with no corresponding code split is strictly worse than the monolith it replaced, because it gives up atomic consistency and gets independent deployability back for nothing.");
 
-// ===== SECTION 05 — THE STRANGLER FIG (PROXY / ACL / EVENT-DRIVEN) ============
+// ===== SECTION 05: THE STRANGLER FIG (PROXY / ACL / EVENT-DRIVEN) =============
 divider("05", "The Strangler Fig in Practice", "A proxy in front, an ACL at the seam, events to notify.",
   "Walks the strangler-fig mechanics this migration used: a thin ASGI reverse-proxy façade, an anti-corruption layer at each boundary, and the first event-driven extraction with no synchronous dependency on the monolith at all.");
 
@@ -219,16 +219,16 @@ diagram("THE STRANGLER FIG · PROXY ROUTING", "The edge router chooses old or ne
 diagram("THE STRANGLER FIG · THE ACL", "An anti-corruption layer keeps the new service clean",
   "acl-contract-seam",
   "Figure 16.2: The ACL is a translation boundary, not just another request: notification-service's OrderPlacedEvent sits between the monolith's Kafka contract and the service's own owned schema.",
-  "Contrast the two ACL instances this book built: ch.16's is a one-dimensional routing decision (pick a backend by path); ch.19's inventory.proto is the harder case, a wire contract kept distinct from both the monolith's and the service's own domain vocabulary, with a drift guard that fails the build the moment the checked-in .proto and the generated stubs disagree. Section 08 returns to that proto in detail.");
+  "Contrast two ACL instances this book built: the content-based router is a one-dimensional routing decision (pick a backend by path); inventory.proto is the harder case, a wire contract kept distinct from both the monolith's and the service's own domain vocabulary, with a drift guard that fails the build the moment the checked-in .proto and the generated stubs disagree.");
 
 diagram("THE STRANGLER FIG · EVENT-DRIVEN NOTIFICATION", "The first extraction reacts to an event, not a call",
   "event-driven-notification-topology",
   "Figure 17.2: One outbox row, two independent consumer groups, one flag choosing who answers the read, the first extraction with no synchronous dependency on the monolith at all.",
   "Notification is also the project's first owned schema from day one: no shared-table entanglement to unwind later, unlike review (which stays on the shared schema, a named deferral) or inventory (which needs a one-time CDC bridge). This is the cheapest possible extraction shape, and it's sequenced second for exactly that reason.");
 
-// ===== SECTION 06 — DATA ACROSS THE SEAM ======================================
+// ===== SECTION 06: DATA ACROSS THE SEAM =======================================
 divider("06", "Data Across the Seam", "From a shared schema to owned data, without losing an event.",
-  "Walks database-per-service, the transactional outbox, CDC as a temporary bridge, CQRS, and the ACID-to-ACD transaction boundary: the five data-ownership moves that together cure smells #1 and #4 from section 03.");
+  "Walks database-per-service, the transactional outbox, CDC as a temporary bridge, CQRS, and the ACID-to-ACD transaction boundary: the five data-ownership moves that together cure the shared-schema and synchronous-call smells named in the monolith's own smell list.");
 
 diagram("DATA · OWNED, NOT SHARED", "Database-per-service is the goal",
   "shared-data-vs-owned-data",
@@ -269,16 +269,16 @@ diagram("DATA · CQRS", "Split the write model from the read model where shapes 
 diagram("DATA · ACID BECOMES ACD", "Across services, eventual consistency with compensation",
   "acid-to-acd-boundary",
   "Figure 22.1: ACID → ACD: Atomicity, Consistency, and Durability survive for a smaller scope; Isolation is the one letter traded for a window the saga manages explicitly: a PENDING order visible and real before payment or shipping has an opinion on it.",
-  "Say the cost out loud, in the open: that Isolation gap is real, not hand-waved. A PENDING order is a legitimate, visible state a reader can query before the saga resolves it; ACD names that window and gives it a state machine (section 07's sagas) instead of pretending the old single-transaction guarantee still holds.");
+  "That Isolation gap is real. A PENDING order is a legitimate, visible state a reader can query before the saga resolves it; ACD names that window and gives it a state machine, the saga, instead of pretending the old single-transaction guarantee still holds.");
 
-// ===== SECTION 07 — COORDINATING ACROSS SERVICES ==============================
+// ===== SECTION 07: COORDINATING ACROSS SERVICES ===============================
 divider("07", "Coordinating Across Services", "Sagas: two styles, same checkout, and failure as a first-class concern.",
   "Walks choreographed and orchestrated sagas side by side on the same checkout flow, plus the idempotent-compensation mechanism that makes a redelivered event or a retried RPC safe either way.");
 
 diagram("COORDINATING · TWO STYLES", "Choreography and orchestration, same checkout",
   "choreography-vs-orchestration-contrast",
   "Figure 24.1: Choreography has no coordinator; orchestration has exactly one: the same checkout, solved two structurally opposite ways in the same codebase.",
-  "This contrast matters: a project that only ever needed one style wouldn't have this chapter's teaching value. Payment's saga (next slide) has no box anywhere that knows the whole sequence; shipping's saga (the slide after) re-embeds a DB-backed orchestrator that does.");
+  "This contrast matters: a project that only ever needed one style would be missing real teaching value. Payment's saga has no box anywhere that knows the whole sequence; shipping's saga re-embeds a DB-backed orchestrator that does.");
 
 code("COORDINATING · THE CHOREOGRAPHED SAGA", "Payment reacts to the order-placed event",
   "python · aiokafka",
@@ -327,9 +327,9 @@ diagram("COORDINATING · IDEMPOTENT CONSUMERS", "A redelivered event must not do
 diagram("COORDINATING · COMPENSATION, NOT ROLLBACK", "Undo a committed step with a compensating action",
   "idempotent-compensation-two-layers",
   "Figure 23.3: A compensating Release survives redelivery at two independent layers: the Kafka-event status-transition guard and the RPC-layer compensations ledger.",
-  "This closes a gap the gRPC Reserve/Release pair opened back in section 06: once a reservation decrement lives in another service's own database, the free rollback a single transaction used to provide is gone, and this two-layer idempotency is what replaces it. Proven live: stock held constant across forced redelivery on both paths.");
+  "This closes a gap the gRPC Reserve/Release pair opened: once a reservation decrement lives in another service's own database, the free rollback a single transaction used to provide is gone, and this two-layer idempotency is what replaces it. Proven live: stock held constant across forced redelivery on both paths.");
 
-// ===== SECTION 08 — COMMUNICATION, CONTRACTS & THE CHASSIS ====================
+// ===== SECTION 08: COMMUNICATION, CONTRACTS & THE CHASSIS =====================
 divider("08", "Communication, Contracts & the Chassis", "REST, gRPC, GraphQL, and the registry that keeps them compatible.",
   "Walks protocol fit across the finished system, the two contract mechanisms this project exercises (a byte-identical .proto with a drift guard, and a live Apicurio schema registry demo), and the FastAPI chassis every service runs on.");
 
@@ -391,14 +391,14 @@ diagram("THE CHASSIS", "Config, health, logging, and tracing, as a convention",
   "Figure 27.1: The chassis inside one FastAPI service: config and logging copied into every service by hand, health and error-mapping present on six of eight, tenacity retry on exactly the one call site that has needed it so far.",
   "This chassis is a convention, not a library: eight near-identical files, not one shared dependency. Config (frozen @dataclass + from_env()) and logging sit at 7-8 of 8; /health and errors.py sit at 6 of 8, each gap tied to a stated structural reason, not an unexplained one. The deeper chassis code (DI wiring, structured logging setup) is 201-FastAPI's job; this deck just names the shape.");
 
-// ===== SECTION 09 — OPERATING & DELIVERING ====================================
+// ===== SECTION 09: OPERATING & DELIVERING =====================================
 divider("09", "Operating & Delivering", "Deploy, mesh, observe, and gate the supply chain.",
   "Walks the deployment topology, the service mesh's mTLS and tracing story, and the supply-chain gate that scans every built image before it ships: the cross-cutting concerns no single bounded context owns alone.");
 
 diagram("OPERATING · DEPLOY TOPOLOGY", "Six services, one Kubernetes namespace",
   "deploy-k8s-namespace-topology",
   "Figure 29.1: The mea namespace: eight Deployments/Services behind one NodePort edge, two shared StatefulSets, probes honoring each service's actual health surface rather than copied uniformly.",
-  "Two services (strangler-proxy, review-service) get tcpSocket probes because they have no /health route; the other six get httpGet /health. That's the chassis scorecard from section 08 showing up directly in the deployment manifest, not glossed over with a uniform probe that would silently lie about two services' real readiness.");
+  "Two services (strangler-proxy, review-service) get tcpSocket probes because they have no /health route; the other six get httpGet /health. That's the chassis scorecard showing up directly in the deployment manifest, not glossed over with a uniform probe that would silently lie about two services' real readiness.");
 
 diagram("OPERATING · THE MESH", "mTLS and traffic identity, from the platform",
   "mesh-mtls-topology",
@@ -433,7 +433,7 @@ diagram("OPERATING · THE RESULT", "One monolith, six services, no shared schema
   "Figure 26.3: The final topology: six services and a GraphQL gateway behind one flagless router, the monolith frozen and unwired.",
   "Flagless is the word to land on: every *_enabled boolean and the monolith fallback path were removed from the proxy as the one irreversible move in the whole project, taken only after a pre-cutover reversibility proof captured the full extracted topology against the bare monolith, both green.");
 
-// ===== SECTION 10 — THE PATTERN LANGUAGE, REVISITED ===========================
+// ===== SECTION 10: THE PATTERN LANGUAGE, REVISITED ============================
 divider("10", "The Pattern Language, Revisited", "Which patterns we used, and where to stop.",
   "Closes the main body with the pattern-language retrospective: forty-five rows walked against the finished system, three verdicts (earned, adapted, named-and-deferred), and the anti-pattern that explains why this project has eight services and not twenty.");
 
@@ -453,7 +453,7 @@ content("WHERE TO STOP", "Over-decomposition is the seductive failure",
    "Five named next horizons (a circuit breaker, full event sourcing, a GitOps operator, Loki log aggregation, tracing across a Kafka saga hop) are each a bounded increment with a stated trigger, not a rewrite."],
   "This is the slide to leave the audience on before the close: the finished system has eight services (six contexts plus the proxy plus the gateway) because that's where real smells ran out, not because twenty would have looked more impressive on an architecture diagram. A nanoservice-sprawl version of the same domain would have the same forty-five-pattern catalog to reach for, and would reach for most of it for the wrong reason.");
 
-// ===== CLOSE (end of MAIN body — ~50 slides through here) =====================
+// ===== CLOSE (end of MAIN body: ~50 slides through here) ======================
 content("201 · CLOSE", "The patterns, end to end: now go deeper",
   ["The main body covered the full pattern arc at just-enough-code depth: seams, data ownership, coordination, contracts, and the operating model that keeps six services running as one system.",
    "For the async/FastAPI code deep dive (SQLAlchemy 2.0 sessions, the outbox relay as an asyncio task, grpc.aio, Pydantic v2 at the edges), see the 201-FastAPI companion.",
@@ -461,14 +461,14 @@ content("201 · CLOSE", "The patterns, end to end: now go deeper",
   "This is the handoff slide: the main body is complete at this point and the appendix is reference material, not a continuation of the narrative arc. If the audience is engineers about to implement, point them at 201-FastAPI next; if they're deciding whether to start a migration at all, point them back at the 101.");
 
 // ===============================================================================
-// APPENDIX — overflow starts here. Slides below do NOT count against the
+// APPENDIX: overflow starts here. Slides below do NOT count against the
 // ~50-slide MAIN cap (tracked separately as appendixCount).
 // ===============================================================================
 inAppendix = true;
 
-// ----- APPENDIX A — OpenShift/CRC Parity --------------------------------------
+// ----- APPENDIX A: OpenShift/CRC Parity ---------------------------------------
 divider("APP-A", "Appendix A: OpenShift/CRC Parity", "Keep this open in another window.",
-  "OpenShift/CRC parity material: the same eight services and manifests from section 09, re-homed onto OpenShift Local with Routes, SCCs, and OpenShift Service Mesh 3 instead of a plain NodePort and vanilla Istio. deploy/k8s, the app code, and the Containerfiles are unchanged: every OpenShift-specific concern is confined to openshift/ and this one appendix chapter.");
+  "OpenShift/CRC parity material: the same eight services and manifests, re-homed onto OpenShift Local with Routes, SCCs, and OpenShift Service Mesh 3 instead of a plain NodePort and vanilla Istio. deploy/k8s, the app code, and the Containerfiles are unchanged: every OpenShift-specific concern is confined to openshift/ and this one appendix chapter.");
 
 diagram("APPENDIX · OPENSHIFT TOPOLOGY", "The same six services, on OpenShift Local",
   "openshift-crc-topology",
@@ -482,17 +482,17 @@ diagram("APPENDIX · IMAGE DELIVERY", "In-cluster builds, no external registry r
 
 diagram("APPENDIX · MESH mTLS AT THE EDGE", "STRICT mTLS and a Route at the edge",
   "openshift-mesh-mtls-edge",
-  "Figure 33.3: STRICT mesh-wide, a PERMISSIVE carve-out at each Route, the Route itself the one unmeshed edge: OpenShift Service Mesh 3 parity with the minikube/Istio mesh in section 09.",
+  "Figure 33.3: STRICT mesh-wide, a PERMISSIVE carve-out at each Route, the Route itself the one unmeshed edge: OpenShift Service Mesh 3 parity with the minikube/Istio mesh.",
   "The injection mechanism differs by platform and the deck says so rather than letting a reader infer it: minikube uses a sidecar.istio.io/inject pod-template annotation; OSSM 3 on OpenShift uses an istio.io/rev label instead. Verified live: STRICT mTLS rejecting a plaintext caller with exit 56, and Kiali reporting MTLS_ENABLED.");
 
-// ----- APPENDIX B — Extended Pattern Variants & the Full Figure Set ----------
+// ----- APPENDIX B: Extended Pattern Variants & the Full Figure Set -----------
 divider("APP-B", "Appendix B: Extended Pattern Variants", "The deeper per-pattern figures that didn't fit the main 50.",
   "Every diagram from the house figure set not already used in the main body: the deeper per-pattern variants, sequence-level detail on both sagas, and the evidence figures behind the main body's summary claims. Reference depth, not a second narrative pass.");
 
 diagram("APPENDIX · SAGA CRASH-RESUME", "The saga's state machine survives a crash",
   "saga-state-machine-crash-resume",
   "Figure 24.3: Resumable by construction: the saga_log row remembers what the process forgot; resume_running_sagas() picks up at the persisted step_index, not from scratch.",
-  "Pair this with section 07's orchestrator code slide; this figure is the proof, not just the claim: kill the process mid-saga, restart, and it resumes without re-invoking a step that already completed.");
+  "Pair this with the orchestrator code slide; this figure is the proof, not just the claim: kill the process mid-saga, restart, and it resumes without re-invoking a step that already completed.");
 diagram("APPENDIX · THE CHASSIS SCORECARD", "Which chassis capabilities each service adopted",
   "chassis-scorecard",
   "Figure 27.2: Used, partial, and deferred, across all eight services: config and logging at 7-8 of 8, health and error-mapping at 6 of 8 each for a named structural reason, tenacity at 1 of 8, OpenTelemetry and a shared chassis library both named and deferred.",
@@ -500,7 +500,7 @@ diagram("APPENDIX · THE CHASSIS SCORECARD", "Which chassis capabilities each se
 diagram("APPENDIX · SHIPPING RESILIENCE", "Retries, timeouts, and the circuit breaker in the shipping chassis",
   "shipping-resilience-chassis",
   "Figure 25.1: What already runs (a gRPC deadline, outbox at-least-once, the proxy's 502 fail-safe, the orchestrator's own crash-resume), what's new (a tenacity retry-with-timeout on one HTTP call), and what's named but not yet built.",
-  "The resilience this system has is distributed across existing mechanisms, not concentrated in one new named component: the only new mechanism this chapter added was the tenacity wrapper around shipping's one outbound enrich() call.");
+  "The resilience this system has is distributed across existing mechanisms, not concentrated in one new named component: the only new mechanism added here was the tenacity wrapper around shipping's one outbound enrich() call.");
 diagram("APPENDIX · SCHEMA EVOLUTION", "A compatible Avro schema change, end to end",
   "avro-compatibility-evolution",
   "Figure 28.3: Schema evolution against a live BACKWARD rule: an additive field with a default is accepted (200); a field retype is rejected (400) before a single message ships.",
@@ -516,15 +516,15 @@ diagram("APPENDIX · BEFORE THE REGISTRY", "Hand-duplicated schemas were the sta
 diagram("APPENDIX · THE gRPC CONTRACT, VISUALLY", "Inventory's protobuf ACL, as a diagram",
   "inventory-grpc-proto-acl",
   "Figure 19.1: The proto is the ACL: two separate domain vocabularies meet only at the wire.",
-  "Visual companion to section 08's gRPC code slide, useful when walking through why the wire vocabulary (stock_keeping_unit, display_name) is kept distinct from both the monolith's and inventory-service's own internal vocabulary.");
+  "Visual companion to the gRPC code slide, useful when walking through why the wire vocabulary (stock_keeping_unit, display_name) is kept distinct from both the monolith's and inventory-service's own internal vocabulary.");
 diagram("APPENDIX · THE GRAPHQL FAN-OUT, VISUALLY", "One query, five sources, as a diagram",
   "graphql-gateway-five-source-fanout",
   "Figure 26.2: One query, five sources, no data owned locally: a downstream failure nulls one field and appends one errors[] entry, never a crashed request.",
-  "Visual companion to section 08's GraphQL code slide: walk the five fetch targets (order REST, payment REST, shipment REST, review REST per item, inventory gRPC per item) and the nullability discipline that makes partial failure safe.");
+  "Visual companion to the GraphQL code slide: walk the five fetch targets (order REST, payment REST, shipment REST, review REST per item, inventory gRPC per item) and the nullability discipline that makes partial failure safe.");
 diagram("APPENDIX · MULTI-OUTBOX SAGA", "A saga that spans more than one service's outbox",
   "multi-outbox-saga-topology",
   "Figure 20.2: Two outboxes, chained: order-service's outbox feeds payment-service's consumer, which writes its own outbox, consumed in turn, a saga with no orchestrator anywhere in the chain.",
-  "This is the project's first multi-service outbox choreography, and it generalizes the single-outbox pattern from section 06 into a chain: one transaction, an at-least-once relay, an idempotent consumer, repeated at each hop.");
+  "This is the project's first multi-service outbox choreography, and it generalizes the single-outbox pattern into a chain: one transaction, an at-least-once relay, an idempotent consumer, repeated at each hop.");
 diagram("APPENDIX · CONTENT-BASED ROUTING", "The notification service routes by event content",
   "notification-content-based-routing",
   "Figure 16.1: One routing decision (a path-prefix predicate) generalized to header- and payload-based routing as the same mechanism scales to more seams.",
@@ -532,15 +532,15 @@ diagram("APPENDIX · CONTENT-BASED ROUTING", "The notification service routes by
 diagram("APPENDIX · THE CHOREOGRAPHED SAGA, VISUALLY", "Payment's reaction to checkout, as a sequence diagram",
   "choreographed-payment-saga-sequence",
   "Figure 23.2: The choreographed saga top to bottom: every arrow is a reaction to an event, branching into three terminal outcomes, no orchestrator box anywhere.",
-  "Visual companion to section 07's choreography code slide: trace the three terminal outcomes (captured, declined, and the downstream shipping-failed refund hop) and notice that no single component ever holds the whole sequence in view.");
+  "Visual companion to the choreography code slide: trace the three terminal outcomes (captured, declined, and the downstream shipping-failed refund hop) and notice that no single component ever holds the whole sequence in view.");
 diagram("APPENDIX · THE ORCHESTRATED SAGA, VISUALLY", "Shipping's orchestration, as a sequence diagram",
   "orchestrated-shipping-saga-sequence",
   "Figure 24.2: The orchestrated saga: one coordinator, four steps, one compensation decision on a book_carrier failure.",
-  "Visual companion to section 07's orchestration code slide: the SHIP-FAIL sentinel fires at step 3 (book_carrier), after dispatch has already persisted a Shipment row, which is exactly what gives the cancel_shipment compensation something real to undo.");
+  "Visual companion to the orchestration code slide: the SHIP-FAIL sentinel fires at step 3 (book_carrier), after dispatch has already persisted a Shipment row, which is exactly what gives the cancel_shipment compensation something real to undo.");
 diagram("APPENDIX · ORDER-ITEM SNAPSHOT", "The order-item foreign key becomes an owned snapshot",
   "orderitem-fk-to-snapshot",
   "Figure 18.2: From foreign key to snapshot: a live join becomes a denormalized sku/item_name/unit_price_cents copy, moved by an add-backfill-drop migration sequence.",
-  "This is the concrete mechanics behind 'owned, not shared' from section 06: a three-step migration (add the snapshot columns, backfill them, drop the foreign key) rather than a single breaking schema change.");
+  "This is the concrete mechanics behind 'owned, not shared': a three-step migration (add the snapshot columns, backfill them, drop the foreign key) rather than a single breaking schema change.");
 diagram("APPENDIX · ORDER LIFECYCLE (AWAITING SHIPMENT / REFUND)", "The order state machine's less-common branches",
   "order-lifecycle-awaiting-shipment-refund",
   "Figure 24.4: AWAITING_SHIPMENT is a real intermediate status, not an implementation detail, and the refund hop closes the stranded-payment gap a captured payment would otherwise leave behind.",
@@ -556,7 +556,7 @@ diagram("APPENDIX · THE REBUILDABLE READ MODEL", "The order view projection can
 diagram("APPENDIX · THE OUTBOX RELAY, AT LEAST ONCE", "Delivery guarantees the relay makes",
   "outbox-relay-at-least-once",
   "Figure 20.1: The bridge, the relay, and the counterpart that makes at-least-once survive contact with reality: an idempotent consumer on the other end, in whichever idiom fits the write.",
-  "Visual companion to section 06's outbox-relay code slide; the generalized shape behind every outbox instance in this project: one transaction, an at-least-once relay, and a consumer-side guarantee that's never optional.");
+  "Visual companion to the outbox-relay code slide; the generalized shape behind every outbox instance in this project: one transaction, an at-least-once relay, and a consumer-side guarantee that's never optional.");
 diagram("APPENDIX · A LIGHTER RESERVE/RELEASE SAGA", "A smaller saga shape for a smaller workflow",
   "reserve-release-saga-lite",
   "Figure 19.3: Reserve/release across the boundary: where the free rollback went once a decrement lives in another service's own database, and the compensating Release that replaces it.",
@@ -572,13 +572,13 @@ diagram("APPENDIX · THE CUTOVER TIMELINE, VISUALLY", "Six seams, in dependency 
 diagram("APPENDIX · THE SUPPLY-CHAIN GATE, VISUALLY", "SBOM, scan, gate, as a pipeline diagram",
   "supply-chain-gate-pipeline",
   "Figure 31.1: The syft-to-grype-to-policy pipeline for both the gating target and the frozen monolith, plus the four additive CI checks converging on one repository ruleset.",
-  "Visual companion to section 09's supply-chain code slide: both scanned images produce the identical 265-match, 35-High result from their shared UBI base layer, which is itself evidence the finding is a base-image fact, not an order-service-specific regression.");
+  "Visual companion to the supply-chain code slide: both scanned images produce the identical 265-match, 35-High result from their shared UBI base layer, which is itself evidence the finding is a base-image fact, not an order-service-specific regression.");
 diagram("APPENDIX · TWO CUTOVER DIMENSIONS", "Reversibility and blast radius, scored per seam",
   "two-cutover-dimensions",
   "Figure 19.4: Two independent cutover flags as a 2x2 grid: the two corners this project exercised, against the two split corners that are only safe during the CDC-backfilled transition window.",
   "Inventory's cutover has two independent flags (reads vs. reserve/release) rather than one combined switch; this figure is the grid of which combinations were actually exercised and which are only sound transiently, during the backfill window.");
 
-// ----- APPENDIX C — Reference (examples, stack, glossary) --------------------
+// ----- APPENDIX C: Reference (examples, stack, glossary) ---------------------
 divider("APP-C", "Appendix C: Reference", "The runnable examples, the stack, and the terms used in this deck.",
   "Reference material for follow-along: the examples/ directory map, every stack version pinned across the project, and a glossary of the terms this deck used without re-defining each time.");
 
@@ -598,7 +598,7 @@ content("APPENDIX · GLOSSARY", "Terms used in this deck",
   ["Strangler fig: replace a system one seam at a time behind a router, never a rewrite. Seam: a boundary the domain already respects. ACL: a translation layer that keeps two vocabularies from leaking into each other.",
    "Outbox: write the domain row and the event row in one transaction. Saga: a multi-step operation across services that compensates on partial failure, choreographed or orchestrated. CQRS: a write model and a read model, split where their shapes diverge.",
    "ACD: the three letters of ACID a saga keeps, with Isolation traded for a window it manages explicitly. Chassis: the conventions every service in the system follows, copied by hand rather than shared as a library."],
-  "Cross-referenced by concept to the section where each term was introduced: seam and ACL in section 04-05, outbox and ACD in section 06, saga and CQRS in sections 06-07, chassis in section 08.");
+  "Each term maps to a concept this deck develops in depth: seam and the ACL anchor the strangler fig, outbox and ACD anchor data ownership, saga and CQRS anchor cross-service coordination, and chassis anchors the communication and operating conventions.");
 
 content("CLOSING · GO DEEPER", "Where to go from here",
   ["For the ideas and the advantage case at architect altitude, see the 101 deck; for the async/FastAPI code deep dive underneath every pattern here, see 201-FastAPI.",
