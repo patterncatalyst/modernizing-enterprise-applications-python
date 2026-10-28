@@ -25,7 +25,7 @@ p. 2
 - Appendix A: OpenShift/CRC parity
 - Appendix B / C: extended figures + reference
 
-> Ten sections, same order the book builds in: why/how, the ADLC, the monolith, DDD seam-finding, the strangler fig, data, coordination, contracts, operating, and the pattern-language retrospective. Appendix A carries OpenShift/CRC parity; B carries every figure that didn't fit the 50-slide main body; C is the examples index, stack pins, and a glossary. Cross-references in this deck are by concept, never by slide number, so the deck stays correct if a section is trimmed for time.
+> Ten sections, same order the system is built in: why/how, the ADLC, the monolith, DDD seam-finding, the strangler fig, data, coordination, contracts, operating, and the pattern-language retrospective. Appendix A carries OpenShift/CRC parity; B carries every figure that didn't fit the 50-slide main body; C is the examples index, stack pins, and a glossary. Cross-references in this deck are by concept, never by slide number, so the deck stays correct if a section is trimmed for time.
 
 ## [003] Why Modernize (sldId 258)
 
@@ -41,7 +41,7 @@ p. 4
 
 - A Django monolith holding six bounded contexts in one shared Postgres schema makes every change touch everything else: one deployable, one release train, one blast radius.
 - The target is independent deployability, not a service count: a change to shipping should never require testing or redeploying payment.
-- This deck walks the full pattern set that gets there: the strangler fig, owned data, both saga shapes, contracts, and the operating model that keeps the result running as one system.
+- The full pattern set gets there: the strangler fig, owned data, both saga shapes, contracts, and the operating model that keeps the result running as one system.
 
 > Frame this as the business case before any pattern name appears: coupling is a cost, measured in how many things have to move together for one change. The monolith is the believable common ancestor every real legacy system starts from, not bad engineering. The case for moving is narrower and stronger than 'microservices are better': it's that specific changes get safer and cheaper once the coupling that forced them together is gone.
 
@@ -61,17 +61,17 @@ p. 5
 
 The lifecycle, and the automated check, that make agent-driven change safe.
 
-> Introduces the Agentic Development Lifecycle this whole book was built with, and the automated equivalence gate every cutover has to pass before a flag is allowed to flip. This project itself, ten build iterations and three ledger files, is the worked example.
+> Introduces the Agentic Development Lifecycle this whole modernization was built with, and the automated equivalence gate every cutover has to pass before a flag is allowed to flip. This project itself, ten build iterations and three ledger files, is the worked example.
 
 ## [007] THE ADLC · FROM SDLC · The human moves up a level (sldId 262)
 
 p. 7
 
-- The agent authors the change; the human frames the seam, sets the acceptance bar, and gates the merge, the same division of labor across all ten build iterations behind this book.
+- The agent authors the change; the human frames the seam, sets the acceptance bar, and gates the merge, the same division of labor across all ten build iterations behind this modernization.
 - The method rests on an automated equivalence gate, not on trust in a model's output: every cutover re-runs the same Newman contract suite the monolith already had to pass.
 - No Quarkus Agent MCP or Camel MCP equivalent exists for this Python stack; unlike the Java sibling's tooling, the Map and Generate phases here substitute manual reconnaissance plus the lgtm-python skill's scaffold conventions, named as a real difference rather than glossed over.
 
-> This is the one place in the deck that explicitly contrasts with the Java sibling book: there's no live dev-mode reload loop as tight as Quarkus's for this stack, and no MCP server that already knows FastAPI/aiokafka the way quarkus-agent knows Quarkus. That gap is named directly rather than worked around quietly.
+> This is the one place in the deck that explicitly contrasts with the Java sibling implementation. This Python/FastAPI stack has no dev-mode reload loop as tight as Quarkus's, and no MCP server that knows FastAPI/aiokafka the way quarkus-agent knows Quarkus. That gap is named directly rather than worked around quietly.
 
 ## [008] THE ADLC · THE LOOP · Frame, Map, Plan, Generate, Verify, Operate, Reconcile (sldId 263)
 
@@ -81,7 +81,7 @@ p. 8
 - Two human gates carry the whole method: approve the plan before any code exists, and sign off on equivalence before the flag flips.
 - Reconcile is where the record lives: three real corrections surfaced across ten iterations (a configuration mechanism, a ConfigMap's real shape, a harder-than-expected CVE scan) because the validation pass read the actual files, not the plan's description of them.
 
-> Walk the seven phases against a concrete example if there's time: the chassis extraction's own plan assumed pydantic-settings as the configuration mechanism; the Verify/Reconcile phase caught that no service ever adopted it (every service uses a frozen @dataclass with from_env()) by grepping all eight config.py files directly, not by re-trusting the plan. That correction is itself evidence the loop works.
+> Walk the seven phases against a concrete example if there's time: the chassis extraction's own plan assumed pydantic-settings as the configuration mechanism. The Verify/Reconcile phase caught that no service ever adopted it (every service uses a frozen @dataclass with from_env()) by grepping all eight config.py files directly, not by re-trusting the plan. That correction is itself evidence the loop works.
 
 ## [009] THE ADLC · THE EQUIVALENCE GATE · The behaviour-equivalence suite pins observable behaviour (sldId 264)
 
@@ -114,7 +114,7 @@ def test_inventory_serves(api_client, widget):
 
 examples/00-monolith/tests/test_checkout.py + test_smoke.py: the suite every cutover re-runs, old position and new, before a flag is allowed to flip
 
-> This is the same unedited Newman/pytest suite re-run at every single cutover across all six extractions. The point isn't that it's a big suite, it's that it never gets edited to make a cutover pass. test_ship_fail_sentinel is the one worth lingering on: it proves the whole checkout's transaction.atomic() rolls back, including the inventory reservation, leaving stock net-zero: the exact behavior the ACID→ACD shift has to replace with an explicit compensation.
+> This is the same unedited Newman/pytest suite re-run at every single cutover across all six extractions. The point isn't that it's a big suite, it's that it never gets edited to make a cutover pass. test_ship_fail_sentinel is the one worth lingering on: it proves the whole checkout's transaction.atomic() rolls back, including the inventory reservation, leaving stock net-zero. That is the exact behavior the ACID→ACD shift has to replace with an explicit compensation.
 
 ## [010] The Reference Monolith (sldId 265)
 
@@ -143,7 +143,7 @@ INSTALLED_APPS = [
 ]
 
 # SMELL[ch.18]: every app above migrates into ONE shared Postgres schema --
-# the coupling chapters 18-19 unwind, context by context.
+# the coupling this system unwinds, context by context.
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -153,9 +153,9 @@ DATABASES = {
 }
 ```
 
-examples/00-monolith/config/settings.py: six Django apps, one shared Postgres schema, the coupling this book unwinds one seam at a time
+examples/00-monolith/config/settings.py: six Django apps, one shared Postgres schema, the coupling this system unwinds one seam at a time
 
-> Every app in INSTALLED_APPS is a full bounded context, not a module convenience: order/inventory/payment/shipping/notification/review map 1:1 onto the six services this book eventually extracts, in rising order of difficulty. The DATABASES block is the smell the data-ownership material spends the most slides curing.
+> Every app in INSTALLED_APPS is a full bounded context, not a module convenience: order/inventory/payment/shipping/notification/review map 1:1 onto the six services the system eventually extracts, in rising order of difficulty. The DATABASES block is the smell the data-ownership material spends the most slides curing.
 
 ## [012] THE MONOLITH · SMELLS · Each smell maps to the pattern that removes it (sldId 267)
 
@@ -165,7 +165,7 @@ p. 12
 - Each smell maps to the pattern that cures it: the shared schema to owned data, the single transaction to a saga, the synchronous call to an outbox.
 - By the end of the extraction roadmap every smell but the two kept for the frozen baseline is struck through in the project's own SMELLS.md, crossed out as each cure landed rather than just described as fixed.
 
-> This slide is the map the deck keeps returning to: the anti-corruption layer cures smell #5 (no ACL) and #6 (review tangled in auth), owned data and the outbox cure #1 and #4 (shared schema, synchronous send), and the saga cures #2 and #3 (god service, one ACID transaction). If time is short, this is the one slide worth not skipping: everything downstream is a cure for something named here.
+> The map the deck keeps returning to: the anti-corruption layer cures smell #5 (no ACL) and #6 (review tangled in auth); owned data and the outbox cure #1 and #4 (shared schema, synchronous send); the saga cures #2 and #3 (god service, one ACID transaction). If time is short, this is the one slide worth not skipping: everything downstream is a cure for something named here.
 
 ## [013] Finding the Seams (sldId 268)
 
@@ -173,14 +173,14 @@ p. 12
 
 Event storming, bounded contexts, and the coupling ladder.
 
-> Introduces domain-driven seam-finding as the technique that precedes every extraction in this book. The six bounded contexts aren't an architecture diagram handed down from above; they're what falls out of event storming the checkout flow.
+> Introduces domain-driven seam-finding as the technique that precedes every extraction here. The six bounded contexts aren't an architecture diagram handed down from above; they're what falls out of event storming the checkout flow.
 
 ## [014] FINDING THE SEAMS · EVENT STORMING · Lay out the events, then cluster by aggregate (sldId 269)
 
 p. 14
 
 - Lay out what happens in a checkout (order placed, stock reserved, payment captured, shipment dispatched, customer notified) before any code moves.
-- The clusters that fall out are the bounded contexts this book extracts in rising order of difficulty: review, notification, inventory, payment, shipping, order.
+- The clusters that fall out are the bounded contexts the system extracts in rising order of difficulty: review, notification, inventory, payment, shipping, order.
 - A seam drawn around a cluster of events is a seam a reader can explain in one sentence; a seam drawn around a file structure usually can't.
 
 > This is light on ceremony: event storming here isn't a multi-day workshop artifact, it's the discipline of naming what happened before naming what owns it. The six-context list follows the same vocabulary (OrderDto/OrderStatus/StockDto/Topics) carried through from the monolith's own Django apps into every extracted service, not an arbitrary split.
@@ -225,7 +225,7 @@ p. 19
 
 Figure 16.2: The ACL is a translation boundary, not just another request: notification-service's OrderPlacedEvent sits between the monolith's Kafka contract and the service's own owned schema.
 
-> Contrast two ACL instances this book built: the content-based router is a one-dimensional routing decision (pick a backend by path); inventory.proto is the harder case, a wire contract kept distinct from both the monolith's and the service's own domain vocabulary, with a drift guard that fails the build the moment the checked-in .proto and the generated stubs disagree.
+> Contrast two ACL instances built here: the content-based router is a one-dimensional routing decision (pick a backend by path). inventory.proto is the harder case: a wire contract kept distinct from both the monolith's and the service's own domain vocabulary, with a drift guard that fails the build the moment the checked-in .proto and the generated stubs disagree.
 
 ## [020] THE STRANGLER FIG · EVENT-DRIVEN NOTIFICATION · The first extraction reacts to an event, not a call (sldId 275)
 
@@ -257,7 +257,7 @@ p. 23
 
 Figure 17.1: The outbox cure changes the last write inside checkout's transaction, not the transaction itself: a synchronous out-of-process send becomes one more row in the same commit.
 
-> This is the single highest-leverage pattern in the whole book, used and reused: it cures the dual-write hazard in the monolith's own checkout, then gets a second, more mature instance in payment-service's own outbox. A declined or failed checkout leaves zero outbox rows, proven by test, not asserted.
+> This pattern is used and reused across the whole system: it cures the dual-write hazard in the monolith's own checkout, then gets a second, more mature instance in payment-service's own outbox. A declined or failed checkout leaves zero outbox rows, confirmed by test.
 
 ## [024] DATA · THE OUTBOX RELAY · Relay the outbox row; the consumer dedupes idempotently (sldId 279)
 
@@ -289,7 +289,7 @@ p. 25
 
 Figure 19.2: CDC tails the Postgres write-ahead log for a one-time backfill plus a transition-window sync, then is retired on its own documented runbook: grep the CI gates today and Debezium is not there.
 
-> This is the pattern this book can show at every stage of its own lifecycle: live during the inventory cutover window, then gone, by design, on a runbook (drain, delete connector, drop the replication slot and publication, disable the flag). Transaction log tailing was never meant to be permanent, and the project confirms it never became one.
+> This is the pattern this system shows at every stage of its own lifecycle: live during the inventory cutover window, then gone, by design, on a runbook (drain, delete connector, drop the replication slot and publication, disable the flag). Transaction log tailing was never meant to be permanent, and the project confirms it never became one.
 
 ## [026] DATA · CQRS · Split the write model from the read model where shapes diverge (sldId 281)
 
@@ -406,7 +406,7 @@ REST, gRPC, GraphQL, and the registry that keeps them compatible.
 
 p. 35
 
-Figure 26.1: Three protocols, three different problems, used side by side in one system: REST for every service's own surface, gRPC for the one hot synchronous path, GraphQL for bounded aggregation at a gateway with no data of its own.
+Figure 26.1: Three protocols, one system: REST for every service's own surface, gRPC for the one hot synchronous path, GraphQL for bounded aggregation at a gateway with no data of its own.
 
 > gRPC earned exactly one seam (order→inventory reservation), not every seam: it's the project's only strongly-typed, low-latency inter-service call, picked because strong typing and a tight latency budget mattered enough to justify a second wire protocol alongside REST.
 
@@ -499,7 +499,7 @@ p. 41
 
 Figure 29.1: The mea namespace: eight Deployments/Services behind one NodePort edge, two shared StatefulSets, probes honoring each service's actual health surface rather than copied uniformly.
 
-> Two services (strangler-proxy, review-service) get tcpSocket probes because they have no /health route; the other six get httpGet /health. That's the chassis scorecard showing up directly in the deployment manifest, not glossed over with a uniform probe that would silently lie about two services' real readiness.
+> Two services (strangler-proxy, review-service) get tcpSocket probes because they have no /health route; the other six get httpGet /health. That's the chassis scorecard showing up directly in the deployment manifest, not glossed over with a uniform probe that would lie about two services' real readiness.
 
 ## [042] OPERATING · THE MESH · mTLS and traffic identity, from the platform (sldId 297)
 
@@ -541,7 +541,7 @@ grype "sbom:$sbom" -c "$GRYPE_CFG" -o json -q > "$scan"
 
 examples/10-supply-chain/{policy.yaml,demo.sh}: SBOM, scan, and a policy threshold gating on fixable findings only
 
-> The real result landed harder than planned: both order-service and the frozen monolith scanned 35 High-severity findings in the shared UBI base layer, every one fix-state not-fixed, confirmed with skopeo that no newer patched tag exists to re-pin onto. gate-on: fixable means the gate still surfaces all 35 in grype's own output; it just stops blocking a merge on a CVE no change in this repository can fix. That's a narrower bar, not a lower one.
+> The real result landed harder than planned. Both order-service and the frozen monolith scanned 35 High-severity findings in the shared UBI base layer, every one fix-state not-fixed, confirmed with skopeo that no newer patched tag exists to re-pin onto. gate-on: fixable means the gate still surfaces all 35 in grype's own output; it just stops blocking a merge on a CVE no change in this repository can fix. That's a narrower bar, not a lower one.
 
 ## [045] OPERATING · THE RESULT · One monolith, six services, no shared schema (sldId 300)
 
@@ -571,7 +571,7 @@ Figure 32.1: The pattern language as one connected flow, colored by verdict: ear
 
 p. 48
 
-Figure 32.2: The book-wide pattern scorecard, matching build-plan.md section C: eight patterns earned outright, five adapted into a narrower shape, six named and deferred with the condition that would change the answer.
+Figure 32.2: The system-wide pattern scorecard: eight patterns earned outright, five adapted into a narrower shape, six named and deferred with the condition that would change the answer.
 
 > A verdict needs three outcomes, not two: 'built vs. not built' can't represent a schema registry that works but covers one event out of a dozen, or a chassis that's real but copied by hand eight times. Full event sourcing, a circuit breaker, a GitOps operator, Loki log aggregation, and Kafka saga-hop tracing are each named with the specific trigger that would earn their place, not a vague gesture at future work.
 
@@ -601,7 +601,7 @@ APP-A
 
 Keep this open in another window.
 
-> OpenShift/CRC parity material: the same eight services and manifests, re-homed onto OpenShift Local with Routes, SCCs, and OpenShift Service Mesh 3 instead of a plain NodePort and vanilla Istio. deploy/k8s, the app code, and the Containerfiles are unchanged: every OpenShift-specific concern is confined to openshift/ and this one appendix chapter.
+> OpenShift/CRC parity material: the same eight services and manifests, re-homed onto OpenShift Local with Routes, SCCs, and OpenShift Service Mesh 3 instead of a plain NodePort and vanilla Istio. deploy/k8s, the app code, and the Containerfiles are unchanged: every OpenShift-specific concern is confined to openshift/ and this one appendix.
 
 ## [052] APPENDIX · OPENSHIFT TOPOLOGY · The same six services, on OpenShift Local (sldId 307)
 
@@ -665,7 +665,7 @@ p. 59
 
 Figure 28.3: Schema evolution against a live BACKWARD rule: an additive field with a default is accepted (200); a field retype is rejected (400) before a single message ships.
 
-> Both outcomes were observed against a real, pinned Apicurio 3.3.3 instance, not inferred from documentation: the actual HTTP status (400 RuleViolationException) is what's recorded, including a note that an earlier version of Apicurio returned 409 for the same kind of rejection.
+> Both outcomes were observed against a real, pinned Apicurio 3.3.3 instance: the HTTP status recorded is 400 (RuleViolationException); an earlier version of Apicurio returned 409 for the same rejection.
 
 ## [060] APPENDIX · SYNC-TO-ASYNC CONTRACT · The checkout call crosses from sync REST to an async event (sldId 315)
 
@@ -721,7 +721,7 @@ p. 66
 
 Figure 23.2: The choreographed saga top to bottom: every arrow is a reaction to an event, branching into three terminal outcomes, no orchestrator box anywhere.
 
-> Visual companion to the choreography code slide: trace the three terminal outcomes (captured, declined, and the downstream shipping-failed refund hop) and notice that no single component ever holds the whole sequence in view.
+> Visual companion to the choreography code slide: trace the three terminal outcomes (captured, declined, and the downstream shipping-failed refund hop); no single component ever holds the whole sequence in view.
 
 ## [067] APPENDIX · THE ORCHESTRATED SAGA, VISUALLY · Shipping's orchestration, as a sequence diagram (sldId 322)
 
@@ -779,13 +779,13 @@ Figure 19.3: Reserve/release across the boundary: where the free rollback went o
 
 > Before this seam existed, a single transaction.atomic() gave a free rollback across reserve, order, payment, and shipping; this figure shows exactly what has to replace that once the reservation decrement crosses a process boundary.
 
-## [074] APPENDIX · REVIEW, PHASE A VS. PHASE B · The review service's two extraction phases (sldId 329)
+## [074] APPENDIX · REVIEW, SHIM VS. NATIVE · The review service's two extraction designs (sldId 329)
 
 p. 74
 
-Figure 15.1: Phase A (a thin FastAPI shim over the Django ORM, documented but never shipped) versus Phase B (native async SQLAlchemy, no monolith import at all), the same read contract either way.
+Figure 15.1: The shim design (a thin FastAPI shim over the Django ORM, documented but never shipped) versus the native design (native async SQLAlchemy, no monolith import at all), the same read contract either way.
 
-> Phase A was never committed as running code once two concrete problems surfaced while sketching it: bridging Django's synchronous ORM into FastAPI's async loop, and a backwards build-time dependency on the entire monolith just to reach one model. The real payoff is structural, not a startup-time number: Phase A/B import timing came back statistically indistinguishable.
+> The shim design was never committed as running code once two concrete problems surfaced while sketching it: bridging Django's synchronous ORM into FastAPI's async loop, and a backwards build-time dependency on the entire monolith just to reach one model. The real payoff is structural, not a startup-time number: shim vs. native import timing came back statistically indistinguishable.
 
 ## [075] APPENDIX · THE CUTOVER TIMELINE, VISUALLY · Six seams, in dependency order, as a timeline (sldId 330)
 
@@ -793,7 +793,7 @@ p. 75
 
 Figure 14.3: The cutover evidence trail: one unedited Newman suite, four runs (flag off, flag on, flag reverted, and a forced-down negative that fails loudly by design).
 
-> That fourth run is the one worth narrating: with the extracted service killed outright, the suite goes RED (6/6 assertions failed) rather than quietly passing, proof the equivalence gate actually gates, not just a green checkmark that never turns red.
+> That fourth run is the one worth narrating: with the extracted service killed outright, the suite goes RED (6/6 assertions failed) rather than quietly passing, proof the equivalence gate enforces rather than rubber-stamps.
 
 ## [076] APPENDIX · THE SUPPLY-CHAIN GATE, VISUALLY · SBOM, scan, gate, as a pipeline diagram (sldId 331)
 
@@ -809,7 +809,7 @@ p. 77
 
 Figure 19.4: Two independent cutover flags as a 2x2 grid: the two corners this project exercised, against the two split corners that are only safe during the CDC-backfilled transition window.
 
-> Inventory's cutover has two independent flags (reads vs. reserve/release) rather than one combined switch; this figure is the grid of which combinations were actually exercised and which are only sound transiently, during the backfill window.
+> Inventory's cutover has two independent flags (reads vs. reserve/release) rather than one combined switch; this figure is the grid of which combinations were exercised and which are only sound transiently, during the backfill window.
 
 ## [078] Appendix C: Reference (sldId 333)
 
@@ -837,7 +837,7 @@ p. 80
 - The frozen monolith: Django 5.2 LTS + DRF, psycopg, gunicorn. Testing: pytest + pytest-django + pytest-asyncio, Testcontainers, Newman.
 - The platform: Kubernetes via kustomize, Istio 1.31, OpenTelemetry + grafana/otel-lgtm, Apicurio 3.3.3, syft/grype, plus Helm and OpenShift Service Mesh 3 for the CRC appendix.
 
-> Every version here is a real pin from a service's own pyproject.toml or a CI workflow, not a representative placeholder, useful as a quick compatibility check before someone tries to reproduce a chapter locally.
+> Every version here is a real pin from a service's own pyproject.toml or a CI workflow, not a representative placeholder, useful as a quick compatibility check before someone tries to reproduce an example locally.
 
 ## [081] APPENDIX · GLOSSARY · Terms used in this deck (sldId 336)
 
@@ -854,8 +854,8 @@ p. 81
 p. 82
 
 - For the ideas and the advantage case at architect altitude, see the 101 deck; for the async/FastAPI code deep dive underneath every pattern here, see 201-FastAPI.
-- Every pattern in this deck is grounded in a runnable example in the repository, and every diagram in a figure from the published chapters; nothing here is illustrative-only.
-- The pattern-coverage matrix in build-plan.md section C is the single source of truth this deck's scorecard slides draw from; check any claim in this deck against it.
+- Every pattern in this deck is grounded in a runnable example in the repository, and every diagram a figure from the reference system; nothing here is illustrative-only.
+- The pattern-coverage matrix behind this deck's scorecard slides is the single source of truth; check any claim in this deck against it.
 
 > This is the deck's actual last slide: leave it up during Q&A. If a question goes deeper than just-enough-code depth, the direct answer for most of them is '201-FastAPI covers that'; if a question is about whether to start a migration at all, the 101 is the better reference.
 
