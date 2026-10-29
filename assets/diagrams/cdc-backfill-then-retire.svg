@@ -50,7 +50,7 @@
 <text x="766.0" y="335.0" font-size="11" fill="#555" text-anchor="middle">gRPC Reserve/Release own all writes</text>
 <path d="M530.0,485.0 L600.0,485.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <path d="M860.0,485.0 L930.0,485.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
-<text x="740.0" y="32" font-size="18" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.19 -- CDC tails the WAL for a ONE-TIME backfill + transition sync, then is retired</text>
+<text x="740.0" y="32" font-size="18" fill="#1d1d1d" text-anchor="middle" font-weight="700">CDC tails the WAL for a ONE-TIME backfill + transition sync, then is retired</text>
 <text x="40" y="620" font-size="11" fill="#555555" text-anchor="start">Debezium is transition-only infrastructure here: it is never part of the CI equivalence gate, and the running system</text>
 <text x="40" y="638" font-size="11" fill="#555555" text-anchor="start">does not depend on it after cutover -- inventory-service reaches its end state via its own schema and seed, not a live consumer.</text>
 </svg>

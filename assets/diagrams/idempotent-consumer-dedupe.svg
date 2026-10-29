@@ -40,7 +40,7 @@
 <path d="M820.0,205.0 L880.0,205.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <path d="M1060.0,113.86363636363637 L1120.0,139.77272727272728" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
 <path d="M1060.0,190.6818181818182 L1120.0,181.13636363636363" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
-<text x="640.0" y="30" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.17 -- at-least-once delivery, exactly-once effect: check-then-insert plus a DB backstop</text>
+<text x="640.0" y="30" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">at-least-once delivery, exactly-once effect: check-then-insert plus a DB backstop</text>
 <text x="30" y="520" font-size="11" fill="#555555" text-anchor="start">Two layers, not one: the application-level check (get_by_order_id) is the common case; the partial unique index</text>
 <text x="30" y="538" font-size="11" fill="#555555" text-anchor="start">on order_id is the backstop for the narrow window where two redeliveries race the check itself.</text>
 </svg>

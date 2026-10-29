@@ -5,7 +5,7 @@
 <rect x="1000" y="170" width="320" height="220" rx="12" fill="#f4f4f4" stroke="#ddd"/>
 <text x="1012" y="190" font-size="12" font-weight="700" fill="#1d1d1d">irreversible once crossed</text>
 <rect x="60" y="220" width="280" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
-<text x="200.0" y="265.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">1. Intercept -- ch.14</text>
+<text x="200.0" y="265.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">1. Intercept</text>
 <text x="200.0" y="282.5" font-size="11.5" fill="#555555" text-anchor="middle">the proxy sees every request first</text>
 <text x="200.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">:8888, Starlette + httpx</text>
 <rect x="380" y="220" width="280" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
@@ -36,7 +36,7 @@
 <path d="M818.8461538461538,330.0 L761.1538461538462,480.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <text x="796.0" y="399.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">retire before the check passes -&gt;</text>
 <text x="796.0" y="399.0" font-size="11" fill="#555" text-anchor="middle">retire before the check passes -&gt;</text>
-<text x="700.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.14 -- the strangler fig&#x27;s four moves, in the order that matters</text>
+<text x="700.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">the strangler fig&#x27;s four moves, in the order that matters</text>
 <text x="700.0" y="56" font-size="12" fill="#555555" text-anchor="middle">retiring out of order is how an &quot;incremental&quot; migration quietly becomes a big-bang rewrite</text>
 <text x="60" y="375" font-size="10.5" fill="#555555" text-anchor="start">both backends still exist here -- the flag can flip either way, no redeploy required</text>
 <text x="1020" y="352" font-size="10" fill="#555555" text-anchor="start">the flag still routes; the destination</text>

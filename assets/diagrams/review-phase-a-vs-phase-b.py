@@ -86,7 +86,7 @@ edges_all = a_edges + b_edges + [
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.15 -- Review extraction: Phase A (ORM lift, illustrative) vs Phase B (idiomatic, shipped)",
+     "text": "Review extraction: Phase A (ORM lift, illustrative) vs Phase B (idiomatic, shipped)",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56,
      "text": "startup/RSS were statistically indistinguishable at the proxy level; the real win is structural, not raw speed",

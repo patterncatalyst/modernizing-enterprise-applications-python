@@ -39,10 +39,10 @@ X0, PANEL_Y, PANEL_H = 30, 90, 360
 panels = [
     {"x": X0 + i * (PANEL_W + GUTTER), "y": PANEL_Y, "w": PANEL_W, "h": PANEL_H, "fill": fill, "label": label}
     for i, (label, fill) in enumerate([
-        ("1. Monolith -- ch.08", "#ffffff"),
-        ("2. Proxy-fronted -- ch.14", "#ffffff"),
-        ("3. Partially strangled -- ch.15-24", "#ffffff"),
-        ("4. Fully extracted -- ch.26", "#eaf4ec"),
+        ("1. Monolith", "#ffffff"),
+        ("2. Proxy-fronted", "#ffffff"),
+        ("3. Partially strangled", "#ffffff"),
+        ("4. Fully extracted", "#eaf4ec"),
     ])
 ]
 
@@ -93,7 +93,7 @@ timeline_edge = [{"x1": 60, "y1": timeline_y, "x2": 1500, "y2": timeline_y, "amb
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.04 -- the staged evolution this book executes: monolith -> proxy-fronted -> partially strangled -> fully extracted",
+     "text": "the staged evolution this book executes: monolith -> proxy-fronted -> partially strangled -> fully extracted",
      "anchor": "middle", "bold": True, "size": 16.5},
 
     {"x": 40, "y": H - 16,

@@ -59,8 +59,8 @@
 <path d="M500.0,366.82089552238807 L600.0,381.44776119402985" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
 <path d="M500.0,393.25373134328356 L618.968253968254,438.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
 <path d="M720.0,438.0 L720.0,290.0" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
-<text x="726.0" y="358.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">gRPC Reserve, mTLS STRICT (ACL seam, ch.19)</text>
-<text x="726.0" y="358.0" font-size="11" fill="#2f5f3d" text-anchor="middle">gRPC Reserve, mTLS STRICT (ACL seam, ch.19)</text>
+<text x="726.0" y="358.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">gRPC Reserve, mTLS STRICT (ACL seam)</text>
+<text x="726.0" y="358.0" font-size="11" fill="#2f5f3d" text-anchor="middle">gRPC Reserve, mTLS STRICT (ACL seam)</text>
 <path d="M423.84057971014494,560.0 L686.0144927536232,290.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <text x="560.9275362318841" y="419.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">gRPC, mTLS STRICT</text>
 <text x="560.9275362318841" y="419.0" font-size="11" fill="#555" text-anchor="middle">gRPC, mTLS STRICT</text>
@@ -79,7 +79,7 @@
 <path d="M840.0,496.6511627906977 L1020.0,527.6279069767442" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
 <text x="936.0" y="506.1395348837209" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">app OTLP (depth)</text>
 <text x="936.0" y="506.1395348837209" font-size="11" fill="#2f5f3d" text-anchor="middle">app OTLP (depth)</text>
-<text x="770.0" y="24" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.30 -- the meshed mea namespace: mTLS STRICT inside, one PERMISSIVE edge, two unmeshed backends</text>
+<text x="770.0" y="24" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">the meshed mea namespace: mTLS STRICT inside, one PERMISSIVE edge, two unmeshed backends</text>
 <text x="240" y="764" font-size="11" fill="#555555" text-anchor="start">Green boxes (strangler-proxy, order-service, inventory-service) are the 3 OTel-instrumented services -- app depth. All 8 get mesh breadth automatically via Envoy.</text>
 <text x="240" y="782" font-size="11" fill="#555555" text-anchor="start">postgres, kafka, and the lgtm backend itself carry no sidecar.istio.io/inject label -- meshing their own TLS/plaintext would collide with the injected sidecar&#x27;s mTLS wrapping.</text>
 <text x="240" y="800" font-size="11" fill="#555555" text-anchor="start">PeerAuthentication: default (STRICT, namespace-wide) + strangler-proxy-edge (PERMISSIVE, inbound only) -- deploy/k8s/istio/peer-authentication*.yaml.</text>

@@ -50,7 +50,7 @@ bot_edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 28, "text": "ch.23 -- DRQ-043 closed: a compensation survives redelivery at the event layer AND the RPC layer",
+    {"x": W / 2, "y": 28, "text": "a compensation survives redelivery at the event layer AND the RPC layer",
      "anchor": "middle", "bold": True, "size": 16},
     {"x": 40, "y": H - 46, "text": "Proven live: on_hand_qty held at 94 across a hand-redelivered payment.declined event AND two direct,",
      "anchor": "start", "size": 11, "color": "#555555"},

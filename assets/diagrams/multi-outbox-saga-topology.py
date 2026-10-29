@@ -50,7 +50,7 @@ mono2_edges = [connect(n_saga, n_reaction)]
 edge_topic2 = {"x1": 1170, "y1": 220, "x2": 190, "y2": 360, "label": "Kafka: payment.captured / payment.declined", "amber": True, "dashed": True}
 
 notes = [
-    {"x": W / 2, "y": 28, "text": "ch.20/ch.23 -- two outboxes chained end to end, no orchestrator anywhere in this picture",
+    {"x": W / 2, "y": 28, "text": "two outboxes chained end to end, no orchestrator anywhere in this picture",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": 40, "y": H - 46, "text": "Each hop (outbox -> relay -> topic -> consumer) is independently at-least-once; the monolith is BOTH the first producer",
      "anchor": "start", "size": 11, "color": "#555555"},

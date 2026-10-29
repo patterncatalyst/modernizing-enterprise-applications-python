@@ -69,7 +69,7 @@ boundary = {
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.14 -- the Review cutover evidence trail: one unedited Newman suite, four runs",
+     "text": "the Review cutover evidence trail: one unedited Newman suite, four runs",
      "anchor": "middle", "bold": True, "size": 18},
 
     {"x": xs[3] + step_w + gap + 30, "y": y - 14,

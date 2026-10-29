@@ -34,11 +34,11 @@ band = {"x": 230, "y": 40, "w": 1280, "h": 660, "fill": "#fafafa",
 client = node(30, 330, 170, 80, ["Client", "https://<route-host>.apps-crc.testing"], style="box")
 
 proxy = node(270, 300, 230, 100,
-             ["strangler-proxy", "Route: edge TLS, redirect (DRQ-106)",
+             ["strangler-proxy", "Route: edge TLS, redirect",
               "restricted-v2, tcp probe"],
              style="accent")
 gql = node(270, 560, 230, 90,
-           ["graphql-gateway", "Route: edge TLS, redirect (DRQ-106)",
+           ["graphql-gateway", "Route: edge TLS, redirect",
             "restricted-v2, http probe"],
            style="accent")
 
@@ -73,16 +73,16 @@ edges = [
 ]
 edges += [connect(proxy, s, amber=True) for s in services]
 edges[2]["label"] = "ClusterIP, in-mesh when mesh.enabled (6 backends)"
-edges.append(connect(order, inv, amber=True, dashed=True, label="gRPC Reserve (ACL seam, ch.19)"))
+edges.append(connect(order, inv, amber=True, dashed=True, label="gRPC Reserve (ACL seam)"))
 edges.append(connect(gql, inv, dashed=True, label="gRPC"))
 edges.append(connect(db_group_box, postgres, label="DATABASE_URL (6 services)"))
 edges.append(connect(kafka_group_box, kafka, label="KAFKA_BOOTSTRAP_SERVERS (4 consumers)"))
 
 notes = [
-    {"x": W / 2, "y": 24, "text": "ch.33 -- the mea project on OpenShift Local: three SCC postures, two Routes as the only edge",
+    {"x": W / 2, "y": 24, "text": "the mea project on OpenShift Local: three SCC postures, two Routes as the only edge",
      "anchor": "middle", "bold": True, "size": 15},
     {"x": 240, "y": H - 56,
-     "text": "restricted-v2 (8 app Deployments, no runAsUser) / nonroot-v2 (postgres, kafka via SA mea-infra) / anyuid+runAsUser:0 (otel-lgtm only) -- DRQ-107.",
+     "text": "restricted-v2 (8 app Deployments, no runAsUser) / nonroot-v2 (postgres, kafka via SA mea-infra) / anyuid+runAsUser:0 (otel-lgtm only).",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 240, "y": H - 38,
      "text": "strangler-proxy and graphql-gateway are the only externally reachable workloads -- every other Service stays ClusterIP-only.",

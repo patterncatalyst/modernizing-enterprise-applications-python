@@ -51,7 +51,7 @@ bottom_edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.19 -- CDC tails the WAL for a ONE-TIME backfill + transition sync, then is retired",
+    {"x": W / 2, "y": 32, "text": "CDC tails the WAL for a ONE-TIME backfill + transition sync, then is retired",
      "anchor": "middle", "bold": True, "size": 18},
     {"x": 40, "y": H - 40, "text": "Debezium is transition-only infrastructure here: it is never part of the CI equivalence gate, and the running system",
      "anchor": "start", "size": 11, "color": "#555555"},

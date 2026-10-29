@@ -63,7 +63,7 @@ PFX_X, PFX_Y0, PFX_W, PFX_H = 880, 40, 220, 56
 for label, y in prefixes:
     prefix_nodes.append(node(PFX_X, PFX_Y0 + y, PFX_W, PFX_H, [label, "-> owning backend base URL"], style="box"))
 
-not_found = node(880, 540, 220, 70, ["no match", "-> 404 (no fallback, r07)"], style="ghost")
+not_found = node(880, 540, 220, 70, ["no match", "-> 404 (no fallback)"], style="ghost")
 
 forward = node(1160, 300, 200, 150,
                ["Forward request", "strip hop-by-hop headers,", "buffer body for correct", "Content-Length, httpx.send()"], style="accent")
@@ -93,7 +93,7 @@ trap = node(60, 712, 860, 80,
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.06 -- the ASGI strangler proxy's content-based routing, start to finish",
+     "text": "the ASGI strangler proxy's content-based routing, start to finish",
      "anchor": "middle", "bold": True, "size": 16.5},
     {"x": W / 2, "y": 56,
      "text": "one Starlette catch-all route, six fixed full-path prefixes, httpx forwarding -- the Python analog of a content-based router",

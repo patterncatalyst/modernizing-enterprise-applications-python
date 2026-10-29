@@ -53,7 +53,7 @@
 <path d="M680.0,392.6595744680851 L843.3333333333334,450.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <text x="767.6666666666667" y="415.32978723404256" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">made visible</text>
 <text x="767.6666666666667" y="415.32978723404256" font-size="11" fill="#555" text-anchor="middle">made visible</text>
-<text x="670.0" y="30" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.25 -- the resilience chassis: four mechanisms already in use, one new one, two deferred</text>
+<text x="670.0" y="30" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">the resilience chassis: four mechanisms already in use, one new one, two deferred</text>
 <text x="40" y="720" font-size="11" fill="#555555" text-anchor="start">Deferral is a decision, not an oversight: pybreaker/Semaphore solve problems this system doesn&#x27;t have yet (sustained failure, contention).</text>
 <text x="40" y="738" font-size="11" fill="#555555" text-anchor="start">6/6 consecutive stable runs after the poll-script fix -- a resilience lesson about the TEST SUITE, not just the system under test.</text>
 </svg>

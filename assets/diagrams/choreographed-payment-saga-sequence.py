@@ -31,7 +31,7 @@ n8 = node(680, 580, 190, 90, ["order_saga_listener:", "status guard,", "gRPC Rel
 n9 = node(230, 710, 220, 90, ["CONFIRMED", "(shipping dispatched OK)"], style="accent")
 n10 = node(460, 710, 220, 90, ["SHIPPING_FAILED", "+ gRPC Release", "(known refund deferral)"], style="ghost")
 n11 = node(700, 710, 220, 90, ["PAYMENT_DECLINED", "+ gRPC Release"], style="accent")
-n12 = node(460, 850, 380, 90, ["Client: GET /api/orders/{id}", "bounded-wait poll -- resolved", "attempt 2/20 in the r05 cutover run"], style="box")
+n12 = node(460, 850, 380, 90, ["Client: GET /api/orders/{id}", "bounded-wait poll -- resolved", "attempt 2/20 in the cutover run"], style="box")
 
 nodes = [n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12]
 edges = [
@@ -51,9 +51,9 @@ edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 20, "text": "ch.23 -- the choreographed saga: every arrow is an event one side reacted to, nothing is called synchronously",
+    {"x": W / 2, "y": 20, "text": "the choreographed saga: every arrow is an event one side reacted to, nothing is called synchronously",
      "anchor": "middle", "bold": True, "size": 16},
-    {"x": 40, "y": H - 40, "text": "No orchestrator box exists in this picture -- compare ch.24's orchestrated shipping step, where one does.",
+    {"x": 40, "y": H - 40, "text": "No orchestrator box exists in this picture -- compare the orchestrated shipping step, where one does.",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 40, "y": H - 22, "text": "Every reaction is idempotent (status guard / order_id uniqueness), so Kafka's at-least-once redelivery is safe here.",
      "anchor": "start", "size": 11, "color": "#555555"},

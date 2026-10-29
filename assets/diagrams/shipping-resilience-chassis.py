@@ -62,7 +62,7 @@ edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 30, "text": "ch.25 -- the resilience chassis: four mechanisms already in use, one new one, two deferred",
+    {"x": W / 2, "y": 30, "text": "the resilience chassis: four mechanisms already in use, one new one, two deferred",
      "anchor": "middle", "bold": True, "size": 15},
     {"x": 40, "y": H - 40, "text": "Deferral is a decision, not an oversight: pybreaker/Semaphore solve problems this system doesn't have yet (sustained failure, contention).",
      "anchor": "start", "size": 11, "color": "#555555"},

@@ -70,7 +70,7 @@ order_n, inv_n = cols["order"], cols["inventory"]
 # ---- the missing ACL, sitting above the order<->inventory seam -----------
 acl_box = node(110, 108, 340, 62,
                ["Anti-corruption layer -- unused by default",
-                "RemoteInventoryClient/inventory.proto exist (ch.19)",
+                "RemoteInventoryClient/inventory.proto exist",
                 "should be: customer/supplier (negotiated contract)"],
                style="ghost")
 nodes.append(acl_box)
@@ -136,14 +136,14 @@ bands = [
 
 review_n = cols["review"]
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.11 -- Context map: six bounded contexts, one relationship nobody decided",
+    {"x": W / 2, "y": 32, "text": "Context map: six bounded contexts, one relationship nobody decided",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56,
      "text": "order->inventory is conformist with no ACL on the default path; order's other sync edges are direct; notification is already reached only via outbox",
      "anchor": "middle", "size": 11.5, "color": "#555555"},
 
     {"x": review_n["x"] + review_n["w"] / 2, "y": ROW_Y - 12,
-     "text": "zero outbound edges to siblings -- own extraction is ch.15",
+     "text": "zero outbound edges to siblings -- extracted first",
      "anchor": "middle", "size": 10, "color": "#3d7a4e"},
 
     {"x": 40, "y": PG_Y + PG_H + 24,

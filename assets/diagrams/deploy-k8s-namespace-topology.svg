@@ -73,6 +73,6 @@
 <path d="M820.0,357.90588235294115 L1000.0,376.54117647058825" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <text x="916.0" y="361.22352941176473" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">KAFKA_BOOTSTRAP_SERVERS via ConfigMap (5 services)</text>
 <text x="916.0" y="361.22352941176473" font-size="11" fill="#555" text-anchor="middle">KAFKA_BOOTSTRAP_SERVERS via ConfigMap (5 services)</text>
-<text x="750.0" y="24" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.29 -- the mea namespace deploy topology (deploy/k8s/base + overlays/minikube)</text>
+<text x="750.0" y="24" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">the mea namespace deploy topology (deploy/k8s/base + overlays/minikube)</text>
 <text x="240" y="736" font-size="11" fill="#555555" text-anchor="start">strangler-proxy is the only NodePort; every other Service (including graphql-gateway&#x27;s own front door) stays ClusterIP. Probes: tcpSocket on strangler-proxy + review-service (no /health route), httpGet /health on the other six.</text>
 </svg>

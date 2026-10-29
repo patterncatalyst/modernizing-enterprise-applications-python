@@ -34,7 +34,7 @@ def heptagon_positions(cx, cy, rx, ry):
 
 phases = [
     ["1. Frame", "human: intent + PRD"],
-    ["2. Map", "manual recon + lgtm-python", "(no MCP equivalent, DRQ-020)"],
+    ["2. Map", "manual recon + lgtm-python", "(no MCP equivalent)"],
     ["3. Plan", "lgtm-relay -- Opus plans"],
     ["4. Generate", "lgtm-relay -- Sonnet executes", "+ lgtm-python scaffolds"],
     ["5. Verify", "lgtm-relay -- Opus validates", "pytest + Newman + scan"],
@@ -59,7 +59,7 @@ notes = [
     {"x": 500, "y": 68, "text": "lgtm-relay tiers Plan/Generate/Verify; Map has no MCP equivalent and says so",
      "anchor": "middle", "size": 12, "color": "#555555"},
     {"x": 500, "y": H - 24,
-     "text": "Sourced from _plans/build-plan.md (section F.1) and _plans/decisions.md (DRQ-020).",
+     "text": "Sourced from _plans/build-plan.md (section F.1) and _plans/decisions.md.",
      "anchor": "middle", "size": 10, "color": "#777777"},
 ]
 

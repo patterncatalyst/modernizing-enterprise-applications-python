@@ -57,7 +57,7 @@ edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.17 -- one outbox row, two independent consumer groups, one flag choosing who answers the read",
+    {"x": W / 2, "y": 32, "text": "one outbox row, two independent consumer groups, one flag choosing who answers the read",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": 30, "y": 250, "text": "Both consumer groups run for the ENTIRE strangle window -- the monolith becomes a consumer of its own event",
      "anchor": "start", "size": 12, "color": "#1d1d1d"},

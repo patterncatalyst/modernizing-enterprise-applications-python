@@ -79,7 +79,7 @@ edges.append(connect(gql, inv, dashed=True, label="gRPC, mTLS STRICT"))
 edges.append(connect(mesh_group_box, kiali, dashed=True, label="Envoy spans + :15020 Prometheus scrape"))
 
 notes = [
-    {"x": W / 2, "y": 24, "text": "ch.33 -- OSSM 3 on OpenShift: STRICT mesh-wide, a PERMISSIVE carve-out at each Route, Kiali reading otel-lgtm",
+    {"x": W / 2, "y": 24, "text": "OSSM 3 on OpenShift: STRICT mesh-wide, a PERMISSIVE carve-out at each Route, Kiali reading otel-lgtm",
      "anchor": "middle", "bold": True, "size": 15},
     {"x": 240, "y": H - 56,
      "text": "Injection is by the istio.io/rev: default pod-template LABEL (app-deployment.yaml) -- Sail's revisioned webhook ignores sidecar.istio.io/inject entirely.",
@@ -88,7 +88,7 @@ notes = [
      "text": "Without the per-Route PERMISSIVE PeerAuthentication, the STRICT default would 502 every Route request: the router is not a mesh member.",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 240, "y": H - 20,
-     "text": "postgres and kafka carry no istio.io/rev label -- unmeshed, same as the minikube path (ch.30).",
+     "text": "postgres and kafka carry no istio.io/rev label -- unmeshed, same as the minikube path.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

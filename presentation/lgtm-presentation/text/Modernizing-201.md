@@ -14,14 +14,14 @@ The full technical pattern set behind the Django-to-FastAPI migration: seams, da
 
 p. 2
 
-- 01–02: Why modernize, the restraint case, and the ADLC + equivalence gate
-- 03–04: The reference monolith, its smells, and finding the seams with DDD
-- 05: The strangler fig in practice: proxy, ACL, event-driven notification
-- 06: Data across the seam: owned data, the outbox, CDC, CQRS, ACID→ACD
-- 07: Coordinating across services: both saga shapes, idempotent compensation
-- 08: Communication, contracts, and the chassis: REST, gRPC, GraphQL, the registry
-- 09: Operating and delivering: deploy topology, the mesh, the trace, the supply-chain gate
-- 10: The pattern language, revisited: what earned its place, and where to stop
+- Why modernize, the restraint case, and the ADLC + equivalence gate
+- The reference monolith, its smells, and finding the seams with DDD
+- The strangler fig in practice: proxy, ACL, event-driven notification
+- Data across the seam: owned data, the outbox, CDC, CQRS, ACID→ACD
+- Coordinating across services: both saga shapes, idempotent compensation
+- Communication, contracts, and the chassis: REST, gRPC, GraphQL, the registry
+- Operating and delivering: deploy topology, the mesh, the trace, the supply-chain gate
+- The pattern language, revisited: what earned its place, and where to stop
 - Appendix A: OpenShift/CRC parity
 - Appendix B / C: extended figures + reference
 

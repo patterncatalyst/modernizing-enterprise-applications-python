@@ -72,7 +72,7 @@ edges = [
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.10: the monolith's test shape: pytest-django, not a textbook fully-mocked pyramid",
+     "text": "the monolith's test shape: pytest-django, not a textbook fully-mocked pyramid",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56,
      "text": "8 files, 50 tests collected, every file django_db-marked: widest tier is service integration, not isolated units",

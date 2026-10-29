@@ -87,9 +87,9 @@ bands = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.08: Six bounded contexts, one deployable: apps, not services",
+    {"x": W / 2, "y": 32, "text": "Six bounded contexts, one deployable: apps, not services",
      "anchor": "middle", "bold": True, "size": 17},
-    {"x": W / 2, "y": 56, "text": "no process boundary, no network hop, no per-context database: the opposite of what ch.14 onward builds",
+    {"x": W / 2, "y": 56, "text": "no process boundary, no network hop, no per-context database: the opposite of what the extractions build",
      "anchor": "middle", "size": 12, "color": "#555555"},
 
     {"x": 40, "y": PG_Y + PG_H + 24,

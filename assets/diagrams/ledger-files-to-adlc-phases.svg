@@ -75,7 +75,7 @@
 <path d="M576.7,345.0 L707.6,430.0" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
 <text x="902.1500000000001" y="381.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">status line read again to resume</text>
 <text x="902.1500000000001" y="381.5" font-size="11" fill="#2f5f3d" text-anchor="middle">status line read again to resume</text>
-<text x="800.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.02 -- The ledger&#x27;s files, mapped onto the ADLC&#x27;s own phases</text>
+<text x="800.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">The ledger&#x27;s files, mapped onto the ADLC&#x27;s own phases</text>
 <text x="800.0" y="56" font-size="12" fill="#555555" text-anchor="middle">Plan and Verify (blue) are this project&#x27;s two human gates; Reconcile (green) is where the ledger actually gets written</text>
 <text x="40" y="634" font-size="10.5" fill="#555555" text-anchor="start">Sourced from the project&#x27;s build plan (its phase table and per-iteration status rows).</text>
 <text x="40" y="664" font-size="10.5" fill="#555555" text-anchor="start">Unlike a chapter-era snapshot frozen at authoring time, the reconciliation log here is a live, append-only record by the time this chapter is read.</text>

@@ -15,7 +15,7 @@
 <text x="690.0" y="340.0" font-size="11.5" fill="#555555" text-anchor="middle">no match -&gt; None</text>
 <rect x="880" y="540" width="220" height="70" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
 <text x="990.0" y="573.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">no match</text>
-<text x="990.0" y="590.0" font-size="11.5" fill="#555555" text-anchor="middle">-&gt; 404 (no fallback, r07)</text>
+<text x="990.0" y="590.0" font-size="11.5" fill="#555555" text-anchor="middle">-&gt; 404 (no fallback)</text>
 <rect x="1160" y="300" width="200" height="150" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="1260.0" y="358.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Forward request</text>
 <text x="1260.0" y="375.0" font-size="11.5" fill="#555555" text-anchor="middle">strip hop-by-hop headers,</text>
@@ -72,7 +72,7 @@
 <path d="M1360.0,326.219512195122 L1390.0,311.5853658536585" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <path d="M1360.0,428.6585365853658 L1390.0,444.7560975609756" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <path d="M1390.0,527.3076923076923 L1332.0454545454545,560.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
-<text x="780.0" y="32" font-size="16.5" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.06 -- the ASGI strangler proxy&#x27;s content-based routing, start to finish</text>
+<text x="780.0" y="32" font-size="16.5" fill="#1d1d1d" text-anchor="middle" font-weight="700">the ASGI strangler proxy&#x27;s content-based routing, start to finish</text>
 <text x="780.0" y="56" font-size="12" fill="#555555" text-anchor="middle">one Starlette catch-all route, six fixed full-path prefixes, httpx forwarding -- the Python analog of a content-based router</text>
 <text x="40" y="804" font-size="10" fill="#777777" text-anchor="start">Sourced from examples/01-strangler-proxy/app/main.py (_select_backend, proxy_handler) and CUTOVER.md.</text>
 </svg>

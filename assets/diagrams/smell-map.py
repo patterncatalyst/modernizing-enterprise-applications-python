@@ -71,25 +71,25 @@ CARD_X0 = 30
 cards_def = [
     ("#1 God checkout function",
      "order/services.py::place_order() reaches directly into inventory/payment/shipping's services/models",
-     "cures: ch.26 (hardest, last)", "sub"),
+     "cured last (hardest)", "sub"),
     ("#2 One ACID txn, five contexts",
      "_place_order_local's transaction.atomic(): free rollback across order+inventory+payment+shipping+outbox",
-     "cures: ch.22 (ACID->ACD), ch.23/24 (sagas)", "sub"),
+     "cured by ACID->ACD and the sagas", "sub"),
     ("#3 Shared single schema/DB",
      "config/settings.py: one Postgres schema, one set of Django migrations, all six apps deploy together",
-     "cures: ch.18 (owned data)", "sub"),
+     "cured by owned data", "sub"),
     ("#4 Cross-context FKs",
      "orders->customers, payments/shipments/notifications->orders, reviews->customers+inventory_items",
-     "cures: ch.18, ch.19 (CDC)", "sub"),
+     "cured by owned data + CDC", "sub"),
     ("#5 Sync notification: CURED",
      "place_order() used to call notification/services.py in-process; now it only writes an OutboxEvent row",
-     "ch.17: cured at r03", "accent"),
+     "cured", "accent"),
     ("#6 Dual-write hazard: CURED",
      "DB row + provider call were two independent writes; outbox_relay now publishes at-least-once",
-     "ch.17: cured at r03", "accent"),
+     "cured", "accent"),
     ("#7 Review tangled in shared auth",
      "review/views.py gates POST with HTTP Basic auth against the shared django.contrib.auth table",
-     "cures: ch.15: review's own auth config", "sub"),
+     "cured by review's own auth config", "sub"),
 ]
 
 cards = []
@@ -141,7 +141,7 @@ review_n = cols["review"]
 callout_edges += callout(cards[6], review_n["x"] + review_n["w"] / 2, review_n["y"] + review_n["h"])
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.09: The seven deliberate smells, mapped onto the monolith's structure",
+    {"x": W / 2, "y": 32, "text": "The seven deliberate smells, mapped onto the monolith's structure",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56, "text": "the visual form of SMELLS.md: five smells still standing, two already cured",
      "anchor": "middle", "size": 12, "color": "#555555"},

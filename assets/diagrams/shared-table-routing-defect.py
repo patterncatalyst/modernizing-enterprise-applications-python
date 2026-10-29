@@ -62,7 +62,7 @@ mono_l = node(LEFT_X + 40, 360, 280, 90,
 rev_l = node(LEFT_X + 360, 360, 280, 90,
              ["Review service (FastAPI) :8001", "answers /api/reviews (path B)"], style="box")
 pg_l = node(LEFT_X + 120, 520, 440, 90,
-            ["shared Postgres schema (DRQ-028)", "reviews + auth_user -- read & written by both"], style="accent")
+            ["shared Postgres schema", "reviews + auth_user -- read & written by both"], style="accent")
 
 left_nodes = [suite_l, proxy_l, mono_l, rev_l, pg_l]
 left_edges = [
@@ -98,10 +98,10 @@ right_edges = [
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.07 -- the shared-table proof: why response shape alone couldn't tell path A from path B",
+     "text": "the shared-table proof: why response shape alone couldn't tell path A from path B",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56,
-     "text": "Review's r02 form still shares the monolith's Postgres schema (DRQ-028) -- DB ownership is deferred to ch.18/19",
+     "text": "Review's form still shares the monolith's Postgres schema -- DB ownership is deferred to the owned-data step",
      "anchor": "middle", "size": 12, "color": "#555555"},
 
     {"x": LEFT_X + 40, "y": 630,
@@ -116,7 +116,7 @@ notes = [
      "anchor": "start", "size": 11, "color": "#555555"},
 
     {"x": 40, "y": H - 16,
-     "text": "Sourced from _plans/decisions.md (DRQ-026, DRQ-028) and examples/01-strangler-proxy/CUTOVER.md (\"A bug this cutover caught\").",
+     "text": "Sourced from _plans/decisions.md and examples/01-strangler-proxy/CUTOVER.md (\"A bug this cutover caught\").",
      "anchor": "start", "size": 10, "color": "#777777"},
 ]
 

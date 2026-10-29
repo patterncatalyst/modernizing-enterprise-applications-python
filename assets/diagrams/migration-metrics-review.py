@@ -103,7 +103,7 @@ structural = node(20, structural_y, 1460, 130,
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.03 -- the Review-extraction measurement: Phase A (illustrative) vs Phase B (shipped)",
+     "text": "the Review-extraction measurement: Phase A (illustrative) vs Phase B (shipped)",
      "anchor": "middle", "bold": True, "size": 16},
     {"x": W / 2, "y": 56,
      "text": "the same 16/16-assertion equivalence suite passed, unchanged, against the shipped Phase B build",

@@ -54,7 +54,7 @@ nodes = [q1_detail, q2_detail, q3_detail, q4_detail, monolith_marker]
 
 notes = [
     {"x": W / 2, "y": 36,
-     "text": "ch.04 -- prioritizing what to modernize: strategic value x change frequency",
+     "text": "prioritizing what to modernize: strategic value x change frequency",
      "anchor": "middle", "bold": True, "size": 17},
 
     {"x": PLOT_X - 12, "y": PLOT_Y + 14, "text": "high value", "anchor": "end", "size": 11.5, "color": "#555555"},

@@ -49,7 +49,7 @@ edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.28 -- schema evolution against a live BACKWARD rule: an additive change passes, a retype is rejected before a single message ships",
+    {"x": W / 2, "y": 32, "text": "schema evolution against a live BACKWARD rule: an additive change passes, a retype is rejected before a single message ships",
      "anchor": "middle", "bold": True, "size": 18},
     {"x": 50, "y": 70, "text": "tests/test_compatibility.py, live-verified against quay.io/apicurio/apicurio-registry:3.3.3 -- not guessed from documentation.",
      "anchor": "start", "size": 11, "color": "#555555"},
