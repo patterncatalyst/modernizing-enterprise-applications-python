@@ -93,8 +93,8 @@ those two values fields at the upstream references directly.
 {% include excalidraw.html file="openshift-image-delivery" alt="A host-side podman build and push pipeline on the left feeding, across the registry Route, ImageStream tags inside the mea project on the right; a mirror-infra branch pulls and re-pushes postgres and kafka images for a CRC VM with no outbound egress; the monolith image and an infra image pull both flow from the same ImageStream tags toward a bootstrap Job and the postgres/kafka StatefulSets respectively." caption="Figure 33.1: Image delivery: podman build and push on the host, pulled in-cluster from the integrated registry" %}
 
 The rejected alternative (a Docker-strategy `BuildConfig` per service,
-triggered from a binary input the way the Quarkus sibling's S2I build
-works) is recorded rather than silently dropped, because it's the
+triggered from a binary input through an S2I build) is recorded rather than
+silently dropped, because it's the
 question anyone porting a Java `openshift/` tree to a Python one will ask
 first. For eight small FastAPI services with no compiled artifact step,
 an in-cluster `BuildConfig` buys nothing a host-side `podman build` doesn't
@@ -363,7 +363,7 @@ names exactly which of them a real run has, and hasn't yet, confirmed.
 > and `restricted-v2`'s UID-range rejection meant the correct fix for the
 > eight app Deployments was to *remove* `runAsUser` rather than pick a new
 > value, something `datamesh-reference-arch-python`'s own `openshift/`
-> precedent and the `lgtm-crc` skill's accumulated gotchas both called out
+> precedent and an OpenShift/CRC skill's accumulated gotchas both called out
 > directly. An agent drafting this chapter from the plan's working
 > assumption alone, without reading `app-deployment.yaml`,
 > `peerauthentication.yaml`, and the Sail operator's own CRD behavior
@@ -371,7 +371,7 @@ names exactly which of them a real run has, and hasn't yet, confirmed.
 > `kubeconform` and still fails to admit a single pod, or to carry a
 > single Route request past the mesh's own edge.
 
-<div class="callout callout--safe"><p class="callout__title">Decision</p><p>Reach for a <strong>Route</strong>, not a mesh ingress gateway, whenever OSSM provisions none on the target cluster: on OpenShift Local that's always, and treating the Route as the one legitimately-plaintext edge (with a scoped PERMISSIVE <code>PeerAuthentication</code>) is simpler than standing up a gateway resource the platform doesn't give you. Reach for a <strong>Helm chart</strong> over an OpenShift kustomize overlay when more than one platform-specific knob (SCC posture, Route, mesh, observability) needs to toggle independently without forking the manifest tree: <code>values.yaml</code>'s data-driven <code>services:</code> map is what let this chart stay one template for eight workloads instead of eight hand-edited copies. Reach for <strong>host-side <code>podman build</code> and push</strong> over an in-cluster <code>BuildConfig</code> when the runtime has no S2I builder image and the images are small enough that a host build costs nothing extra; reserve a <code>BuildConfig</code> for a runtime (Quarkus's own S2I path is the example two chapters over) where building inside the cluster is the supported, documented path rather than a workaround.</p></div>
+<div class="callout callout--safe"><p class="callout__title">Decision</p><p>Reach for a <strong>Route</strong>, not a mesh ingress gateway, whenever OSSM provisions none on the target cluster: on OpenShift Local that's always, and treating the Route as the one legitimately-plaintext edge (with a scoped PERMISSIVE <code>PeerAuthentication</code>) is simpler than standing up a gateway resource the platform doesn't give you. Reach for a <strong>Helm chart</strong> over an OpenShift kustomize overlay when more than one platform-specific knob (SCC posture, Route, mesh, observability) needs to toggle independently without forking the manifest tree: <code>values.yaml</code>'s data-driven <code>services:</code> map is what let this chart stay one template for eight workloads instead of eight hand-edited copies. Reach for <strong>host-side <code>podman build</code> and push</strong> over an in-cluster <code>BuildConfig</code> when the runtime has no S2I builder image and the images are small enough that a host build costs nothing extra; reserve a <code>BuildConfig</code> for a runtime (Quarkus's own S2I path is the example) where building inside the cluster is the supported, documented path rather than a workaround.</p></div>
 
 ## What you learned
 

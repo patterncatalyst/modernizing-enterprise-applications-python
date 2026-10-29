@@ -255,25 +255,14 @@ it as it was then.
 
 ## The reference-book map
 
-This book draws, by name and with every reuse recorded, on two other
-projects rather than inventing everything from scratch. The closer of the two is its own **Java sibling**,
-*Modernizing Enterprise Applications*: the same shipping-and-e-commerce
-domain, the same six extractions in the same order, a Spring Boot monolith
-strangled into Quarkus and Apache Camel services instead of a Django monolith
-strangled into FastAPI. Where this book's prose or a decision log row says
-"unchanged from the Java sibling," that means the architectural argument
-transfers even though not one line of code does; every stack-specific
-mechanism, the proxy, the saga, the chassis, is re-authored for Python
-rather than translated, and Chapter 6 names the one real capability gap
-between the two books directly: there is no Python equivalent of the Java
-sibling's Quarkus Agent and Camel MCP tooling, and this book says so instead
-of quietly working around it. The second source is
+This book draws, by name and with every reuse recorded, on an outside
+source rather than inventing everything from scratch:
 **`cloud-native-design-patterns`**, a pattern catalog this project reuses
-code from exactly once: the shipping extraction's orchestrated saga in
+code from exactly once. The shipping extraction's orchestrated saga in
 Chapter 24 adapts that catalog's already-documented, database-backed saga
 orchestrator onto this project's own persistence stack rather than
-re-authoring the same mechanism from a blank file. Both reuses are named
-where they happen, not folded in silently, because a book that argues for an
+re-authoring the same mechanism from a blank file. That reuse is named
+where it happens, not folded in silently, because a book that argues for an
 auditable decision trail should keep one for its own borrowed code too.
 
 ## What you will be able to do by the end

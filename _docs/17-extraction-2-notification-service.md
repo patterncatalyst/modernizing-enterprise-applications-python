@@ -204,8 +204,7 @@ At-least-once with a cheap, correct consumer-side dedupe (below) is the
 right trade; silent loss never is. Third, this is a **simple polling
 relay, not Debezium/CDC**: the module docstring says so explicitly,
 because the more sophisticated alternative (tailing Postgres's write-ahead
-log instead of polling a table) is deferred by design, the same way the
-Java sibling project sequences it. A one-second poll against a
+log instead of polling a table) is deferred by design. A one-second poll against a
 condition-indexed table is a perfectly adequate relay for this book's
 traffic; CDC becomes worth its complexity once polling latency or database load
 from polling itself becomes the bottleneck, neither of which is the case

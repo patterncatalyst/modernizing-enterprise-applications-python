@@ -119,13 +119,13 @@ cleanly `skipped`) while the actually expensive job (building two
 container images, downloading two SBOMs' worth of grype matches) still
 only runs when something relevant changed.
 
-This is a corrected pattern, not a freely chosen one. The build plan for
-this chapter flags that the Java sibling project's own `supply-chain.yml`
-has a `paths:` filter *and* no `*-ok` summary job: the exact combination
-this section just described as broken. `schema-registry.yml` (Chapter 28)
+This is a corrected pattern, not a freely chosen one. A naive
+`supply-chain.yml` carries a `paths:` filter *and* no `*-ok` summary job:
+the exact combination this section just described as broken.
+`schema-registry.yml` (Chapter 28)
 got the shape right first; `deploy-manifests.yml` and `supply-chain.yml`
-both copy it rather than the Java tree's version, specifically so a
-future reader grepping either repository's `.github/workflows/` for "how
+both copy it, specifically so a
+future reader grepping this repository's `.github/workflows/` for "how
 do I add a required check safely" finds the corrected answer here.
 
 ## Progressive delivery, already practiced

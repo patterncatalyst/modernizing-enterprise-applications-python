@@ -398,9 +398,8 @@ The four remaining services with a role in the system's saga,
 gateway`, stay mesh-only. Their request and response activity is visible
 in Kiali's service graph and in Envoy's own spans the moment a request
 touches them; what happens inside their own `app/` code during a Kafka
-consume-and-react cycle is not. That's a choice carried over from this
-book's Java sibling, which deferred Kafka saga-hop tracing in the same
-way, not a limitation of Istio or OpenTelemetry; the same outbox-
+consume-and-react cycle is not. That's a deliberate choice,
+not a limitation of Istio or OpenTelemetry; the same outbox-
 propagation work described above would close it for a future iteration,
 and this chapter names that rather than building it without comment.
 
@@ -494,9 +493,9 @@ anyone applies them; the live run is what confirms the mesh, the mTLS
 policy, and the trace pipeline this chapter describes actually produce
 the behavior described, on a cluster where they've been asked to.
 
-> **ADLC in Action.** Drafting this chapter from the Java sibling's own
-> ch.30 alone would have produced a hero trace rooted at `graphql-gateway`,
-> because that's where the Java system's synchronous fan-out lives. This
+> **ADLC in Action.** Drafting this chapter from an assumed topology
+> alone would have produced a hero trace rooted at `graphql-gateway`,
+> the natural root when a system's synchronous fan-out lives there. This
 > project's `graphql-gateway` has no comparable role: it's a read-side
 > front door added at ch.26, with no outbox, no saga fan-in, and no
 > business reason to be one of the three OTel-instrumented services.

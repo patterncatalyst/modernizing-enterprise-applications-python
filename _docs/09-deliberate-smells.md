@@ -61,7 +61,7 @@ deployable collaborators reached over a stable contract:
 ```python
 # SMELL[ch.26]: reaching directly into inventory's services/model
 # layer from the order context, with no anti-corruption layer at the
-# seam -- the Python equivalent of the Java monolith's `OrderService`
+# seam -- the same shape as a monolith's `OrderService`
 # calling straight into `InventoryService`.
 for line in items:
     inventory_item = inventory_services.get_by_sku(line["sku"])

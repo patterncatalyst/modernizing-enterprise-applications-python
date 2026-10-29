@@ -395,8 +395,7 @@ outbound edges to any other bounded context's services**. It reads
 `notification.services`; review has no synchronous dependency on anything
 else in the monolith, a property Chapter 9 named explicitly.
 
-The second caveat is the one worth sitting with, because it's a nuance the
-Java-sibling version of this chapter didn't have to carry: review's write
+The second caveat is the one worth sitting with: review's write
 endpoint *does* still borrow something from its siblings: Django's shared
 `auth_user` table, gated per-view with HTTP Basic auth, even though nothing
 about reviewing a product requires authenticating against the same user

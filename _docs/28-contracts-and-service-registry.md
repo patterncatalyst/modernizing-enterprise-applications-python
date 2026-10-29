@@ -215,8 +215,8 @@ async def register_or_resolve(self, artifact_id: str, schema_json: str) -> Regis
     )
 ```
 
-`register_or_resolve` is the Python-native analogue of the Java sibling's
-`apicurio.registry.auto-register=true`: a producer can call it on every
+`register_or_resolve` is the Python-native analogue of Apicurio's
+`auto-register=true`: a producer can call it on every
 `start()` without worrying about double-registering, because
 `ifExists=FIND_OR_CREATE_VERSION` returns the existing version, with
 `200`, if the content already matches byte-for-byte. `RegistryClient`'s own
@@ -368,8 +368,7 @@ async def poll_one(self, timeout: float = 30.0) -> dict[str, Any]:
     return fastavro.schemaless_reader(io.BytesIO(avro_bytes), schema)
 ```
 
-`tests/test_roundtrip.py`, the pure-Python analogue of the Java sibling's
-`OrderAvroRoundTripTest`, proves this whole path end to end against a
+`tests/test_roundtrip.py` proves this whole path end to end against a
 Testcontainers-managed Kafka and Apicurio: encode a `DemoOrderPlaced` event,
 register/resolve its schema, publish it, consume it back, and assert every
 field matches, field for field, including the millisecond-truncated
@@ -395,8 +394,7 @@ assert received["placedAt"] == expected_millis
 Round-tripping one fixed schema proves serialization works. It does not
 prove the thing a registry is actually *for*: catching a breaking change
 before it ships. That proof needs at least two schema versions and a rule
-that can tell them apart, and `tests/test_compatibility.py`, the pure-
-Python sibling of the Java `SchemaCompatibilityTest`, builds exactly that
+that can tell them apart, and `tests/test_compatibility.py` builds exactly that
 scenario against a live registry.
 
 Apicurio supports the standard compatibility rule vocabulary: **BACKWARD**
@@ -464,8 +462,7 @@ The actual numbers this project observed, live, against the pinned
 7807 problem body whose `"name"` field is `"RuleViolationException"`.
 That specific status code is not incidental trivia: `app/registry_client.py`'s
 own module docstring records that an **older, pre-3.3 registry answers
-`409`** for the identical rejected request, the same 409-to-400 shift the
-Java sibling's own test docstring independently observed across its own
+`409`** for the identical rejected request, a 409-to-400 shift across the
 registry-version bump. `tests/test_compatibility.py` and `app/demo_cli.py`
 both assert the actual, live-observed `400` rather than a remembered or
 assumed status, exactly the discipline `RegistryClient.register_version`
