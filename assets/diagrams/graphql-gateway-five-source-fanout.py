@@ -57,7 +57,7 @@ edges = [connect(client, gw)] + source_edges + [
 ]
 
 notes = [
-    {"x": W / 2, "y": 30, "text": "ch.26 -- one query, five sources, no data owned locally: partial failure is a null field, never a crashed request",
+    {"x": W / 2, "y": 30, "text": "one query, five sources, no data owned locally: partial failure is a null field, never a crashed request",
      "anchor": "middle", "bold": True, "size": 15},
     {"x": 40, "y": H - 24, "text": "Every target above is fixed operator configuration -- never derived from the incoming request -- which is what keeps a fan-out gateway from becoming an SSRF/amplification vector.",
      "anchor": "start", "size": 11, "color": "#555555"},

@@ -28,8 +28,8 @@ g.OUT = os.path.dirname(__file__)
 W, H = 1280, 640
 PANEL_H = 260
 
-band_a = {"x": 30, "y": 60, "w": 1220, "h": PANEL_H, "label": "Panel A -- no ACL (ch.15 Review): a request into someone else's tables", "fill": "#fafafa"}
-band_b = {"x": 30, "y": 60 + PANEL_H + 40, "w": 1220, "h": PANEL_H, "label": "Panel B -- an ACL (ch.16/17 Notification): a contract, not a request", "fill": "#f1f5f9"}
+band_a = {"x": 30, "y": 60, "w": 1220, "h": PANEL_H, "label": "Panel A -- no ACL (Review): a request into someone else's tables", "fill": "#fafafa"}
+band_b = {"x": 30, "y": 60 + PANEL_H + 40, "w": 1220, "h": PANEL_H, "label": "Panel B -- an ACL (Notification): a contract, not a request", "fill": "#f1f5f9"}
 
 # Panel A
 review_svc = node(70, 150, 260, 100, ["review-service :8001", "app/models.py -- SQLAlchemy mapping", "onto the MONOLITH'S OWN tables"], style="box")
@@ -54,9 +54,9 @@ edges_b = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.16 -- the ACL is a translation boundary, not just \"another request\"",
+    {"x": W / 2, "y": 32, "text": "the ACL is a translation boundary, not just \"another request\"",
      "anchor": "middle", "bold": True, "size": 18},
-    {"x": 50, "y": H - 40, "text": "Panel A's shared-schema reach is a deliberate, named deferral (ch.18/19 give review its own schema) --",
+    {"x": 50, "y": H - 40, "text": "Panel A's shared-schema reach is a deliberate, named deferral (review gets its own schema later) --",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 50, "y": H - 22, "text": "Panel B's OrderPlacedEvent is what makes notification-service independent of the monolith's schema.",
      "anchor": "start", "size": 11, "color": "#555555"},

@@ -71,7 +71,7 @@
 <text x="404.0952380952381" y="739.0" font-size="11" fill="#555" text-anchor="middle">undo step 2 (only completed inverse)</text>
 <path d="M560.0,730.0 L560.0,760.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <path d="M560.0,850.0 L560.0,890.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
-<text x="660.0" y="18" font-size="16" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.24 -- the orchestrated saga: ONE coordinator sequences every step and owns the compensation decision</text>
+<text x="660.0" y="18" font-size="16" fill="#1d1d1d" text-anchor="middle" font-weight="700">the orchestrated saga: ONE coordinator sequences every step and owns the compensation decision</text>
 <text x="40" y="974" font-size="11" fill="#555555" text-anchor="start">enrich and book_carrier persist nothing of their own, so neither has a compensation entry -- only dispatch&#x27;s Shipment row needs undoing.</text>
-<text x="40" y="992" font-size="11" fill="#555555" text-anchor="start">Compare ch.23&#x27;s choreographed-payment-saga-sequence: no box in this picture&#x27;s counterpart decides anything for another box.</text>
+<text x="40" y="992" font-size="11" fill="#555555" text-anchor="start">Compare the choreographed payment saga: no box in this picture&#x27;s counterpart decides anything for another box.</text>
 </svg>

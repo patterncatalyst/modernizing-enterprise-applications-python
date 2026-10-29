@@ -49,7 +49,7 @@
 <path d="M612.280701754386,220.0 L373.6842105263158,420.0" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
 <text x="498.9824561403509" y="314.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">no event arrives within the bounded wait</text>
 <text x="498.9824561403509" y="314.0" font-size="11" fill="#2f5f3d" text-anchor="middle">no event arrives within the bounded wait</text>
-<text x="660.0" y="20" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.24 -- AWAITING_SHIPMENT is a real intermediate status, and SHIPPING_FAILED now closes the refund gap r05 left open</text>
-<text x="40" y="720" font-size="11" fill="#555555" text-anchor="start">Before r06: a SHIP-FAIL order compensated inventory but left a captured payment stranded (DRQ-054, documented, not silent).</text>
-<text x="40" y="738" font-size="11" fill="#555555" text-anchor="start">After r06: the SAME shipment.failed event that triggers the order&#x27;s SHIPPING_FAILED transition also drives CAPTURED -&gt; REFUNDED.</text>
+<text x="660.0" y="20" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">AWAITING_SHIPMENT is a real intermediate status, and SHIPPING_FAILED now closes the refund gap an earlier step left open</text>
+<text x="40" y="720" font-size="11" fill="#555555" text-anchor="start">Before the refund hop: a SHIP-FAIL order compensated inventory but left a captured payment stranded (documented, not silent).</text>
+<text x="40" y="738" font-size="11" fill="#555555" text-anchor="start">After the refund hop: the SAME shipment.failed event that triggers the order&#x27;s SHIPPING_FAILED transition also drives CAPTURED -&gt; REFUNDED.</text>
 </svg>

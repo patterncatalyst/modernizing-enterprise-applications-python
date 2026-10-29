@@ -93,7 +93,7 @@ right_edges = [
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.10: same system, two kinds of test: white-box pytest pyramid vs. black-box equivalence suite",
+     "text": "same system, two kinds of test: white-box pytest pyramid vs. black-box equivalence suite",
      "anchor": "middle", "bold": True, "size": 16},
     {"x": W / 2, "y": 56,
      "text": "the pyramid imports Python package names; the equivalence suite only knows baseUrl and HTTP",

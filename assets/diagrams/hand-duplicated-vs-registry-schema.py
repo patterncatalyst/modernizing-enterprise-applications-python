@@ -31,7 +31,7 @@ band_left = {"x": 30, "y": 60, "w": 610, "h": PANEL_H,
              "label": "Today -- two hand-authored copies of the same contract",
              "fill": "#fafafa"}
 band_right = {"x": 680, "y": 60, "w": 610, "h": PANEL_H,
-              "label": "ch.28's demonstrator -- one schema, registered once",
+              "label": "the demonstrator -- one schema, registered once",
               "fill": "#f1f5f9"}
 
 # Left panel
@@ -47,7 +47,7 @@ notif_copy = node(350, 230, 250, 110,
                    style="ghost")
 drift_note = node(70, 400, 530, 90,
                    ["Two independent authors, two independent understandings,", "no mechanism checking they still agree -- a hand-maintained",
-                    "JSON contract re-declared per consumer (DRQ-036)"],
+                    "JSON contract re-declared per consumer"],
                    style="box")
 edges_left = [
     connect(order_svc, payment_copy, label="publishes, payment reads"),
@@ -76,7 +76,7 @@ edges_right = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.28 -- the hand-maintained JSON contract's drift, and the registry-governed alternative demonstrated alongside it",
+    {"x": W / 2, "y": 32, "text": "the hand-maintained JSON contract's drift, and the registry-governed alternative demonstrated alongside it",
      "anchor": "middle", "bold": True, "size": 18},
     {"x": 50, "y": H - 22, "text": "The registry is additive: order.placed stays plain JSON. The demonstrator publishes an Avro mirror to its own topic, order.events.avro.demo.",
      "anchor": "start", "size": 11, "color": "#555555"},

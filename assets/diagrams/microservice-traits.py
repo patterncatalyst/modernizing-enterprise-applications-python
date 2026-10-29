@@ -92,7 +92,7 @@ for i, (title, lines) in enumerate(TRAITS):
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.03 -- the ten microservice traits: what the word is actually promising",
+     "text": "the ten microservice traits: what the word is actually promising",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56,
      "text": "each service's boundary matches a bounded context -- the target this book's six extractions are built toward, one at a time",
@@ -102,7 +102,7 @@ notes = [
      "text": "None of these ten traits is this book's own goal in isolation. Together, they are the destination the strangler-fig",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": X0, "y": Y0 + 2 * ROW_H + GUTTER_Y + 52,
-     "text": "sequence (ch.14-26) is aimed at -- each of the six extractions is a bet that one more bounded context can acquire them.",
+     "text": "sequence is aimed at -- each of the six extractions is a bet that one more bounded context can acquire them.",
      "anchor": "start", "size": 11, "color": "#555555"},
 
     {"x": X0, "y": H - 16,

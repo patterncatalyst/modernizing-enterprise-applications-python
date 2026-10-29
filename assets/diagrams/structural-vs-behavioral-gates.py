@@ -52,7 +52,7 @@ band_top = {"x": 20, "y": 80, "w": 1360, "h": 250,
 route_check = node(60, 150, 400, 120,
                     ["ruff check + Python import-time wiring",
                      "no live route-graph validator exists for",
-                     "this stack (no MCP equivalent, DRQ-020)"], style="accent")
+                     "this stack (no MCP equivalent)"], style="accent")
 catches1 = node(500, 150, 380, 120,
                 ["Catches", "a malformed route registration,",
                  "unresolved import, typo'd dependency signature"], style="box")
@@ -77,7 +77,7 @@ suite_check = node(60, 460, 400, 120,
                     ["Newman equivalence suite +", "adversarial follow-up",
                      "exercises real requests, running service"], style="accent")
 catches2 = node(500, 460, 420, 120,
-                ["Catches", "the chunked-body routing bug (DRQ-026) --",
+                ["Catches", "the chunked-body routing bug --",
                  "a misleadingly correct-looking response"], style="box")
 
 bottom_nodes = [suite_check, catches2]
@@ -101,21 +101,21 @@ bottom_edges = [
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.06 -- structural gate vs behavioral gate: two layers, two different classes of mistake",
+     "text": "structural gate vs behavioral gate: two layers, two different classes of mistake",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56,
-     "text": "no MCP-driven structural validator exists for this stack (DRQ-020) -- the behavioral gate carries more of the weight here than a live route-validator tool would leave it",
+     "text": "no MCP-driven structural validator exists for this stack -- the behavioral gate carries more of the weight here than a live route-validator tool would leave it",
      "anchor": "middle", "size": 12, "color": "#555555"},
 
     {"x": 980, "y": 520,
-     "text": "the real bug this gate caught: every POST through the proxy silently arrived empty (DRQ-026)",
+     "text": "the real bug this gate caught: every POST through the proxy silently arrived empty",
      "anchor": "start", "size": 10, "color": "#777777"},
 
     {"x": 40, "y": H - 46,
-     "text": "Sourced from _plans/build-plan.md (section F.1's tooling column, DRQ-020).",
+     "text": "Sourced from _plans/build-plan.md (section F.1's tooling column).",
      "anchor": "start", "size": 10.5, "color": "#555555"},
     {"x": 40, "y": H - 16,
-     "text": "Behavioral-gate example: _plans/decisions.md DRQ-026, the strangler proxy's chunked-body bug.",
+     "text": "Behavioral-gate example: the strangler proxy's chunked-body bug.",
      "anchor": "start", "size": 10.5, "color": "#555555"},
 ]
 

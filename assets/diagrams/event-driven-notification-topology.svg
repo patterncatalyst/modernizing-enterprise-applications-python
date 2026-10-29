@@ -49,7 +49,7 @@
 <path d="M900.0,570.3164556962025 L1000.0,551.3291139240506" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
 <text x="956.0" y="554.8227848101266" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">flag ON</text>
 <text x="956.0" y="554.8227848101266" font-size="11" fill="#2f5f3d" text-anchor="middle">flag ON</text>
-<text x="680.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.17 -- one outbox row, two independent consumer groups, one flag choosing who answers the read</text>
+<text x="680.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">one outbox row, two independent consumer groups, one flag choosing who answers the read</text>
 <text x="30" y="250" font-size="12" fill="#1d1d1d" text-anchor="start">Both consumer groups run for the ENTIRE strangle window -- the monolith becomes a consumer of its own event</text>
 <text x="30" y="270" font-size="12" fill="#1d1d1d" text-anchor="start">(the decorating-collaborator pattern), not a placeholder removed once notification-service ships.</text>
 <text x="30" y="656" font-size="11" fill="#555555" text-anchor="start">Kafka delivery is AT-LEAST-ONCE end to end: the relay can republish, and each consumer can redeliver on its own restart.</text>

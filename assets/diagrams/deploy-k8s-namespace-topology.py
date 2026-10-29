@@ -70,7 +70,7 @@ edges.append(connect(db_group_box, postgres, label="DATABASE_URL via Secret (6 s
 edges.append(connect(kafka_group_box, kafka, label="KAFKA_BOOTSTRAP_SERVERS via ConfigMap (5 services)"))
 
 notes = [
-    {"x": W / 2, "y": 24, "text": "ch.29 -- the mea namespace deploy topology (deploy/k8s/base + overlays/minikube)",
+    {"x": W / 2, "y": 24, "text": "the mea namespace deploy topology (deploy/k8s/base + overlays/minikube)",
      "anchor": "middle", "bold": True, "size": 15},
     {"x": 240, "y": H - 24,
      "text": "strangler-proxy is the only NodePort; every other Service (including graphql-gateway's own front door) stays ClusterIP. Probes: tcpSocket on strangler-proxy + review-service (no /health route), httpGet /health on the other six.",

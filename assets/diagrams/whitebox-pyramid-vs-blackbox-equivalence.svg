@@ -42,7 +42,7 @@
 <path d="M1216.4516129032259,380.0 L1286.1290322580644,440.0" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
 <text x="1257.2903225806451" y="404.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">re-pointed, zero assertions edited</text>
 <text x="1257.2903225806451" y="404.0" font-size="11" fill="#2f5f3d" text-anchor="middle">re-pointed, zero assertions edited</text>
-<text x="780.0" y="32" font-size="16" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.10: same system, two kinds of test: white-box pytest pyramid vs. black-box equivalence suite</text>
+<text x="780.0" y="32" font-size="16" fill="#1d1d1d" text-anchor="middle" font-weight="700">same system, two kinds of test: white-box pytest pyramid vs. black-box equivalence suite</text>
 <text x="780.0" y="56" font-size="12" fill="#555555" text-anchor="middle">the pyramid imports Python package names; the equivalence suite only knows baseUrl and HTTP</text>
 <text x="110" y="575" font-size="10.5" fill="#555555" text-anchor="start">A white-box test can&#x27;t import a module that doesn&#x27;t share the monolith&#x27;s package names,</text>
 <text x="110" y="591" font-size="10.5" fill="#555555" text-anchor="start">let alone its database rows: it proves the implementation, not the behavior, is correct.</text>

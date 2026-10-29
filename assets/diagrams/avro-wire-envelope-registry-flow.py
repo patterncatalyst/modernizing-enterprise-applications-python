@@ -62,7 +62,7 @@ edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.28 -- the hand-rolled envelope and the register/resolve round trip, pure-Python (fastavro + aiokafka + httpx, DRQ-033)",
+    {"x": W / 2, "y": 32, "text": "the hand-rolled envelope and the register/resolve round trip, pure-Python (fastavro + aiokafka + httpx)",
      "anchor": "middle", "bold": True, "size": 18},
     {"x": 50, "y": H - 22, "text": "The consumer always fetches the writer schema by global id -- it never trusts its own locally parsed .avsc matches what produced the bytes.",
      "anchor": "start", "size": 11, "color": "#555555"},

@@ -31,14 +31,14 @@ band_gql = {"x": 900, "y": 56, "w": 440, "h": 400, "label": "GraphQL", "fill": "
 r1 = node(50, 110, 360, 70, ["Client -> any service", "request/reply, caller waits"], style="box")
 r2 = node(50, 200, 360, 70, ["GET/POST /api/orders", "/api/payments, /api/shipments..."], style="box")
 r3 = node(50, 290, 360, 70, ["Fits: a user directly", "waiting on one answer"], style="accent")
-r4 = node(50, 380, 360, 60, ["Used by every service", "in this project, since ch.1"], style="ghost")
+r4 = node(50, 380, 360, 60, ["Used by every service", "in this project, from the start"], style="ghost")
 rest_nodes = [r1, r2, r3, r4]
 rest_edges = [connect(r1, r2), connect(r2, r3), connect(r3, r4)]
 
 g1 = node(490, 110, 360, 70, ["order-service -> inventory-service", "Reserve / Release / GetStock"], style="box")
 g2 = node(490, 200, 360, 70, ["Strongly typed wire contract", "(proto), versioned, fast"], style="box")
 g3 = node(490, 290, 360, 70, ["Fits: checkout cannot proceed", "without a synchronous stock answer"], style="accent")
-g4 = node(490, 380, 360, 60, ["The ACL from ch.19,", "unchanged through order's extraction"], style="ghost")
+g4 = node(490, 380, 360, 60, ["The ACL seam,", "unchanged through order's extraction"], style="ghost")
 grpc_nodes = [g1, g2, g3, g4]
 grpc_edges = [connect(g1, g2), connect(g2, g3), connect(g3, g4)]
 
@@ -50,9 +50,9 @@ gql_nodes = [q1, q2, q3, q4]
 gql_edges = [connect(q1, q2), connect(q2, q3), connect(q3, q4)]
 
 notes = [
-    {"x": W / 2, "y": 30, "text": "ch.26 -- three protocols, three different problems, used side by side in one system",
+    {"x": W / 2, "y": 30, "text": "three protocols, three different problems, used side by side in one system",
      "anchor": "middle", "bold": True, "size": 16},
-    {"x": 40, "y": H - 24, "text": "A fourth style, asynchronous saga events (choreographed ch.23, orchestrated ch.24), coordinates every cross-service outcome none of the three above resolves synchronously.",
+    {"x": 40, "y": H - 24, "text": "A fourth style, asynchronous saga events (choreographed and orchestrated), coordinates every cross-service outcome none of the three above resolves synchronously.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

@@ -57,16 +57,16 @@ edges = [
     connect(client, proxy, label="HTTP, any method"),
     connect(proxy, monolith, label="default"),
     connect(proxy, review, label="path-prefix match"),
-    connect(proxy, notification, label="path-prefix match (ch.17's seam)", amber=True),
+    connect(proxy, notification, label="path-prefix match", amber=True),
 ]
 
 notes = [
-    {"x": W / 2, "y": 30, "text": "ch.16 -- one routing decision, generalized past a single URL-path predicate",
+    {"x": W / 2, "y": 30, "text": "one routing decision, generalized past a single URL-path predicate",
      "anchor": "middle", "bold": True, "size": 18},
 
-    {"x": 60, "y": 450, "text": "Today, this proxy matches on PATH (request.url.path, the full path -- see ch.14's",
+    {"x": 60, "y": 450, "text": "Today, this proxy matches on PATH (request.url.path, the full path).",
      "anchor": "start", "size": 12, "color": "#1d1d1d"},
-    {"x": 60, "y": 470, "text": "full-path-prefix lesson). The same _select_backend() shape generalizes to:",
+    {"x": 60, "y": 470, "text": "The same _select_backend() shape generalizes to:",
      "anchor": "start", "size": 12, "color": "#1d1d1d"},
     {"x": 76, "y": 495, "text": "- HEADER match -- e.g. route by X-Tenant-Id to a tenant-specific backend",
      "anchor": "start", "size": 12, "color": "#64748b"},

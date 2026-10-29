@@ -26,13 +26,13 @@ W, H = 1320, 800
 PANEL_H = 200
 
 band_a = {"x": 30, "y": 60, "w": 1260, "h": PANEL_H,
-          "label": "Panel A -- SHARED (ch.15 Review, deliberate deferral): direct reach into the monolith's own tables, no ACL",
+          "label": "Panel A -- SHARED (Review, deliberate deferral): direct reach into the monolith's own tables, no ACL",
           "fill": "#fafafa"}
 band_b = {"x": 30, "y": 60 + PANEL_H + 30, "w": 1260, "h": PANEL_H,
-          "label": "Panel B -- OWNED FROM DAY ONE (ch.17 Notification): own schema, reached only via a frozen Kafka contract",
+          "label": "Panel B -- OWNED FROM DAY ONE (Notification): own schema, reached only via a frozen Kafka contract",
           "fill": "#f1f5f9"}
 band_c = {"x": 30, "y": 60 + 2 * (PANEL_H + 30), "w": 1260, "h": PANEL_H + 40,
-          "label": "Panel C -- OWNED + CDC BACKFILL (ch.19, next): the hardest cut -- a synchronous seam AND a one-time log tail",
+          "label": "Panel C -- OWNED + CDC BACKFILL (next): the hardest cut -- a synchronous seam AND a one-time log tail",
           "fill": "#fafafa"}
 
 # Panel A -- Review
@@ -56,9 +56,9 @@ edges_b = [
 
 # Panel C -- Inventory
 y_c = 60 + 2 * (PANEL_H + 30) + 90
-monolith_c = node(70, y_c, 280, 100, ["Django monolith :8000", "public.inventory_items", "SMELL[ch.18]: still shared, pre-cutover"], style="ghost")
-cdc_c = node(420, y_c, 260, 100, ["Debezium (ch.19)", "transition-only backfill", "RETIRED after cutover"], style="ghost")
-inv_svc = node(760, y_c, 280, 100, ["inventory-service", "OWN `inventory` schema", "gRPC Reserve/Release (ch.19)"], style="accent")
+monolith_c = node(70, y_c, 280, 100, ["Django monolith :8000", "public.inventory_items", "still shared, pre-cutover"], style="ghost")
+cdc_c = node(420, y_c, 260, 100, ["Debezium", "transition-only backfill", "RETIRED after cutover"], style="ghost")
+inv_svc = node(760, y_c, 280, 100, ["inventory-service", "OWN `inventory` schema", "gRPC Reserve/Release"], style="accent")
 edges_c = [
     connect(monolith_c, cdc_c, label="tail the WAL", dashed=True),
     connect(cdc_c, inv_svc, label="one-time backfill, then sync", dashed=True, amber=True),
@@ -66,11 +66,11 @@ edges_c = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.18 -- shared data is the hardest coupling to break; the three postures this book builds, stacked",
+    {"x": W / 2, "y": 32, "text": "shared data is the hardest coupling to break; the three postures this book builds, stacked",
      "anchor": "middle", "bold": True, "size": 18},
     {"x": 50, "y": H - 40, "text": "Panel A's shared-schema reach is a named deferral, not an oversight. Panel B shows the clean case: owned from the first migration.",
      "anchor": "start", "size": 11, "color": "#555555"},
-    {"x": 50, "y": H - 22, "text": "Panel C is the hybrid ch.19 builds: a synchronous gRPC seam plus a one-time, explicitly retired transaction-log backfill.",
+    {"x": 50, "y": H - 22, "text": "Panel C is the hybrid build: a synchronous gRPC seam plus a one-time, explicitly retired transaction-log backfill.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

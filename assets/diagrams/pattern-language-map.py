@@ -31,25 +31,25 @@ leg_adapted = node(220, 34, 170, 28, ["Adapted -- real, narrower"], style="user"
 leg_deferred = node(410, 34, 230, 28, ["Named horizon -- scoped, not built"], style="ghost")
 
 # Row A -- the synchronous/transactional spine, ch.14-24
-a1 = node(30, 80, 230, 110, ["Strangler Fig + ASGI proxy", "ch.14 -- decommission", "complete at r07"], style="accent")
-a2 = node(280, 80, 230, 110, ["ACL + gRPC seam", "ch.16, ch.19 -- notification", "+ inventory"], style="accent")
-a3 = node(530, 80, 230, 110, ["Transactional Outbox", "ch.17, ch.20 -- cures the", "sync-send/dual-write smells"], style="accent")
-a4 = node(780, 80, 230, 110, ["CQRS (order_view)", "ch.21, ch.26 -- same-DB,", "same-tx projection"], style="accent")
-a5 = node(1030, 80, 230, 110, ["Saga: Choreographed", "ch.23 -- payment reacts to", "order.placed, no coordinator"], style="accent")
-a6 = node(1280, 80, 230, 110, ["Saga: Orchestrated", "ch.24 -- shipping's crash-", "resumable coordinator"], style="accent")
+a1 = node(30, 80, 230, 110, ["Strangler Fig + ASGI proxy", "decommission", "complete"], style="accent")
+a2 = node(280, 80, 230, 110, ["ACL + gRPC seam", "notification", "+ inventory"], style="accent")
+a3 = node(530, 80, 230, 110, ["Transactional Outbox", "cures the", "sync-send/dual-write smells"], style="accent")
+a4 = node(780, 80, 230, 110, ["CQRS (order_view)", "same-DB,", "same-tx projection"], style="accent")
+a5 = node(1030, 80, 230, 110, ["Saga: Choreographed", "payment reacts to", "order.placed, no coordinator"], style="accent")
+a6 = node(1280, 80, 230, 110, ["Saga: Orchestrated", "shipping's crash-", "resumable coordinator"], style="accent")
 
 # Row B -- the platform layer, ch.27-31
-b1 = node(30, 220, 280, 110, ["Contracts & Schema Registry", "ch.28 -- Apicurio, scoped to", "one demo, not every topic"], style="user")
-b2 = node(330, 220, 280, 110, ["Microservices Chassis", "ch.27 -- convention copied", "per service, not a library"], style="user")
-b3 = node(630, 220, 280, 110, ["Deployment (kustomize)", "ch.29 -- base + overlays/", "minikube, 8 Deployments"], style="accent")
-b4 = node(930, 220, 280, 110, ["Service Mesh + Observability", "ch.30 -- Istio mTLS STRICT +", "LGTM; OTel app-level on 3 of 8"], style="user")
-b5 = node(1230, 220, 280, 110, ["CI/CD + Supply Chain", "ch.31 -- syft/grype/policy,", "fixable-findings-only gate"], style="accent")
+b1 = node(30, 220, 280, 110, ["Contracts & Schema Registry", "Apicurio, scoped to", "one demo, not every topic"], style="user")
+b2 = node(330, 220, 280, 110, ["Microservices Chassis", "convention copied", "per service, not a library"], style="user")
+b3 = node(630, 220, 280, 110, ["Deployment (kustomize)", "base + overlays/", "minikube, 8 Deployments"], style="accent")
+b4 = node(930, 220, 280, 110, ["Service Mesh + Observability", "Istio mTLS STRICT +", "LGTM; OTel app-level on 3 of 8"], style="user")
+b5 = node(1230, 220, 280, 110, ["CI/CD + Supply Chain", "syft/grype/policy,", "fixable-findings-only gate"], style="accent")
 
 # Ghost row -- named further horizons, not built this book
-g1 = node(30, 390, 280, 100, ["Full event sourcing (replay)", "beyond the outbox-as-log", "framing ch.21 already teaches"], style="ghost")
+g1 = node(30, 390, 280, 100, ["Full event sourcing (replay)", "beyond the outbox-as-log", "framing shown earlier"], style="ghost")
 g2 = node(330, 390, 280, 100, ["pybreaker / bulkhead", "no second failure mode yet", "has forced building one"], style="ghost")
 g3 = node(630, 390, 280, 100, ["GitOps operator + canary", "progressive delivery beyond", "the flag-gated cutovers"], style="ghost")
-g4 = node(930, 390, 280, 100, ["Loki log aggregation", "LGTM ships L+G+T+M; only", "T (Tempo) is wired into ch.30"], style="ghost")
+g4 = node(930, 390, 280, 100, ["Loki log aggregation", "LGTM ships L+G+T+M; only", "T (Tempo) is wired in"], style="ghost")
 g5 = node(1230, 390, 280, 100, ["Kafka saga-hop tracing", "mesh sees the hop; no app-", "level span crosses it yet"], style="ghost")
 
 nodes = [leg_earned, leg_adapted, leg_deferred,
@@ -59,7 +59,7 @@ nodes = [leg_earned, leg_adapted, leg_deferred,
 
 edges = [
     connect(a1, a2), connect(a2, a3), connect(a3, a4), connect(a4, a5), connect(a5, a6),
-    connect(a6, b1, label="ch.14-26 -> ch.27-31"),
+    connect(a6, b1, label="extractions -> platform"),
     connect(b1, b2), connect(b2, b3), connect(b3, b4), connect(b4, b5),
     connect(a4, g1, dashed=True),
     connect(b2, g2, dashed=True),

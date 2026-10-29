@@ -48,7 +48,7 @@ suite = node(60, 150, 520, 120,
              ["Newman suite, real WSGI backend, real socket", "re-run against every candidate build",
               "58/58 -- baseline, cutover, reverted (CUTOVER.md)"], style="accent")
 remove1 = node(660, 150, 580, 120,
-               ["Remove this layer:", "the chunked-body bug (DRQ-026) ships silently --",
+               ["Remove this layer:", "the chunked-body bug ships silently --",
                 "every POST through the proxy arrives empty"], style="accent")
 
 # ---- Layer 2 ---------------------------------------------------------------
@@ -57,7 +57,7 @@ adversarial = node(60, 400, 520, 120,
                      "in the shared reviews/auth_user table?"], style="accent")
 remove2 = node(660, 400, 580, 120,
                ["Remove this layer:", "a shape-only green run hides which backend",
-                "actually answered -- both share one table (DRQ-028)"], style="accent")
+                "actually answered -- both share one table"], style="accent")
 
 # ---- Layer 3 ---------------------------------------------------------------
 gate1 = node(60, 650, 290, 120,
@@ -83,14 +83,14 @@ edges = [
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.07 -- the safety net has three layers; removing any one lets a specific bug through",
+     "text": "the safety net has three layers; removing any one lets a specific bug through",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56,
      "text": "the ADLC is not safe because an agent is careful -- it is safe because all three layers hold at once",
      "anchor": "middle", "size": 12, "color": "#555555"},
 
     {"x": 40, "y": H - 16,
-     "text": "Sourced from _plans/decisions.md (DRQ-026, DRQ-028) and examples/01-strangler-proxy/CUTOVER.md.",
+     "text": "Sourced from _plans/decisions.md and examples/01-strangler-proxy/CUTOVER.md.",
      "anchor": "start", "size": 10, "color": "#777777"},
 ]
 

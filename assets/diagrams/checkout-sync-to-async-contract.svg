@@ -34,7 +34,7 @@
 <path d="M920.0,475.0 L970.0,475.0" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
 <text x="951.0" y="469.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">caller must poll</text>
 <text x="951.0" y="469.0" font-size="11" fill="#2f5f3d" text-anchor="middle">caller must poll</text>
-<text x="640.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.23 -- the contract change: 202 is a PROMISE, not a faster 201</text>
+<text x="640.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">the contract change: 202 is a PROMISE, not a faster 201</text>
 <text x="50" y="580" font-size="11" fill="#555555" text-anchor="start">A dishonest cutover would keep returning 201 and just lie about the status; the equivalence suite is taught to poll</text>
 <text x="50" y="598" font-size="11" fill="#555555" text-anchor="start">GET /api/orders/{id} to a bounded terminal status instead, so a stuck PENDING order fails the gate, not passes it.</text>
 </svg>

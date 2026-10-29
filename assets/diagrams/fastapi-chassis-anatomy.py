@@ -54,7 +54,7 @@ n_resilience = node(60, 490, 460, 120,
                      ["tenacity retry + exponential backoff", "examples/06-shipping-service/app/enrich_client.py", "ONE call site, ONE service -- not a shared wrapper"], style="box")
 
 n_deferred = node(560, 490, 480, 120,
-                   ["DEFERRED: OpenTelemetry/Prometheus (ch.30 adds 3 services),", "pybreaker circuit breaker, bulkhead isolation,", "a shared chassis library -- named, not built"], style="ghost")
+                   ["DEFERRED: OpenTelemetry/Prometheus,", "pybreaker circuit breaker, bulkhead isolation,", "a shared chassis library -- named, not built"], style="ghost")
 
 nodes = [n_entry, n_config, n_logging, n_lifespan, n_errors, n_health,
          n_container, n_resilience, n_deferred]
@@ -71,7 +71,7 @@ edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 30, "text": "ch.27 -- the chassis is convention, not a framework feature: every box above is code someone wrote, not a dependency someone added",
+    {"x": W / 2, "y": 30, "text": "the chassis is convention, not a framework feature: every box above is code someone wrote, not a dependency someone added",
      "anchor": "middle", "bold": True, "size": 14},
     {"x": 40, "y": H - 40, "text": "Config and logging are the floor every service shares identically; health, errors, and resilience are opt-in and partial by actual count, not by oversight.",
      "anchor": "start", "size": 11, "color": "#555555"},

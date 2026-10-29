@@ -114,7 +114,7 @@ bands = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.08: Shared schema: eight tables, one Postgres schema, seven cross-context foreign keys",
+    {"x": W / 2, "y": 32, "text": "Shared schema: eight tables, one Postgres schema, seven cross-context foreign keys",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56,
      "text": "SMELL #3/#4: every amber FK below crosses a bounded-context ownership boundary, enforced only because everything shares one database",
@@ -125,7 +125,7 @@ notes = [
      "anchor": "start", "size": 10, "color": "#777777"},
 
     {"x": 40, "y": H - 16,
-     "text": "Sourced from each app's models.py under examples/00-monolith/ and SMELLS.md smells #3/#4. Reused in ch.18.",
+     "text": "Sourced from each app's models.py under examples/00-monolith/ and SMELLS.md smells #3/#4.",
      "anchor": "start", "size": 10.5, "color": "#555555"},
 ]
 

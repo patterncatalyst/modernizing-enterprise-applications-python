@@ -47,6 +47,6 @@
 <path d="M530.0,300.0 L950.0,300.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <text x="746.0" y="294.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">no route left -- break-glass only</text>
 <text x="746.0" y="294.0" font-size="11" fill="#555" text-anchor="middle">no route left -- break-glass only</text>
-<text x="700.0" y="28" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.26 -- the final topology: six services + a GraphQL gateway behind one flagless router, the monolith frozen and unwired</text>
-<text x="40" y="616" font-size="11" fill="#555555" text-anchor="start">Contract suite green against exactly this mesh -- 50 requests / 133 assertions, 0 failed, repeated 4x (GOLDEN-BASELINE-r07.md) -- with no monolith process running at all.</text>
+<text x="700.0" y="28" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">the final topology: six services + a GraphQL gateway behind one flagless router, the monolith frozen and unwired</text>
+<text x="40" y="616" font-size="11" fill="#555555" text-anchor="start">Contract suite green against exactly this mesh -- 50 requests / 133 assertions, 0 failed, repeated 4x -- with no monolith process running at all.</text>
 </svg>

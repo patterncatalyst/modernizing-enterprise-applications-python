@@ -21,31 +21,31 @@
 <rect x="30" y="500" width="200" height="190" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
 <text x="130.0" y="585.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">#1 God checkout function</text>
 <text x="130.0" y="602.5" font-size="11.5" fill="#555555" text-anchor="middle">order/services.py::place_order() reaches directly into inventory/payment/shipping&#x27;s services/models</text>
-<text x="130.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">cures: ch.26 (hardest, last)</text>
+<text x="130.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">cured last (hardest)</text>
 <rect x="244" y="500" width="200" height="190" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
 <text x="344.0" y="585.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">#2 One ACID txn, five contexts</text>
 <text x="344.0" y="602.5" font-size="11.5" fill="#555555" text-anchor="middle">_place_order_local&#x27;s transaction.atomic(): free rollback across order+inventory+payment+shipping+outbox</text>
-<text x="344.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">cures: ch.22 (ACID-&gt;ACD), ch.23/24 (sagas)</text>
+<text x="344.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">cured by ACID-&gt;ACD and the sagas</text>
 <rect x="458" y="500" width="200" height="190" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
 <text x="558.0" y="585.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">#3 Shared single schema/DB</text>
 <text x="558.0" y="602.5" font-size="11.5" fill="#555555" text-anchor="middle">config/settings.py: one Postgres schema, one set of Django migrations, all six apps deploy together</text>
-<text x="558.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">cures: ch.18 (owned data)</text>
+<text x="558.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">cured by owned data</text>
 <rect x="672" y="500" width="200" height="190" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
 <text x="772.0" y="585.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">#4 Cross-context FKs</text>
 <text x="772.0" y="602.5" font-size="11.5" fill="#555555" text-anchor="middle">orders-&gt;customers, payments/shipments/notifications-&gt;orders, reviews-&gt;customers+inventory_items</text>
-<text x="772.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">cures: ch.18, ch.19 (CDC)</text>
+<text x="772.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">cured by owned data + CDC</text>
 <rect x="886" y="500" width="200" height="190" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="986.0" y="585.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">#5 Sync notification: CURED</text>
 <text x="986.0" y="602.5" font-size="11.5" fill="#555555" text-anchor="middle">place_order() used to call notification/services.py in-process; now it only writes an OutboxEvent row</text>
-<text x="986.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">ch.17: cured at r03</text>
+<text x="986.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">cured</text>
 <rect x="1100" y="500" width="200" height="190" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="1200.0" y="585.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">#6 Dual-write hazard: CURED</text>
 <text x="1200.0" y="602.5" font-size="11.5" fill="#555555" text-anchor="middle">DB row + provider call were two independent writes; outbox_relay now publishes at-least-once</text>
-<text x="1200.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">ch.17: cured at r03</text>
+<text x="1200.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">cured</text>
 <rect x="1314" y="500" width="200" height="190" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
 <text x="1414.0" y="585.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">#7 Review tangled in shared auth</text>
 <text x="1414.0" y="602.5" font-size="11.5" fill="#555555" text-anchor="middle">review/views.py gates POST with HTTP Basic auth against the shared django.contrib.auth table</text>
-<text x="1414.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">cures: ch.15: review&#x27;s own auth config</text>
+<text x="1414.0" y="617.5" font-size="11.5" fill="#555555" text-anchor="middle">cured by review&#x27;s own auth config</text>
 <path d="M270.0,223.66666666666666 L685.4929577464789,322.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <path d="M494.0,237.7659574468085 L717.0422535211268,322.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <path d="M671.5211267605633,250.0 L748.5915492957746,322.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
@@ -78,7 +78,7 @@
 <path d="M1414.0,500 L1414.0,460" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
 <path d="M1414.0,460 L1290.0,460" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
 <path d="M1290.0,460 L1290.0,250" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
-<text x="770.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.09: The seven deliberate smells, mapped onto the monolith&#x27;s structure</text>
+<text x="770.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">The seven deliberate smells, mapped onto the monolith&#x27;s structure</text>
 <text x="770.0" y="56" font-size="12" fill="#555555" text-anchor="middle">the visual form of SMELLS.md: five smells still standing, two already cured</text>
 <text x="40" y="884" font-size="10.5" fill="#555555" text-anchor="start">Sourced from examples/00-monolith/SMELLS.md (grep &#x27;SMELL\[ch\.&#x27; for every in-code tag).</text>
 </svg>

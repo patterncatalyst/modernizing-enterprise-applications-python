@@ -46,7 +46,7 @@ after_edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.23 -- the contract change: 202 is a PROMISE, not a faster 201",
+    {"x": W / 2, "y": 32, "text": "the contract change: 202 is a PROMISE, not a faster 201",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": 50, "y": H - 40, "text": "A dishonest cutover would keep returning 201 and just lie about the status; the equivalence suite is taught to poll",
      "anchor": "start", "size": 11, "color": "#555555"},

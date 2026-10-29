@@ -49,9 +49,9 @@ edges += [connect(gql, order), connect(gql, pay), connect(gql, ship), connect(gq
 edges.append(connect(proxy, monolith, dashed=True, label="no route left -- break-glass only"))
 
 notes = [
-    {"x": W / 2, "y": 28, "text": "ch.26 -- the final topology: six services + a GraphQL gateway behind one flagless router, the monolith frozen and unwired",
+    {"x": W / 2, "y": 28, "text": "the final topology: six services + a GraphQL gateway behind one flagless router, the monolith frozen and unwired",
      "anchor": "middle", "bold": True, "size": 15},
-    {"x": 40, "y": H - 24, "text": "Contract suite green against exactly this mesh -- 50 requests / 133 assertions, 0 failed, repeated 4x (GOLDEN-BASELINE-r07.md) -- with no monolith process running at all.",
+    {"x": 40, "y": H - 24, "text": "Contract suite green against exactly this mesh -- 50 requests / 133 assertions, 0 failed, repeated 4x -- with no monolith process running at all.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

@@ -1,41 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1480 940" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
 <defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
 <rect x="30" y="70" width="1420" height="190" rx="12" fill="#fafafa" stroke="#ddd"/>
-<text x="42" y="90" font-size="12" font-weight="700" fill="#1d1d1d">Hop 1 -- Client -&gt; strangler-proxy (mesh edge, PeerAuth PERMISSIVE)</text>
+<text x="42" y="90" font-size="12" font-weight="700" fill="#1d1d1d">Hop 1: Client -&gt; strangler-proxy (mesh edge, PeerAuth PERMISSIVE)</text>
 <rect x="30" y="290" width="1420" height="260" rx="12" fill="#f5f5f5" stroke="#ddd"/>
-<text x="42" y="310" font-size="12" font-weight="700" fill="#1d1d1d">Hop 2 -- strangler-proxy -&gt; order-service (mTLS STRICT)</text>
+<text x="42" y="310" font-size="12" font-weight="700" fill="#1d1d1d">Hop 2: strangler-proxy -&gt; order-service (mTLS STRICT)</text>
 <rect x="30" y="580" width="1420" height="260" rx="12" fill="#fafafa" stroke="#ddd"/>
-<text x="42" y="600" font-size="12" font-weight="700" fill="#1d1d1d">Hop 3 -- order-service -&gt; inventory-service, gRPC Reserve (mTLS STRICT, ACL seam ch.19)</text>
+<text x="42" y="600" font-size="12" font-weight="700" fill="#1d1d1d">Hop 3: order-service -&gt; inventory-service, gRPC Reserve (mTLS STRICT, ACL seam)</text>
 <rect x="60" y="118" width="1360" height="120" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
-<text x="740.0" y="176.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Envoy mesh span -- ingress sidecar (strangler-proxy)</text>
+<text x="740.0" y="176.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Envoy mesh span: ingress sidecar (strangler-proxy)</text>
 <text x="740.0" y="193.0" font-size="11.5" fill="#555555" text-anchor="middle">breadth: every hop, all 8 services, zero app code</text>
 <rect x="100" y="168" width="480" height="56" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
-<text x="340.0" y="194.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">app span -- proxy_handler()</text>
+<text x="340.0" y="194.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">app span: proxy_handler()</text>
 <text x="340.0" y="211.0" font-size="11.5" fill="#555555" text-anchor="middle">httpx client call to order-service</text>
 <rect x="60" y="336" width="1360" height="190" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
-<text x="740.0" y="436.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Envoy mesh span -- strangler-proxy -&gt; order-service (client + server sidecar)</text>
+<text x="740.0" y="436.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Envoy mesh span: strangler-proxy -&gt; order-service (client + server sidecar)</text>
 <rect x="100" y="376" width="1000" height="130" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
-<text x="600.0" y="446.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">app span -- FastAPI server (order-service), POST /api/orders</text>
+<text x="600.0" y="446.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">app span: FastAPI server (order-service), POST /api/orders</text>
 <rect x="130" y="414" width="280" height="36" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
-<text x="270.0" y="437.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">asyncpg span -- insert order aggregate</text>
+<text x="270.0" y="437.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">asyncpg span: insert order aggregate</text>
 <rect x="430" y="414" width="280" height="36" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
-<text x="570.0" y="437.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">asyncpg span -- write order_view (CQRS)</text>
+<text x="570.0" y="437.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">asyncpg span: write order_view (CQRS)</text>
 <rect x="730" y="414" width="330" height="36" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
-<text x="895.0" y="437.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">app span -- grpc-client call: inventory.Reserve</text>
+<text x="895.0" y="437.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">app span, grpc-client call: inventory.Reserve</text>
 <rect x="60" y="626" width="1360" height="190" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
-<text x="740.0" y="726.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Envoy mesh span -- order-service -&gt; inventory-service (gRPC)</text>
+<text x="740.0" y="726.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Envoy mesh span: order-service -&gt; inventory-service (gRPC)</text>
 <rect x="100" y="666" width="1000" height="130" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
-<text x="600.0" y="736.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">app span -- grpc-server (inventory-service), Reserve()</text>
+<text x="600.0" y="736.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">app span: grpc-server (inventory-service), Reserve()</text>
 <rect x="130" y="706" width="320" height="36" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
-<text x="290.0" y="729.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">asyncpg span -- reserve inventory row</text>
+<text x="290.0" y="729.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">asyncpg span: reserve inventory row</text>
 <path d="M740.0,238.0 L740.0,336.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <text x="746.0" y="281.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">traceparent propagated</text>
 <text x="746.0" y="281.0" font-size="11" fill="#555" text-anchor="middle">traceparent propagated</text>
 <path d="M740.0,526.0 L740.0,626.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <text x="746.0" y="570.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">traceparent propagated across the ACL seam</text>
 <text x="746.0" y="570.0" font-size="11" fill="#555" text-anchor="middle">traceparent propagated across the ACL seam</text>
-<text x="740.0" y="30" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.30 -- the hero trace: mesh breadth (grey, Envoy) vs OTel depth (green, app SDK) -- illustrative span nesting, not captured timing</text>
-<text x="40" y="58" font-size="11" fill="#555555" text-anchor="start">Real span IDs, durations, and the Tempo capture come from the user&#x27;s live run -- see the chapter&#x27;s verification footer, not this figure.</text>
+<text x="740.0" y="30" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">The hero trace: mesh breadth (grey, Envoy) vs OTel depth (green, app SDK), illustrative span nesting, not captured timing</text>
+<text x="40" y="58" font-size="11" fill="#555555" text-anchor="start">Real span IDs, durations, and the Tempo capture come from a live run, not from this figure.</text>
 <text x="40" y="900" font-size="11" fill="#555555" text-anchor="start">The async Kafka saga hops (order.placed -&gt; payment -&gt; shipping) are out of this trace: mesh-visible in Kiali, app-level-deferred (same posture as the Java sibling).</text>
 <text x="40" y="918" font-size="11" fill="#555555" text-anchor="start">Grey = mesh span (Envoy sidecar, free on all 8 services). Green = app span (OTel SDK, only strangler-proxy / order-service / inventory-service). White = asyncpg child span.</text>
 </svg>

@@ -42,7 +42,7 @@ edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 40, "text": "ch.19 -- the proto IS the ACL: two distinct vocabularies meet only at the wire",
+    {"x": W / 2, "y": 40, "text": "the proto IS the ACL: two distinct vocabularies meet only at the wire",
      "anchor": "middle", "bold": True, "size": 18},
     {"x": 40, "y": H - 60, "text": "Wire vocab (stock_keeping_unit/display_name/unit_price_cents/on_hand_qty) is distinct from domain vocab",
      "anchor": "start", "size": 11, "color": "#555555"},
