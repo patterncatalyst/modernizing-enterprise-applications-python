@@ -4,7 +4,7 @@ output: false
 
 # Plan — Rebuild the three companion decks on the lgtm-presentation JSON-spec workflow
 
-Status: IN PROGRESS (lgtm-relay, branch `docs/decks-lgtm-presentation-rebuild`)
+Status: COMPLETE (lgtm-relay, branch `docs/decks-lgtm-presentation-rebuild`). Opus validation: all 8 criteria met; one validator nit (in-code `SMELL[ch.NN]` tags) fixed in a repair round. Not yet pushed / no PR.
 
 ## Goal
 Rebuild `modernizing-101`, `modernizing-201`, `modernizing-201-fastapi` so they match the
