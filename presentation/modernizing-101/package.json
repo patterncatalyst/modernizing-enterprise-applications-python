@@ -1,8 +1,0 @@
-{
-  "name": "modernizing-101",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Modernizing Enterprise Applications (Python) — companion deck 101, the ideas (lgtm-presentation)",
-  "scripts": { "build": "node deck.js" },
-  "dependencies": { "pptxgenjs": "^4.0.1" }
-}

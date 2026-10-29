@@ -27,7 +27,9 @@ deck toolchain, under `scripts/`:
 | `scripts/deck_edit.py` | applies an edit file to a deck in place (python-pptx and lxml): `replace`, `set_notes`, `set_code`, `set_text`, `clone_slide`, `replace_picture` and layout operations; slides are addressed by `sldId`; `--dry-run` prints the text diff |
 | `scripts/deck_font.py` | retargets title fonts to Red Hat Display across a `.pptx`, in place |
 | `scripts/deck_render.sh` | soffice to PDF to PNG for selected slides; refuses to run without the brand fonts |
-| `scripts/deck_fit.py` | checks a render for text outside its frame, over the page number or logo, off the slide, or on top of other text |
+| `scripts/deck_fit.py` | checks a render for text outside its frame, over the page number or logo, off the slide, or on top of other text; needs the brand fonts, including Overpass |
+| `scripts/deck_embed_fonts.py` | LibreOffice/UNO helper that embeds fonts into a throwaway copy, used only to generate correctly subset Red Hat EOT font data |
+| `scripts/deck_inject_fonts.py` | splices the harvested Red Hat `.fntdata` into a pristine `.pptx` (content parts byte-for-byte unchanged); run after edits to re-embed |
 | `presentation/lgtm-presentation/edits/` | the committed edit files: `<deck>.json` (edits in apply order) and `<deck>.fixN.json` (later repairs, each applied once) |
 
 Rules for an edit:
@@ -55,15 +57,37 @@ other than the default, and `LO_PROFILE` selects the LibreOffice profile for ren
 language, speaker notes as a `>` block. Keep these current with `deck_text.py --write`
 so a deck cannot drift from its text copy unnoticed.
 
+## Embedded fonts
+
+Each committed `.pptx` embeds the Red Hat families (Display, Text, Mono) as subset EOT
+font data under `ppt/fonts/*.fntdata`, with `embedTrueTypeFonts="1"` and a
+`<p:embeddedFontLst>` in `ppt/presentation.xml`, so the decks render in the brand fonts on
+a machine that does not have them installed. LibreOffice cannot save these decks directly
+without reflowing the theme and pulling in large fallback fonts, so embedding is a two
+step process: `deck_embed_fonts.py` embeds into a throwaway copy, then `deck_inject_fonts.py`
+copies only the Red Hat font parts into the untouched committed deck. Re-run
+`deck_inject_fonts.py` after any edit run so the embedded fonts match the final glyphs.
+
 ## Pins
 
 - python-pptx 1.0.2, lxml 6.1.3 (its dependency), cairosvg 2.9.1, all in `.venv-decks`.
-- Fonts: Red Hat Display, Red Hat Text, Red Hat Mono (installed system-wide).
+- Fonts: Red Hat Display, Red Hat Text, Red Hat Mono, and Overpass (for `deck_fit.py`),
+  installed for fontconfig.
+
+## Known cosmetic note
+
+`deck_fit.py` reports a uniform ~4 to 5 pt overflow on the figure-caption text boxes. This
+is inherited from the original r1.1 baselines (identical counts before and after this
+rewrite) and is a sizing trait of those caption frames, not a regression from the content
+edits.
 
 ## Status
 
-Baselines copied in from the per-deck `presentation/modernizing-*/` directories
-(`Modernizing_101-r1.1.pptx`, `Modernizing-201-r1.1.pptx`,
-`Modernizing-201-FastAPI-r1.1.pptx`) and renamed to the names above. The originals are
-left in place until a later step retires them. No slide content, fonts, or diagrams have
-been edited yet; this file will be finalized once that work lands.
+Rebuilt on this workflow from the r1.1 baselines: slide and note content rewritten to
+stand alone (no external chapter or book cross-references), voice cleaned to zero ban-tier,
+notes tightened, the two embedded diagrams (chassis scorecard, mesh hero trace) made
+standalone, and the Red Hat fonts embedded. The committed `.pptx` files here, their
+`edits/` and their `text/` copies are the source of truth. The old per-deck generator
+(`deck.js`, `deck-helpers.js`, npm packages) and the r1.1 baselines were retired and remain
+in git history; `presentation/modernizing-*/png/` and `assets/` are kept as the figure and
+cover image sources the edit files reference.

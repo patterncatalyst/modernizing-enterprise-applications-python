@@ -1,8 +1,0 @@
-{
-  "name": "modernizing-201",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Modernizing Enterprise Applications (Python) — companion deck 201, the patterns (lgtm-presentation)",
-  "scripts": { "build": "node deck.js" },
-  "dependencies": { "pptxgenjs": "^4.0.1" }
-}
