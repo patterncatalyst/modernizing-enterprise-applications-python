@@ -104,7 +104,7 @@ def test_ship_fail_sentinel_rolls_back_entire_checkout(api_client, customer, wid
     response = _checkout(api_client, customer, widget.sku, 1, "CARD-VISA", "SHIP-FAIL Lane")
     assert response.status_code == 422
     widget.refresh_from_db()
-    assert widget.quantity_on_hand == before  # net-zero stock, SMELL[ch.22]
+    assert widget.quantity_on_hand == before  # net-zero stock, SMELL
 
 # examples/00-monolith/tests/test_smoke.py -- one assertion per /api/* surface
 def test_inventory_serves(api_client, widget):
@@ -142,7 +142,7 @@ INSTALLED_APPS = [
     "review.apps.ReviewConfig",
 ]
 
-# SMELL[ch.18]: every app above migrates into ONE shared Postgres schema --
+# SMELL: every app above migrates into ONE shared Postgres schema,
 # the coupling this system unwinds, context by context.
 DATABASES = {
     "default": {
@@ -161,7 +161,7 @@ examples/00-monolith/config/settings.py: six Django apps, one shared Postgres sc
 
 p. 12
 
-- Six smells, each tagged # SMELL[ch.NN] in the code: a shared schema, a god checkout service, one ACID transaction spanning every context, a synchronous notification call inside that transaction, no anti-corruption layer, and auth tangled into an otherwise independent context.
+- Six smells, each tagged # SMELL in the code: a shared schema, a god checkout service, one ACID transaction spanning every context, a synchronous notification call inside that transaction, no anti-corruption layer, and auth tangled into an otherwise independent context.
 - Each smell maps to the pattern that cures it: the shared schema to owned data, the single transaction to a saga, the synchronous call to an outbox.
 - By the end of the extraction roadmap every smell but the two kept for the frozen baseline is struck through in the project's own SMELLS.md, crossed out as each cure landed rather than just described as fixed.
 
