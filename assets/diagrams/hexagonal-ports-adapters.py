@@ -63,24 +63,24 @@ outbound_port = node(950, 260, 190, 100,
 # ---- driving adapters, left column -----------------------------------------
 rest_adapter = node(50, 90, 260, 110,
                      ["REST route",
-                      "e.g. app/routes.py (ch.11 excerpt)",
+                      "e.g. app/routes.py",
                       "translates an HTTP request into a port call"],
                      style="sub")
 grpc_adapter = node(50, 255, 260, 110,
                      ["gRPC service",
                       "translates an incoming RPC into a port call",
-                      "e.g. order/inventory_client.py's ACL (ch.19)"],
+                      "e.g. order/inventory_client.py's ACL"],
                      style="sub")
 consumer_adapter = node(50, 420, 260, 110,
                          ["Message consumer",
                           "translates an incoming broker message",
-                          "e.g. order_placed_consumer.py (ch.17)"],
+                          "e.g. order_placed_consumer.py"],
                          style="sub")
 
 # ---- driven adapters, right column -----------------------------------------
 repo_adapter = node(1190, 160, 260, 130,
                      ["Database repository module",
-                      "e.g. app/repository.py (ch.11 excerpt)",
+                      "e.g. app/repository.py",
                       "implements the outbound port"],
                      style="sub")
 publisher_adapter = node(1190, 360, 260, 130,
@@ -108,7 +108,7 @@ edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.11 -- Hexagonal architecture: ports and adapters, dependencies pointing inward",
+    {"x": W / 2, "y": 32, "text": "Hexagonal architecture: ports and adapters, dependencies pointing inward",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56,
      "text": "driving adapters translate a protocol into an inbound-port call; driven adapters implement the outbound port the core declared",

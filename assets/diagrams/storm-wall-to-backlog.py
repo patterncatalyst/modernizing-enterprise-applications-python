@@ -38,26 +38,26 @@ ROW_Y0, ROW_H, GUTTER = 150, 110, 24
 
 ROWS = [
     ("OrderPlaced -> StockReserved", "inventory's seam",
-     "ch.19", "Inventory",
+     "Inventory",
      "gRPC proto-as-ACL + CDC backfill", "atomic conditional-UPDATE reserve, compensating release"),
     ("StockReserved -> PaymentCaptured / PaymentDeclined", "payment's seam",
-     "ch.23", "Payment",
+     "Payment",
      "Choreographed saga", "an aiokafka consumer reacting to order.placed, emitting payment.captured/declined"),
     ("PaymentCaptured -> ShipmentDispatched", "shipping's seam",
-     "ch.24", "Shipping",
+     "Shipping",
      "Orchestrated saga", "a single FastAPI saga coordinator sequences dispatch, not peer-to-peer events"),
     ("ShipmentDispatched -> OrderConfirmed / NotificationSent", "notification's seam -- cut first",
-     "ch.17", "Notification",
+     "Notification",
      "Transactional outbox", "feeding an asynchronous aiokafka consumer"),
 ]
 
 nodes = []
 edges = []
 
-for i, (boundary, seam_note, chnum, ctx, mech, mech_detail) in enumerate(ROWS):
+for i, (boundary, seam_note, ctx, mech, mech_detail) in enumerate(ROWS):
     y = ROW_Y0 + i * (ROW_H + GUTTER)
     a = node(COL_A_X, y, COL_A_W, ROW_H, [boundary, seam_note], style="sub")
-    b = node(COL_B_X, y, COL_B_W, ROW_H, [chnum, ctx], style="accent")
+    b = node(COL_B_X, y, COL_B_W, ROW_H, [ctx], style="accent")
     c = node(COL_C_X, y, COL_C_W, ROW_H, [mech, mech_detail], style="box")
     nodes += [a, b, c]
     edges.append(connect(a, b))
@@ -66,13 +66,13 @@ for i, (boundary, seam_note, chnum, ctx, mech, mech_detail) in enumerate(ROWS):
 # ---- footnote: place_order() / ch.26 -- extracted last, no single mechanism --
 foot = node(COL_A_X, ROW_Y0 + 4 * (ROW_H + GUTTER) + 10, COL_A_W + (COL_B_X - COL_A_X - COL_A_W) + COL_B_W,
             90,
-            ["order/services.py::place_order() itself -- ch.26, cut last",
+            ["order/services.py::place_order() itself -- cut last",
              "issues every policy's command above; waits until all four boundaries already fire events"],
             style="ghost")
 nodes.append(foot)
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.12 -- From the storm wall to the extraction backlog",
+    {"x": W / 2, "y": 32, "text": "From the storm wall to the extraction backlog",
      "anchor": "middle", "bold": True, "size": 18},
     {"x": W / 2, "y": 58,
      "text": "every boundary this chapter's wall finds, mapped to the chapter that cuts it and the mechanism it uses",
@@ -83,11 +83,11 @@ notes = [
     {"x": COL_C_X, "y": ROW_Y0 - 16, "text": "Mechanism", "anchor": "start", "bold": True, "size": 12.5},
 
     {"x": COL_A_X, "y": foot["y"] + foot["h"] + 26,
-     "text": "ch.16's anti-corruption layer is the precondition at every row above: an event can't carry "
+     "text": "The anti-corruption layer is the precondition at every row above: an event can't carry "
              "contract-shaped data until the ACL exists at that seam.",
      "anchor": "start", "size": 10.5, "color": "#555555"},
     {"x": COL_A_X, "y": foot["y"] + foot["h"] + 44,
-     "text": "This wall answers *where* to cut; *in what order* is ch.13's question (coupling analysis), not this figure's.",
+     "text": "This wall answers *where* to cut; *in what order* is the coupling-analysis question, not this figure's.",
      "anchor": "start", "size": 10.5, "color": "#555555"},
     {"x": COL_A_X, "y": H - 16,
      "text": "Sourced from examples/00-monolith/order/services.py and the extraction examples (02-review-service through 07-order-service).",

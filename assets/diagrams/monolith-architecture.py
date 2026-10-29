@@ -89,7 +89,7 @@ bus_targets = ["payment", "shipping"]
 farthest_x = cols[bus_targets[-1]]["svc"]["x"]
 edges.append({"x1": order_edge_x, "y1": order_mid_y, "x2": order_edge_x, "y2": BUS_Y, "amber": True})
 edges.append({"x1": order_edge_x, "y1": BUS_Y, "x2": farthest_x, "y2": BUS_Y, "amber": True,
-              "label": "god function -- direct calls into other apps (SMELL #1, cures ch.26)"})
+              "label": "god function -- direct calls into other apps (SMELL #1)"})
 for ctx in bus_targets:
     svc = cols[ctx]["svc"]
     bx = svc["x"]
@@ -105,7 +105,7 @@ outbox_box = node(cols["order"]["x"], 330, 260, 46,
 relay_box = node(640, 330, 260, 46,
                   ["outbox_relay -> Kafka order.placed", "order_placed_consumer"], style="sub")
 nodes += [outbox_box, relay_box]
-edges.append(connect(cols["order"]["svc"], outbox_box, label="SMELL #5/#6 CURED (r03)"))
+edges.append(connect(cols["order"]["svc"], outbox_box, label="SMELL #5/#6 CURED"))
 edges.append({"x1": outbox_box["x"] + outbox_box["w"], "y1": outbox_box["y"] + outbox_box["h"] / 2,
               "x2": relay_box["x"], "y2": relay_box["y"] + relay_box["h"] / 2, "dashed": True})
 edges.append({"x1": relay_box["x"] + relay_box["w"], "y1": relay_box["y"] + relay_box["h"] / 2,
@@ -179,7 +179,7 @@ bands = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 30, "text": "ch.08 -- The reference monolith (before): six bounded contexts, one deployable, one shared schema",
+    {"x": W / 2, "y": 30, "text": "The reference monolith (before): six bounded contexts, one deployable, one shared schema",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56, "text": "one DRF REST API surface, documented by drf-spectacular's OpenAPI schema",
      "anchor": "middle", "size": 12, "color": "#555555"},
@@ -197,7 +197,7 @@ notes = [
      "anchor": "start", "size": 10.5, "color": "#555555"},
 
     {"x": cols["review"]["x"] + COL_W / 2, "y": 95,
-     "text": "review: first context extracted (ch.15)", "anchor": "middle", "bold": True, "size": 11.5,
+     "text": "review: first context extracted", "anchor": "middle", "bold": True, "size": 11.5,
      "color": "#3d7a4e"},
     {"x": cols["review"]["x"] + COL_W / 2, "y": REPO_Y + ROW_H + 18,
      "text": "SMELL #7: REST-only, no runtime collaborator -- yet governed by the",
@@ -207,7 +207,7 @@ notes = [
      "anchor": "middle", "size": 9.5, "color": "#555555"},
 
     {"x": 40, "y": H - 16,
-     "text": "Sourced from examples/00-monolith/SMELLS.md and order/services.py::place_order (reference for the smell numbers and the outbox cure, r03).",
+     "text": "Sourced from examples/00-monolith/SMELLS.md and order/services.py::place_order (reference for the smell numbers and the outbox cure).",
      "anchor": "start", "size": 10.5, "color": "#555555"},
 ]
 

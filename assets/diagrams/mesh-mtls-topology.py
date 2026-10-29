@@ -73,7 +73,7 @@ edges = [
 ]
 edges += [connect(proxy, s, amber=True) for s in services]
 edges[2]["label"] = "mTLS STRICT (6 backends)"
-edges.append(connect(order, inv, amber=True, dashed=True, label="gRPC Reserve, mTLS STRICT (ACL seam, ch.19)"))
+edges.append(connect(order, inv, amber=True, dashed=True, label="gRPC Reserve, mTLS STRICT (ACL seam)"))
 edges.append(connect(gql, inv, dashed=True, label="gRPC, mTLS STRICT"))
 edges.append(connect(db_group_box, postgres, label="DATABASE_URL (6 services, unmeshed backend)"))
 edges.append(connect(kafka_group_box, kafka, label="KAFKA_BOOTSTRAP_SERVERS (5 services, unmeshed backend)"))
@@ -82,7 +82,7 @@ edges.append(connect(proxy, lgtm, dashed=True, amber=True, label="app OTLP (dept
 edges.append(connect(order, lgtm, dashed=True, amber=True, label="app OTLP (depth)"))
 
 notes = [
-    {"x": W / 2, "y": 24, "text": "ch.30 -- the meshed mea namespace: mTLS STRICT inside, one PERMISSIVE edge, two unmeshed backends",
+    {"x": W / 2, "y": 24, "text": "the meshed mea namespace: mTLS STRICT inside, one PERMISSIVE edge, two unmeshed backends",
      "anchor": "middle", "bold": True, "size": 15},
     {"x": 240, "y": H - 56,
      "text": "Green boxes (strangler-proxy, order-service, inventory-service) are the 3 OTel-instrumented services -- app depth. All 8 get mesh breadth automatically via Envoy.",

@@ -68,8 +68,8 @@
 <path d="M840.0,366.8837209302326 L1065.3543307086613,500.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <text x="958.6771653543307" y="427.4418604651163" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Envoy spans + :15020 Prometheus scrape</text>
 <text x="958.6771653543307" y="427.4418604651163" font-size="11" fill="#555" text-anchor="middle">Envoy spans + :15020 Prometheus scrape</text>
-<text x="770.0" y="24" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.33 -- OSSM 3 on OpenShift: STRICT mesh-wide, a PERMISSIVE carve-out at each Route, Kiali reading otel-lgtm</text>
+<text x="770.0" y="24" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">OSSM 3 on OpenShift: STRICT mesh-wide, a PERMISSIVE carve-out at each Route, Kiali reading otel-lgtm</text>
 <text x="240" y="764" font-size="11" fill="#555555" text-anchor="start">Injection is by the istio.io/rev: default pod-template LABEL (app-deployment.yaml) -- Sail&#x27;s revisioned webhook ignores sidecar.istio.io/inject entirely.</text>
 <text x="240" y="782" font-size="11" fill="#555555" text-anchor="start">Without the per-Route PERMISSIVE PeerAuthentication, the STRICT default would 502 every Route request: the router is not a mesh member.</text>
-<text x="240" y="800" font-size="11" fill="#555555" text-anchor="start">postgres and kafka carry no istio.io/rev label -- unmeshed, same as the minikube path (ch.30).</text>
+<text x="240" y="800" font-size="11" fill="#555555" text-anchor="start">postgres and kafka carry no istio.io/rev label -- unmeshed, same as the minikube path.</text>
 </svg>

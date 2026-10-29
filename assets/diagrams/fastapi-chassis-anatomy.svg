@@ -33,7 +33,7 @@
 <text x="290.0" y="557.5" font-size="11.5" fill="#555555" text-anchor="middle">examples/06-shipping-service/app/enrich_client.py</text>
 <text x="290.0" y="572.5" font-size="11.5" fill="#555555" text-anchor="middle">ONE call site, ONE service -- not a shared wrapper</text>
 <rect x="560" y="490" width="480" height="120" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
-<text x="800.0" y="540.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">DEFERRED: OpenTelemetry/Prometheus (ch.30 adds 3 services),</text>
+<text x="800.0" y="540.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">DEFERRED: OpenTelemetry/Prometheus,</text>
 <text x="800.0" y="557.5" font-size="11.5" fill="#555555" text-anchor="middle">pybreaker circuit breaker, bulkhead isolation,</text>
 <text x="800.0" y="572.5" font-size="11.5" fill="#555555" text-anchor="middle">a shared chassis library -- named, not built</text>
 <path d="M593.3333333333334,50.0 L360.0,120.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
@@ -54,7 +54,7 @@
 <path d="M520.0,550.0 L560.0,550.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <text x="546.0" y="544.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">not yet justified</text>
 <text x="546.0" y="544.0" font-size="11" fill="#555" text-anchor="middle">not yet justified</text>
-<text x="660.0" y="30" font-size="14" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.27 -- the chassis is convention, not a framework feature: every box above is code someone wrote, not a dependency someone added</text>
+<text x="660.0" y="30" font-size="14" fill="#1d1d1d" text-anchor="middle" font-weight="700">the chassis is convention, not a framework feature: every box above is code someone wrote, not a dependency someone added</text>
 <text x="40" y="720" font-size="11" fill="#555555" text-anchor="start">Config and logging are the floor every service shares identically; health, errors, and resilience are opt-in and partial by actual count, not by oversight.</text>
 <text x="40" y="738" font-size="11" fill="#555555" text-anchor="start">No service imports a shared chassis package -- each file above is copied and adapted per service, the same convention repeated eight times.</text>
 </svg>

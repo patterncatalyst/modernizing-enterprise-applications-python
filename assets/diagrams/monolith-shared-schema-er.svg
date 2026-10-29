@@ -63,8 +63,8 @@
 <path d="M1350.0,330 L1350.0,270.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
 <path d="M1350.0,270.0 L1030.0,270.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
 <path d="M1030.0,270.0 L1030.0,210" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
-<text x="750.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.08: Shared schema: eight tables, one Postgres schema, seven cross-context foreign keys</text>
+<text x="750.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">Shared schema: eight tables, one Postgres schema, seven cross-context foreign keys</text>
 <text x="750.0" y="56" font-size="11.5" fill="#555555" text-anchor="middle">SMELL #3/#4: every amber FK below crosses a bounded-context ownership boundary, enforced only because everything shares one database</text>
 <text x="40" y="546" font-size="10" fill="#777777" text-anchor="start">order_items -&gt; inventory_items is not one of these FKs: sku/item_name/unit_price_cents are captured as a snapshot at checkout time instead.</text>
-<text x="40" y="744" font-size="10.5" fill="#555555" text-anchor="start">Sourced from each app&#x27;s models.py under examples/00-monolith/ and SMELLS.md smells #3/#4. Reused in ch.18.</text>
+<text x="40" y="744" font-size="10.5" fill="#555555" text-anchor="start">Sourced from each app&#x27;s models.py under examples/00-monolith/ and SMELLS.md smells #3/#4.</text>
 </svg>

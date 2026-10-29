@@ -49,7 +49,7 @@ for i, (title, style, lines) in enumerate(cols):
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.04 -- the migration-strategy spectrum: how much risk you take on at once, and how long you wait",
+     "text": "the migration-strategy spectrum: how much risk you take on at once, and how long you wait",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56,
      "text": "this book commits to the strangler fig, gated at every step by a Newman behavior-equivalence suite",

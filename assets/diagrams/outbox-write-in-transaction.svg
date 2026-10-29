@@ -3,7 +3,7 @@
 <rect x="30" y="60" width="1220" height="260" rx="12" fill="#fafafa" stroke="#ddd"/>
 <text x="42" y="80" font-size="12" font-weight="700" fill="#1d1d1d">BEFORE (SMELL #5/#6) -- @transaction.atomic() ends with a dual write</text>
 <rect x="30" y="360" width="1220" height="260" rx="12" fill="#f1f5f9" stroke="#ddd"/>
-<text x="42" y="380" font-size="12" font-weight="700" fill="#1d1d1d">AFTER (r03, CURED) -- @transaction.atomic() ends with one ordinary row</text>
+<text x="42" y="380" font-size="12" font-weight="700" fill="#1d1d1d">AFTER (CURED) -- @transaction.atomic() ends with one ordinary row</text>
 <rect x="70" y="150" width="230" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
 <text x="185.0" y="195.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Validate + reserve</text>
 <text x="185.0" y="212.5" font-size="11.5" fill="#555555" text-anchor="middle">customer, inventory,</text>
@@ -42,7 +42,7 @@
 <path d="M300.0,505.0 L330.0,505.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <path d="M560.0,505.0 L590.0,505.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <path d="M820.0,505.0 L850.0,505.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
-<text x="640.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.17 -- the outbox cure changes the LAST WRITE inside checkout&#x27;s transaction, not the transaction itself</text>
+<text x="640.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">the outbox cure changes the LAST WRITE inside checkout&#x27;s transaction, not the transaction itself</text>
 <text x="50" y="600" font-size="11" fill="#555555" text-anchor="start">BEFORE: a crash between the DB commit and the provider call loses the notification silently, or a naive retry duplicates it.</text>
 <text x="50" y="618" font-size="11" fill="#555555" text-anchor="start">AFTER: the outbox row rolls back automatically with everything else; a separate relay publishes it at-least-once, independently.</text>
 </svg>

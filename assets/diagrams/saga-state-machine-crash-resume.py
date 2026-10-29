@@ -53,7 +53,7 @@ edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 16, "text": "ch.24 -- a crash leaves the saga in a well-defined, resumable row; nothing is lost, nothing re-runs twice",
+    {"x": W / 2, "y": 16, "text": "a crash leaves the saga in a well-defined, resumable row; nothing is lost, nothing re-runs twice",
      "anchor": "middle", "bold": True, "size": 15},
     {"x": 40, "y": H - 40, "text": "The Java sibling's Camel Saga EIP coordinator tracks step progress IN MEMORY -- a pod restart loses it with no documented resume path.",
      "anchor": "start", "size": 11, "color": "#555555"},

@@ -17,7 +17,7 @@
 <text x="750.0" y="577.0" font-size="11.5" fill="#555555" text-anchor="middle">Phase A would carry: a synchronous Django ORM bridged into an async framework via sync_to_async on every query</text>
 <text x="750.0" y="592.0" font-size="11.5" fill="#555555" text-anchor="middle">Phase A would carry: a hard build-time dependency on the entire monolith just to reach one model</text>
 <text x="750.0" y="607.0" font-size="11.5" fill="#555555" text-anchor="middle">Phase B has neither -- independent SQLAlchemy models, zero import from 00-monolith</text>
-<text x="750.0" y="32" font-size="16" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.03 -- the Review-extraction measurement: Phase A (illustrative) vs Phase B (shipped)</text>
+<text x="750.0" y="32" font-size="16" fill="#1d1d1d" text-anchor="middle" font-weight="700">the Review-extraction measurement: Phase A (illustrative) vs Phase B (shipped)</text>
 <text x="750.0" y="56" font-size="12" fill="#2f5f3d" text-anchor="middle">the same 16/16-assertion equivalence suite passed, unchanged, against the shipped Phase B build</text>
 <text x="40" y="152.0" font-size="12" fill="#1d1d1d" text-anchor="start" font-weight="700">Phase A -- Django-ORM bridge (proxy measurement, never shipped)</text>
 <text x="1127.8028169014085" y="152.0" font-size="12.5" fill="#1d1d1d" text-anchor="start">0.32-0.35 s</text>

@@ -56,7 +56,7 @@ pull = node(670, 330, 280, 100,
              "imagePullPolicy: IfNotPresent"],
             style="box")
 job = node(670, 470, 280, 72,
-           ["bootstrap Job", "pulls mea/monolith:v1 (DRQ-111)"],
+           ["bootstrap Job", "pulls mea/monolith:v1"],
            style="sub")
 infra_pull = node(1000, 330, 280, 100,
                    ["postgres / kafka image pull", "same registry, SA mea-infra, nonroot-v2"],
@@ -77,7 +77,7 @@ edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 24, "text": "ch.33 -- image delivery: podman build+push on the host, pulled in-cluster from the integrated registry",
+    {"x": W / 2, "y": 24, "text": "image delivery: podman build+push on the host, pulled in-cluster from the integrated registry",
      "anchor": "middle", "bold": True, "size": 15},
     {"x": 60, "y": H - 36,
      "text": "No in-cluster BuildConfig: 8 host-built Python images push faster and simpler than a Docker-strategy S2I build per service (rejected, _plans/r11-build-plan.md A.3).",

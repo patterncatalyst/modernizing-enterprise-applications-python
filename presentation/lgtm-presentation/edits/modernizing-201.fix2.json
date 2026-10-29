@@ -1,0 +1,34 @@
+{
+ "ops": [
+  {
+   "op": "replace",
+   "scope": "slide",
+   "sldIds": [264],
+   "find": "SMELL[ch.22]",
+   "repl": "SMELL",
+   "expect": 1,
+   "cat": "standalone",
+   "_src": "validator-nit"
+  },
+  {
+   "op": "replace",
+   "scope": "slide",
+   "sldIds": [266],
+   "find": "SMELL[ch.18]: every app above migrates into ONE shared Postgres schema --",
+   "repl": "SMELL: every app above migrates into ONE shared Postgres schema,",
+   "expect": 1,
+   "cat": "standalone",
+   "_src": "validator-nit"
+  },
+  {
+   "op": "replace",
+   "scope": "slide",
+   "sldIds": [267],
+   "find": "each tagged # SMELL[ch.NN] in the code",
+   "repl": "each tagged # SMELL in the code",
+   "expect": 1,
+   "cat": "standalone",
+   "_src": "validator-nit"
+  }
+ ]
+}

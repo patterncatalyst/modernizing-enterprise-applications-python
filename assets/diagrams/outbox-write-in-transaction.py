@@ -30,7 +30,7 @@ PANEL_H = 260
 band_before = {"x": 30, "y": 60, "w": 1220, "h": PANEL_H,
                "label": "BEFORE (SMELL #5/#6) -- @transaction.atomic() ends with a dual write", "fill": "#fafafa"}
 band_after = {"x": 30, "y": 60 + PANEL_H + 40, "w": 1220, "h": PANEL_H,
-              "label": "AFTER (r03, CURED) -- @transaction.atomic() ends with one ordinary row", "fill": "#f1f5f9"}
+              "label": "AFTER (CURED) -- @transaction.atomic() ends with one ordinary row", "fill": "#f1f5f9"}
 
 
 before_steps = [
@@ -51,7 +51,7 @@ after_edges = [connect(after_steps[i], after_steps[i + 1]) for i in range(len(af
 after_edges[-1]["amber"] = True
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.17 -- the outbox cure changes the LAST WRITE inside checkout's transaction, not the transaction itself",
+    {"x": W / 2, "y": 32, "text": "the outbox cure changes the LAST WRITE inside checkout's transaction, not the transaction itself",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": 50, "y": H - 40, "text": "BEFORE: a crash between the DB commit and the provider call loses the notification silently, or a naive retry duplicates it.",
      "anchor": "start", "size": 11, "color": "#555555"},

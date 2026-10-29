@@ -50,11 +50,11 @@ edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 20, "text": "ch.24 -- AWAITING_SHIPMENT is a real intermediate status, and SHIPPING_FAILED now closes the refund gap r05 left open",
+    {"x": W / 2, "y": 20, "text": "AWAITING_SHIPMENT is a real intermediate status, and SHIPPING_FAILED now closes the refund gap an earlier step left open",
      "anchor": "middle", "bold": True, "size": 15},
-    {"x": 40, "y": H - 40, "text": "Before r06: a SHIP-FAIL order compensated inventory but left a captured payment stranded (DRQ-054, documented, not silent).",
+    {"x": 40, "y": H - 40, "text": "Before the refund hop: a SHIP-FAIL order compensated inventory but left a captured payment stranded (documented, not silent).",
      "anchor": "start", "size": 11, "color": "#555555"},
-    {"x": 40, "y": H - 22, "text": "After r06: the SAME shipment.failed event that triggers the order's SHIPPING_FAILED transition also drives CAPTURED -> REFUNDED.",
+    {"x": 40, "y": H - 22, "text": "After the refund hop: the SAME shipment.failed event that triggers the order's SHIPPING_FAILED transition also drives CAPTURED -> REFUNDED.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

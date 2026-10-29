@@ -46,7 +46,7 @@
 <text x="566.0" y="422.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">read-your-writes: same tx as the write above</text>
 <text x="566.0" y="422.0" font-size="11" fill="#2f5f3d" text-anchor="middle">read-your-writes: same tx as the write above</text>
 <path d="M820.0,428.0 L900.0,428.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
-<text x="680.0" y="30" font-size="16" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.21 -- CQRS, concretely: one write aggregate, one projection, upserted in the SAME transaction as every mutation</text>
+<text x="680.0" y="30" font-size="16" fill="#1d1d1d" text-anchor="middle" font-weight="700">CQRS, concretely: one write aggregate, one projection, upserted in the SAME transaction as every mutation</text>
 <text x="40" y="580" font-size="11" fill="#555555" text-anchor="start">This buys read-after-write consistency WITHIN this service: a GET issued right after a 202 sees the new PENDING row with</text>
 <text x="40" y="598" font-size="11" fill="#555555" text-anchor="start">no delay. It does not buy cross-service consistency -- CONFIRMED is only as fresh as the saga event that drives it there.</text>
 </svg>

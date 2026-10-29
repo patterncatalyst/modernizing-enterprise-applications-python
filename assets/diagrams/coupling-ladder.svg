@@ -41,14 +41,14 @@
 <text x="215.0" y="855.0" font-size="11.5" fill="#555555" text-anchor="middle">interaction only through message passing</text>
 <rect x="410" y="780" width="620" height="120" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
 <text x="720.0" y="830.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">No monolith example</text>
-<text x="720.0" y="847.5" font-size="11.5" fill="#555555" text-anchor="middle">target architecture after ch.14-26 --</text>
+<text x="720.0" y="847.5" font-size="11.5" fill="#555555" text-anchor="middle">target architecture after extraction --</text>
 <text x="720.0" y="862.5" font-size="11.5" fill="#555555" text-anchor="middle">interaction only through message passing (examples/02-07)</text>
 <rect x="50" y="916" width="330" height="120" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
 <text x="215.0" y="974.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">7. API / data-structure coupling (best)</text>
 <text x="215.0" y="991.0" font-size="11.5" fill="#555555" text-anchor="middle">well-defined contract at the boundary</text>
 <rect x="410" y="916" width="620" height="120" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
 <text x="720.0" y="966.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">No monolith example</text>
-<text x="720.0" y="983.5" font-size="11.5" fill="#555555" text-anchor="middle">target architecture after ch.14-26 --</text>
+<text x="720.0" y="983.5" font-size="11.5" fill="#555555" text-anchor="middle">target architecture after extraction --</text>
 <text x="720.0" y="998.5" font-size="11.5" fill="#555555" text-anchor="middle">well-defined contract types at the boundary (examples/02-07)</text>
 <path d="M380.0,160.0 L410.0,160.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <path d="M380.0,296.0 L410.0,296.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
@@ -67,8 +67,8 @@
 <text x="221.0" y="766.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">no monolith example beyond this point</text>
 <text x="221.0" y="766.0" font-size="11" fill="#2f5f3d" text-anchor="middle">no monolith example beyond this point</text>
 <path d="M215.0,900.0 L215.0,916.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
-<text x="550.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.13 -- the Constantine coupling ladder, scored against the monolith</text>
+<text x="550.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">the Constantine coupling ladder, scored against the monolith</text>
 <text x="550.0" y="56" font-size="12" fill="#555555" text-anchor="middle">worst (content) at top, best (API/data-structure) at bottom -- five of seven rungs already have a live example</text>
-<text x="50" y="1080" font-size="10.5" fill="#555555" text-anchor="start">Message and API/data-structure coupling have no monolith example today -- they&#x27;re what the extracted services (examples/02-07, ch.14-26) already reach.</text>
+<text x="50" y="1080" font-size="10.5" fill="#555555" text-anchor="start">Message and API/data-structure coupling have no monolith example today -- they&#x27;re what the extracted services (examples/02-07) already reach.</text>
 <text x="50" y="1104" font-size="10.5" fill="#555555" text-anchor="start">Sourced from examples/00-monolith/SMELLS.md (smells #1 and #3), order/services.py, payment/services.py, inventory/views.py, order/views.py.</text>
 </svg>

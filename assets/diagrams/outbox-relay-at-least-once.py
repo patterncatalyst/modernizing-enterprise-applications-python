@@ -67,7 +67,7 @@ mid_edges.append({"x1": 860, "y1": 56 + 230 + 30 + 75, "x2": 860, "y2": bot_y - 
                    "label": "a consumer somewhere on this topic"})
 
 notes = [
-    {"x": W / 2, "y": 30, "text": "ch.20 -- the outbox done right: one bridge, three idempotent-consumer idioms this book has already shipped",
+    {"x": W / 2, "y": 30, "text": "the outbox done right: one bridge, three idempotent-consumer idioms this book has already shipped",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": 40, "y": H - 46, "text": "At-least-once is a promise about the PIPE, not the effect -- the relay can republish, the broker can redeliver.",
      "anchor": "start", "size": 11, "color": "#555555"},

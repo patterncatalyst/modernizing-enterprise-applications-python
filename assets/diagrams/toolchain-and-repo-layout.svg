@@ -17,11 +17,11 @@
 <rect x="40" y="205" width="330" height="85" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
 <text x="205.0" y="238.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">grpcio-tools</text>
 <text x="205.0" y="255.0" font-size="11.5" fill="#555555" text-anchor="middle">scripts/gen-proto.sh</text>
-<text x="205.0" y="270.0" font-size="11.5" fill="#555555" text-anchor="middle">scoped to Part 3 (ch.19) onward</text>
+<text x="205.0" y="270.0" font-size="11.5" fill="#555555" text-anchor="middle">scoped to Part 3 onward</text>
 <rect x="390" y="205" width="330" height="85" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
 <text x="555.0" y="238.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">check-proto-drift.sh</text>
 <text x="555.0" y="255.0" font-size="11.5" fill="#555555" text-anchor="middle">buf-style breaking-change check</text>
-<text x="555.0" y="270.0" font-size="11.5" fill="#555555" text-anchor="middle">scoped to Part 3 (ch.19) onward</text>
+<text x="555.0" y="270.0" font-size="11.5" fill="#555555" text-anchor="middle">scoped to Part 3 onward</text>
 <rect x="780" y="110" width="213" height="95" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
 <text x="886.5" y="155.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Postgres</text>
 <text x="886.5" y="172.5" font-size="11.5" fill="#555555" text-anchor="middle">monolith + review DB (shared)</text>
@@ -70,9 +70,9 @@
 <path d="M1111.9448818897638,410.0 L1118.0787401574803,205.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
 <text x="1121.0118110236222" y="301.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">stack-up.sh / stack-down.sh</text>
 <text x="1121.0118110236222" y="301.5" font-size="11" fill="#2f5f3d" text-anchor="middle">stack-up.sh / stack-down.sh</text>
-<text x="750.0" y="32" font-size="16" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.01 -- Toolchain and repo layout: what you install, and where it lands</text>
+<text x="750.0" y="32" font-size="16" fill="#1d1d1d" text-anchor="middle" font-weight="700">Toolchain and repo layout: what you install, and where it lands</text>
 <text x="750.0" y="52" font-size="11.5" fill="#555555" text-anchor="middle">uv-managed Python tooling and the docker compose stack both build and back the examples/ tree checked into this repository</text>
 <text x="20" y="632" font-size="10.5" fill="#555555" text-anchor="start">Required for every chapter: uv (manages Python 3.14, the venv, and the lockfile) plus ruff and pytest via uv sync --group dev.</text>
-<text x="20" y="648" font-size="10.5" fill="#555555" text-anchor="start">grpcio-tools / proto-drift checking and Debezium Connect / Apicurio are real, but scoped to later parts (ch.19 gRPC seam, ch.28 schema registry).</text>
-<text x="20" y="684" font-size="10" fill="#777777" text-anchor="start">Sourced from _plans/build-plan.md (&quot;A. Approach&quot;), _plans/decisions.md (r01 version matrix), compose.yaml.</text>
+<text x="20" y="648" font-size="10.5" fill="#555555" text-anchor="start">grpcio-tools / proto-drift checking and Debezium Connect / Apicurio are real, but scoped to later parts (the gRPC seam and schema registry).</text>
+<text x="20" y="684" font-size="10" fill="#777777" text-anchor="start">Sourced from _plans/build-plan.md (&quot;A. Approach&quot;), _plans/decisions.md (version matrix), compose.yaml.</text>
 </svg>

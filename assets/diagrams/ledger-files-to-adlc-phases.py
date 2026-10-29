@@ -129,7 +129,7 @@ resume_band = {"x": 150, "y": 400, "w": 1300, "h": 180,
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.02 -- The ledger's files, mapped onto the ADLC's own phases",
+     "text": "The ledger's files, mapped onto the ADLC's own phases",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56,
      "text": "Plan and Verify (blue) are this project's two human gates; Reconcile (green) is where the ledger actually gets written",

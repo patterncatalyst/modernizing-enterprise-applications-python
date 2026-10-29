@@ -76,7 +76,7 @@ on_nodes, on_edges = build_panel(70 + PANEL_H + 60, flag_on=True)
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.14 -- content-based routing: STRANGLER_REVIEW_ENABLED flag OFF vs ON",
+     "text": "content-based routing: STRANGLER_REVIEW_ENABLED flag OFF vs ON",
      "anchor": "middle", "bold": True, "size": 18},
 
     {"x": 40, "y": 65, "text": "FLAG OFF (default) -- /api/reviews* still answered by the monolith",

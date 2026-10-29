@@ -60,7 +60,7 @@ qry_edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 30, "text": "ch.21 -- CQRS, concretely: one write aggregate, one projection, upserted in the SAME transaction as every mutation",
+    {"x": W / 2, "y": 30, "text": "CQRS, concretely: one write aggregate, one projection, upserted in the SAME transaction as every mutation",
      "anchor": "middle", "bold": True, "size": 16},
     {"x": 40, "y": H - 40, "text": "This buys read-after-write consistency WITHIN this service: a GET issued right after a 202 sees the new PENDING row with",
      "anchor": "start", "size": 11, "color": "#555555"},

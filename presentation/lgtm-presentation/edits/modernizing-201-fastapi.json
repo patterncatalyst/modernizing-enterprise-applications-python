@@ -1,0 +1,709 @@
+{
+ "ops": [
+  {
+   "op": "replace",
+   "scope": "slide",
+   "sldIds": [
+    286
+   ],
+   "find": "Which chassis capabilities each service actually adopted",
+   "repl": "Which chassis capabilities each service adopted",
+   "expect": 1,
+   "cat": "voice"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    292
+   ],
+   "find": "regardless of what it actually does.",
+   "repl": "regardless of what it does.",
+   "expect": 1,
+   "cat": "voice"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    294
+   ],
+   "find": "The CMD line is where the OTel wrapper actually lands",
+   "repl": "The CMD line is where the OTel wrapper lands",
+   "expect": 1,
+   "cat": "voice"
+  },
+  {
+   "op": "replace",
+   "scope": "slide",
+   "sldIds": [
+    297
+   ],
+   "find": "the strangler journey at altitude",
+   "repl": "the strangler-fig migration at altitude",
+   "expect": 1,
+   "cat": "voice"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    270
+   ],
+   "find": "This is the moment the request/response cycle ends and the choreography begins: POST /api/orders returns 202, not 201 or 200, because the order is PENDING the moment the handler returns: the aggregate, the outbox row, and the order_view projection are already committed, but payment hasn't been charged yet and won't be until payment-service's own consumer reacts to the event this slide is about. 202 is the status code that matches that architecture precisely.",
+   "repl": "This is the moment the request/response cycle ends and the choreography begins: POST /api/orders returns 202, not 201 or 200, because the order is PENDING the moment the handler returns. The aggregate, the outbox row, and the order_view projection are already committed, but payment hasn't been charged yet and won't be until payment-service's own consumer reacts to OrderPlacedEvent. 202 is the status code that matches that architecture precisely.",
+   "expect": 1,
+   "cat": "voice"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    259
+   ],
+   "find": "expire_on_commit=False matters for an async session specifically: the default would force a lazy-load round trip the next time an attribute is touched after commit, and a lazy load after the session's event loop context has moved on is exactly the kind of bug that's easy to introduce and hard to trace back to this one setting.",
+   "repl": "expire_on_commit=False matters for an async session specifically: the default would force a lazy-load round trip the next time an attribute is touched after commit. A lazy load after the session's event loop context has moved on is a bug that's hard to trace back to this one setting.",
+   "expect": 1,
+   "cat": "voice"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    274
+   ],
+   "find": "The comment on the crash window is the key detail from the earlier outbox-at-least-once diagram made concrete in code: publish happens before the stamp, so a crash between them republishes, and that's the documented tradeoff, not an oversight.",
+   "repl": "The crash-window comment states in code the same tradeoff the earlier outbox-at-least-once diagram showed: publish happens before the stamp, so a crash between them republishes. That's the documented tradeoff, not an oversight.",
+   "expect": 1,
+   "cat": "voice"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    258
+   ],
+   "find": "Four ideas, in order: the async engine and session factory every service builds once at startup; the unit-of-work function that commits the business row and the outbox row together, never one without the other; the Alembic migration that is the schema's own contract, service by service, with no shared database; and the outbox write itself, which is what makes the Kafka publish a separate, retryable concern instead of a point of failure inside the request.",
+   "repl": "Four ideas, in order: the async engine and session factory every service builds once at startup, and the unit-of-work function that commits the business row and the outbox row together, never one without the other. Then the Alembic migration that is the schema's own contract, service by service, with no shared database, and the outbox write itself, which is what makes the Kafka publish a separate, retryable concern instead of a point of failure inside the request.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    256
+   ],
+   "find": "Where the 201 shows just enough code to carry each pattern, this deck opens every file: the async SQLAlchemy 2.0/asyncpg session, the Pydantic v2 models at every edge, the aiokafka producer and consumer, the outbox relay running as a background asyncio task, grpc.aio on both sides of the inventory contract, the FastAPI chassis as a repeated convention rather than a shared library, and the OpenTelemetry instrumentation wired into three of the eight services.",
+   "repl": "Where the 201 shows just enough code to carry each pattern, this deck opens every file: the async SQLAlchemy 2.0/asyncpg session, the Pydantic v2 models at every edge, the aiokafka producer and consumer, and the outbox relay running as a background asyncio task. It also opens grpc.aio on both sides of the inventory contract, the FastAPI chassis as a repeated convention rather than a shared library, and the OpenTelemetry instrumentation wired into three of the eight services.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    264
+   ],
+   "find": "Five ideas: service settings as a plain frozen dataclass (not a Pydantic model: the correction worth making up front, since the obvious guess is wrong); the request/response schema models FastAPI validates against automatically; the anti-corruption-layer translation as a thin Pydantic boundary; the GraphQL gateway's Strawberry types as the edge's own typed contract; and the sync-to-async crossing where one Pydantic shape backs both the HTTP request body and the Kafka event payload.",
+   "repl": "Five ideas: service settings as a plain frozen dataclass (not a Pydantic model, the correction worth making up front, since the obvious guess is wrong), and the request/response schema models FastAPI validates against automatically. Then the anti-corruption-layer translation as a thin Pydantic boundary, the GraphQL gateway's Strawberry types as the edge's own typed contract, and the sync-to-async crossing where one Pydantic shape backs both the HTTP request body and the Kafka event payload.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    285
+   ],
+   "find": "The hero trace traces one synchronous path end to end (the client through strangler-proxy, strangler-proxy's httpx call to order-service, and order-service's grpc.aio call to inventory-service's Reserve), chosen specifically because it's the one connected request/response chain in the system; the four Kafka saga hops stay mesh-only because propagating trace context through an outbox row and restoring it in the relay is real additional work that's named here and wasn't taken on.",
+   "repl": "The hero trace traces one synchronous path end to end: the client through strangler-proxy, strangler-proxy's httpx call to order-service, and order-service's grpc.aio call to inventory-service's Reserve. It's chosen because that's the one connected request/response chain in the system; the four Kafka saga hops stay mesh-only, because propagating trace context through an outbox row and restoring it in the relay is real additional work that's named here and wasn't taken on.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    285
+   ],
+   "find": "Name the version-skew caveat precisely: opentelemetry-instrumentation-sqlalchemy's own dependency metadata caps its support at sqlalchemy<2.1.0, and order-service and inventory-service both pin sqlalchemy[asyncio]==2.1.4, kept at that version because this project upgrades the tool rather than downgrading the pin when the two disagree.",
+   "repl": "Name the version-skew caveat precisely: opentelemetry-instrumentation-sqlalchemy's own dependency metadata caps its support at sqlalchemy<2.1.0. Order-service and inventory-service both pin sqlalchemy[asyncio]==2.1.4, kept at that version because this project upgrades the tool rather than downgrading the pin when the two disagree.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    285
+   ],
+   "find": "opentelemetry-instrumentation-asyncpg carries no such cap and instruments the real driver underneath SQLAlchemy's async engine, so every database span in the hero trace names the raw SQL asyncpg executed, with none of SQLAlchemy's own ORM-level attributes attached; the database work is fully visible, described at the driver's level rather than the ORM's.",
+   "repl": "opentelemetry-instrumentation-asyncpg carries no such cap and instruments the real driver underneath SQLAlchemy's async engine, so every database span in the hero trace names the raw SQL asyncpg executed, with none of SQLAlchemy's own ORM-level attributes attached. The database work is fully visible, described at the driver's level rather than the ORM's.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    279
+   ],
+   "find": "The envelope is a small, hand-rolled framing format: one magic byte, an 8-byte Apicurio global schema id, then the raw Avro-encoded bytes with no embedded schema of their own, defined in exactly one module so producer and consumer never hand-roll their own pack/unpack logic independently.",
+   "repl": "The envelope is a small, hand-rolled framing format: one magic byte, an 8-byte Apicurio global schema id, then the raw Avro-encoded bytes with no embedded schema of their own. It's defined in exactly one module so producer and consumer never hand-roll their own pack/unpack logic independently.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    279
+   ],
+   "find": "The schema id travels with every message, which is what lets a consumer resolve the exact schema version a given message was written against, even after the registry has multiple versions of the same artifact; that's the core value a registry adds over a hand-maintained JSON contract: schema evolution with a server that can enforce compatibility rules, instead of every consumer hoping a producer's new field addition doesn't break it.",
+   "repl": "The schema id travels with every message, which is what lets a consumer resolve the exact schema version a given message was written against, even after the registry has multiple versions of the same artifact. That's the core value a registry adds over a hand-maintained JSON contract: schema evolution with a server that can enforce compatibility rules, instead of every consumer hoping a producer's new field addition doesn't break it.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    279
+   ],
+   "find": "Keep the scope narrow in how this gets framed: this is a demonstrator for the mechanics, standalone from the real order.placed JSON event every other service in this deck already uses; it shows what adopting a registry would look like, it hasn't replaced anything yet.",
+   "repl": "Keep the scope narrow in how this gets framed: this is a demonstrator for the mechanics, standalone from the real order.placed JSON event every other service in this deck already uses. It shows what adopting a registry would look like; it hasn't replaced anything yet.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    273
+   ],
+   "find": "auto_offset_reset=\"earliest\" means a fresh deployment with no prior committed offset backfills from the start of the topic instead of only seeing events published after it joins, which matters for a service that might be redeployed or scaled after the topic already has history.",
+   "repl": "auto_offset_reset=\"earliest\" means a fresh deployment with no prior committed offset backfills from the start of the topic instead of only seeing events published after it joins. That matters for a service that might be redeployed or scaled after the topic already has history.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    273
+   ],
+   "find": "The except Exception clause is the detail to slow down on: a single malformed or unprocessable record logs and the loop keeps running, because letting one bad record crash this background task would silently stop payment processing for every order placed afterward; asyncio.CancelledError is re-raised immediately above it, because that one exception means a caller is shutting the task down on its own terms, not a processing failure to swallow.",
+   "repl": "The except Exception clause is the detail to slow down on: a single malformed or unprocessable record logs and the loop keeps running, because letting one bad record crash this background task would silently stop payment processing for every order placed afterward. asyncio.CancelledError is re-raised immediately above it, because that one exception means a caller is shutting the task down on its own terms, not a processing failure to swallow.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    271
+   ],
+   "find": "Order: an aiokafka producer publishing a registry-aware envelope (the schema-registry demo), an aiokafka consumer reacting to a choreographed event (payment-service), the outbox relay running as a background asyncio.Task alongside the FastAPI app (the mechanic the 201 only gestures at), idempotent dedupe against redelivery, compensation modeled as just another consumer, the grpc.aio contract and server for the one synchronous call in the system, and the Avro/registry wire envelope.",
+   "repl": "Order: an aiokafka producer publishing a registry-aware envelope (the schema-registry demo), an aiokafka consumer reacting to a choreographed event (payment-service), and the outbox relay running as a background asyncio.Task alongside the FastAPI app (the mechanic the 201 only gestures at). Then idempotent dedupe against redelivery, compensation modeled as just another consumer, the grpc.aio contract and server for the one synchronous call in the system, and the Avro/registry wire envelope.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    265
+   ],
+   "find": "Settings is a plain frozen dataclass with a from_env() classmethod that reads os.environ at call time rather than at import time; the reason that matters is testability: a test can set an env var right before constructing a Settings or building an app, and from_env() picks it up fresh every time it's called, where a module-level singleton built at import would already have frozen the wrong values.",
+   "repl": "Settings is a plain frozen dataclass with a from_env() classmethod that reads os.environ at call time rather than at import time; the reason that matters is testability. A test can set an env var right before constructing a Settings or building an app, and from_env() picks it up fresh every time it's called, where a module-level singleton built at import would already have frozen the wrong values.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "slide",
+   "sldIds": [
+    296
+   ],
+   "find": "This is the same behavioral-contract idea the 201's equivalence gate applies at the whole-system level, scoped down to one service's edge: a contract test doesn't care whether a response was built from asyncpg, SQLAlchemy's ORM layer, or a CQRS projection, only that the camelCase JSON shape and status code match what the monolith's own equivalent endpoint returned.",
+   "repl": "This is the same behavioral-contract idea the 201's equivalence gate applies at the whole-system level, scoped down to one service's edge. A contract test doesn't care whether a response was built from asyncpg, SQLAlchemy's ORM layer, or a CQRS projection, only that the camelCase JSON shape and status code match what the monolith's own equivalent endpoint returned.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "slide",
+   "sldIds": [
+    296
+   ],
+   "find": "Running the async-mechanics tests from this deck (pytest + Testcontainers) and the contract tests (Newman) together covers two different failure modes: pytest catches a wrong async implementation detail before it ships; Newman catches a contract drift a unit test inside the service would never notice, because the service agrees with itself but no longer agrees with its own documented wire shape.",
+   "repl": "Running the async-mechanics tests from this deck (pytest + Testcontainers) and the contract tests (Newman) together covers two different failure modes. pytest catches a wrong async implementation detail before it ships; Newman catches a contract drift a unit test inside the service would never notice, because the service agrees with itself but no longer agrees with its own documented wire shape.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    284
+   ],
+   "find": "Four resilience mechanisms already existed before anyone called them that: a bounded gRPC deadline on the inventory client since the reservation call was first written, the outbox's at-least-once delivery guarantee, the conditional-UPDATE idempotent dedupe on saga reactions, and the saga orchestrator's own crash-resume durability.",
+   "repl": "Four resilience mechanisms already existed before anyone called them that: a bounded gRPC deadline on the inventory client since the reservation call was first written, and the outbox's at-least-once delivery guarantee. Also pre-existing: the conditional-UPDATE idempotent dedupe on saga reactions, and the saga orchestrator's own crash-resume durability.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    284
+   ],
+   "find": "A circuit breaker and a bulkhead are named and explicitly not built: a circuit breaker buys a state machine that stops calling a dependency that has demonstrated it won't succeed, instead of retrying it on every call forever, and that's real value, but nothing in this system's own traffic has yet produced the sustained failure rate that would justify the added complexity.",
+   "repl": "A circuit breaker and a bulkhead are named and explicitly not built: a circuit breaker buys a state machine that stops calling a dependency that has demonstrated it won't succeed, instead of retrying it on every call forever, and that's real value. But nothing in this system's own traffic has yet produced the sustained failure rate that would justify the added complexity.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    284
+   ],
+   "find": "The framing to land: resilience mechanisms here were each built to solve a correctness problem a specific extraction already had, not added speculatively because a catalog says a distributed system should have them; the day a circuit breaker is justified, it's a decorator at one call site, not a redesign.",
+   "repl": "The framing to land: resilience mechanisms here were each built to solve a correctness problem a specific extraction already had, not added speculatively because a catalog says a distributed system should have them. The day a circuit breaker is justified, it's a decorator at one call site, not a redesign.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    276
+   ],
+   "find": "The two-layer framing in the figure is the two places idempotency has to hold independently: the RPC call itself (the idempotency key) and the saga step that triggers it (shipping-service's own compensation path only runs cancel_shipment once per saga, gated by the orchestrator's own step-completion tracking): a compensation that only guards one of those two layers can still double-fire through the other.",
+   "repl": "The two-layer framing in the figure names the two places idempotency has to hold independently: the RPC call itself (the idempotency key), and the saga step that triggers it (shipping-service's own compensation path only runs cancel_shipment once per saga, gated by the orchestrator's own step-completion tracking). A compensation that only guards one of those two layers can still double-fire through the other.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "slide",
+   "sldIds": [
+    297
+   ],
+   "find": "Every pattern in the 201 rests on the async mechanics walked in this deck: an async SQLAlchemy 2.0/asyncpg session and its unit-of-work commit, Pydantic v2 validating every edge, aiokafka and a relay running as a background asyncio task, grpc.aio on the one synchronous call, a chassis repeated as convention across eight services, and zero-code OTel on three of them.",
+   "repl": "Every pattern in the 201 rests on the async mechanics walked in this deck: an async SQLAlchemy 2.0/asyncpg session and its unit-of-work commit, Pydantic v2 validating every edge, and aiokafka and a relay running as a background asyncio task. It also rests on grpc.aio on the one synchronous call, a chassis repeated as convention across eight services, and zero-code OTel on three of them.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "slide",
+   "sldIds": [
+    297
+   ],
+   "find": "The common thread across all three decks: async buys concurrency without a thread pool, the outbox buys a crash-safe handoff between a database commit and a Kafka publish, and a chassis built as a copied convention rather than a shared framework keeps every one of these eight services small enough to read start to finish in one sitting.",
+   "repl": "The common thread across all three decks: async buys concurrency without a thread pool, and the outbox buys a crash-safe handoff between a database commit and a Kafka publish. A chassis built as a copied convention rather than a shared framework keeps every one of these eight services small enough to read start to finish in one sitting.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    262
+   ],
+   "find": "That atomicity is the entire reason the outbox pattern works without a distributed transaction across Postgres and Kafka: the hard part (don't lose the event, don't double-apply the business change) gets solved entirely inside one database's ACID guarantee, and Kafka only has to deal with redelivery, which is a much easier problem than exactly-once delivery across two systems.",
+   "repl": "That atomicity is the entire reason the outbox pattern works without a distributed transaction across Postgres and Kafka. The hard part (don't lose the event, don't double-apply the business change) gets solved entirely inside one database's ACID guarantee, and Kafka only has to deal with redelivery, which is a much easier problem than exactly-once delivery across two systems.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    289
+   ],
+   "find": "That's the structural contrast with the orchestrated path on the previous slide: shipping-service's saga is a state machine that knows about all four of its own steps and their compensations; payment-service only knows how to answer one event, publish one outcome, and let whoever's downstream (shipping-service, order-service's own saga reactions) decide what that outcome means for them.",
+   "repl": "That's the structural contrast with the orchestrated path on the previous slide: shipping-service's saga is a state machine that knows about all four of its own steps and their compensations. Payment-service only knows how to answer one event, publish one outcome, and let whoever's downstream (shipping-service, order-service's own saga reactions) decide what that outcome means for them.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    268
+   ],
+   "find": "Strawberry types are this edge's own typed contract, the GraphQL-side equivalent of a Pydantic model: a field declared int or str is validated against that type the moment a resolver returns a value, and Strawberry converts the Python snake_case field names to camelCase in the schema automatically, matching the same wire convention the REST services already use.",
+   "repl": "Strawberry types are this edge's own typed contract, the GraphQL-side equivalent of a Pydantic model. A field declared int or str is validated against that type the moment a resolver returns a value, and Strawberry converts the Python snake_case field names to camelCase in the schema automatically, matching the same wire convention the REST services already use.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    268
+   ],
+   "find": "The depth and token limiters are built as factory lambdas rather than shared instances specifically because passing a shared instance is deprecated in this version of strawberry-graphql: an instance would get reused across requests instead of built fresh per request, which matters once a limiter is tracking any per-request state.",
+   "repl": "The depth and token limiters are built as factory lambdas rather than shared instances, because passing a shared instance is deprecated in this version of strawberry-graphql. An instance would get reused across requests instead of built fresh per request, which matters once a limiter is tracking any per-request state.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    261
+   ],
+   "find": "order_svc is the one naming wrinkle to flag here: order is a reserved word in the SQL standard, and CREATE SCHEMA order would still parse but every unqualified reference near a FROM, JOIN, or DDL clause becomes a quoting problem from then on: the search_path setting, every table_args schema key, Alembic's own version_table_schema, all of it.",
+   "repl": "order_svc is the one naming wrinkle to flag here: order is a reserved word in the SQL standard, and CREATE SCHEMA order would still parse. But every unqualified reference near a FROM, JOIN, or DDL clause becomes a quoting problem from then on: the search_path setting, every table_args schema key, Alembic's own version_table_schema, all of it.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    278
+   ],
+   "find": "This gRPC server runs inside the same process as inventory-service's FastAPI app, sharing the same async session factory the HTTP routes use: one engine, two protocol surfaces, started as a grpc.aio.server() task on the same event loop from the same lifespan.",
+   "repl": "This gRPC server runs inside the same process as inventory-service's FastAPI app, sharing the same async session factory the HTTP routes use: one engine, two protocol surfaces. It's started as a grpc.aio.server() task on the same event loop from the same lifespan.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    278
+   ],
+   "find": "Each RPC opens its own short-lived session rather than sharing a request-scoped one, because gRPC calls aren't bound to FastAPI's request/response cycle the way HTTP routes are: there's no natural per-request scope to hook a session into, so a session per call keeps each RPC's unit of work self-contained.",
+   "repl": "Each RPC opens its own short-lived session rather than sharing a request-scoped one, because gRPC calls aren't bound to FastAPI's request/response cycle the way HTTP routes are. There's no natural per-request scope to hook a session into, so a session per call keeps each RPC's unit of work self-contained.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    278
+   ],
+   "find": "Reserve's concurrency safety comes from a single conditional UPDATE statement, not a read-then-write: rowcount == 1 means the row matched and was decremented atomically; a concurrent caller racing for the same last unit of stock gets rowcount == 0 and a clean reservation_ok=false, with no read-then-write window for two callers to both believe they succeeded.",
+   "repl": "Reserve's concurrency safety comes from a single conditional UPDATE statement, not a read-then-write: rowcount == 1 means the row matched and was decremented atomically. A concurrent caller racing for the same last unit of stock gets rowcount == 0 and a clean reservation_ok=false, with no read-then-write window for two callers to both believe they succeeded.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    282
+   ],
+   "find": "ApiError and its subclasses map every domain failure onto one uniform JSON body ({error, message, timestamp}) once per service, via a single exception handler; six of the eight services carry this file, the two gaps (strangler-proxy and the GraphQL gateway) each for a structural reason named in the scorecard rather than an oversight.",
+   "repl": "ApiError and its subclasses map every domain failure onto one uniform JSON body ({error, message, timestamp}) once per service, via a single exception handler. Six of the eight services carry this file; the two gaps (strangler-proxy and the GraphQL gateway) each for a structural reason named in the scorecard rather than an oversight.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    282
+   ],
+   "find": "The tenacity retry is scoped as narrowly as a resilience mechanism can be: it wraps exactly one outbound call, shipping-service's synchronous enrich step reaching order-service mid-saga, and it only retries httpx.TransportError or httpx.TimeoutException: connection refused, DNS failure, a blown per-call timeout.",
+   "repl": "The tenacity retry is scoped as narrowly as a resilience mechanism can be: it wraps exactly one outbound call, shipping-service's synchronous enrich step reaching order-service mid-saga. It only retries httpx.TransportError or httpx.TimeoutException: connection refused, DNS failure, a blown per-call timeout.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    282
+   ],
+   "find": "A non-2xx response or a 2xx missing the field the saga needs raises immediately as a different exception and is never retried, because that's a contract violation, not a transient blip, and retrying a wrong answer three times just produces the same wrong answer three times slower.",
+   "repl": "A non-2xx response or a 2xx missing the field the saga needs raises immediately as a different exception and is never retried, because that's a contract violation, not a transient blip. Retrying a wrong answer three times just produces the same wrong answer three times slower.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    274
+   ],
+   "find": "This is the async mechanic the 201 only gestures at: there is no separate relay process, no sidecar, no CDC connector reading the write-ahead log; it's one more asyncio.Task, started from the same lifespan as the HTTP server and the Kafka consumer, sharing the same event loop and the same session factory.",
+   "repl": "This is the async mechanic the 201 only gestures at: there is no separate relay process, no sidecar, no CDC connector reading the write-ahead log. It's one more asyncio.Task, started from the same lifespan as the HTTP server and the Kafka consumer, sharing the same event loop and the same session factory.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    274
+   ],
+   "find": "The exception handling mirrors the consumer's: a transient database or broker hiccup is logged and retried on the next tick rather than killing the task, because a relay that dies silently on one bad batch stops publishing every event after it.",
+   "repl": "The exception handling mirrors the consumer's: a transient database or broker hiccup is logged and retried on the next tick rather than killing the task. A relay that dies silently on one bad batch stops publishing every event after it.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    280
+   ],
+   "find": "The framing to set up front: there is no shared chassis library here, because there is no framework-level dependency-injection container or build-system BOM the way the Java sibling has: each of the eight services copies and adapts the same files by hand.",
+   "repl": "The framing to set up front: there is no shared chassis library here, because there is no framework-level dependency-injection container or build-system BOM the way the Java sibling has. Each of the eight services copies and adapts the same files by hand.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    280
+   ],
+   "find": "Six slides: config/logging/health as the repeated convention, errors and the one resilience wrapper this system actually has, the chassis anatomy diagram, the resilience topology (what already runs, what's new, what's named and not built), the zero-code OTel instrumentation on three services with the SQLAlchemy-instrumentor caveat named precisely, and the closing scorecard.",
+   "repl": "Six slides: config/logging/health as the repeated convention, errors and the one resilience wrapper this system has, and the chassis anatomy diagram. Then the resilience topology (what already runs, what's new, what's named and not built), the zero-code OTel instrumentation on three services with the SQLAlchemy-instrumentor caveat named precisely, and the closing scorecard.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    294
+   ],
+   "find": "Two-stage build: a builder stage that resolves dependencies before the app code is copied in, so a code change never invalidates the dependency-install cache layer, and a slim runtime stage that copies only the finished /app tree out of it.",
+   "repl": "Two-stage build: a builder stage that resolves dependencies before the app code is copied in, so a code change never invalidates the dependency-install cache layer. A slim runtime stage then copies only the finished /app tree out of it.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    294
+   ],
+   "find": "UBI10 publishes only a -minimal Python 3.14 image, which has no shadow-utils for useradd: so instead of creating a user, the Containerfile fixes group ownership on /app and runs as UID 1001 with GID 0, the same arbitrary-UID-compatible pattern every container in this project uses, OpenShift-ready without any OpenShift-specific flag.",
+   "repl": "UBI10 publishes only a -minimal Python 3.14 image, which has no shadow-utils for useradd. So instead of creating a user, the Containerfile fixes group ownership on /app and runs as UID 1001 with GID 0, the same arbitrary-UID-compatible pattern every container in this project uses, OpenShift-ready without any OpenShift-specific flag.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    281
+   ],
+   "find": "The chassis here is a code-presence question, not a dependency question: config as a frozen dataclass plus from_env(), stdlib RotatingFileHandler logging to a per-service log file, and a GET /health route are each copied into service after service rather than imported from one shared package.",
+   "repl": "The chassis here is a code-presence question, not a dependency question. Config as a frozen dataclass plus from_env(), stdlib RotatingFileHandler logging to a per-service log file, and a GET /health route are each copied into service after service, rather than imported from one shared package.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    281
+   ],
+   "find": "monolith_base_url is worth a beat: it's a documented, operator-only fallback, kept and logged at startup but never read by the actual enrich() call path: an operator can point ORDER_BASE_URL itself at the frozen monolith during an incident without a code change, but nothing in this service fails over to it automatically.",
+   "repl": "monolith_base_url is worth a beat: it's a documented, operator-only fallback, kept and logged at startup but never read by the actual enrich() call path. An operator can point ORDER_BASE_URL itself at the frozen monolith during an incident without a code change, but nothing in this service fails over to it automatically.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    286
+   ],
+   "find": "PARTIAL, with a named reason per gap: GET /health on 6 of 8 (absent from the proxy and review-service), the uniform errors.py mapping on 6 of 8 (absent from the proxy and the GraphQL gateway, each for a structural reason), tenacity on exactly 1 of 8.",
+   "repl": "PARTIAL, with a named reason per gap: GET /health on 6 of 8 (absent from the proxy and review-service), and the uniform errors.py mapping on 6 of 8 (absent from the proxy and the GraphQL gateway, each for a structural reason). Tenacity sits at exactly 1 of 8.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    286
+   ],
+   "find": "DEFERRED, with zero footprint before now: OpenTelemetry (on 3 of 8 services), a circuit breaker or bulkhead (named in planning prose, no code anywhere), and a true shared chassis library (every file here is copied and hand-adapted per service, never imported from one shared package).",
+   "repl": "DEFERRED, with zero footprint before now: OpenTelemetry (on 3 of 8 services), and a circuit breaker or bulkhead (named in planning prose, no code anywhere). Also deferred: a true shared chassis library (every file here is copied and hand-adapted per service, never imported from one shared package).",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    277
+   ],
+   "find": "grpc.aio generates an async stub from this same .proto that a synchronous grpc stub would generate from; the contract doesn't change, only the calling convention does: await stub.Reserve(request) instead of a blocking call, which is what lets order-service hold this call inside its own event loop without a dedicated thread.",
+   "repl": "grpc.aio generates an async stub from this same .proto that a synchronous grpc stub would generate from; the contract doesn't change, only the calling convention does. await stub.Reserve(request) replaces a blocking call, which is what lets order-service hold this call inside its own event loop without a dedicated thread.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    267
+   ],
+   "find": "The inventory gRPC contract uses its own wire vocabulary (stock_keeping_unit, on_hand_qty, unit_price_cents) kept distinct from order-service's internal sku/quantity/unit_price_cents naming by design, a gap to preserve rather than clean up, because it's what forces a real translation step to exist instead of the two shapes happening to agree by accident.",
+   "repl": "The inventory gRPC contract uses its own wire vocabulary (stock_keeping_unit, on_hand_qty, unit_price_cents), kept distinct from order-service's internal sku/quantity/unit_price_cents naming by design. That's a gap to preserve rather than clean up, because it forces a real translation step to exist instead of the two shapes happening to agree by accident.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    267
+   ],
+   "find": "Pydantic plays the same role at the REST edges: OrderCreate and OrderOut are each a single, narrow seam where wire format meets domain type, so a consumed event's shape changing never means hunting through business logic for every place a raw dict key was read.",
+   "repl": "Pydantic plays the same role at the REST edges: OrderCreate and OrderOut are each a single, narrow seam where wire format meets domain type. A consumed event's shape changing never means hunting through business logic for every place a raw dict key was read.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    266
+   ],
+   "find": "FastAPI validates OrderCreate automatically on every POST: a missing field, a quantity below Field(ge=1), or an empty items list never reaches a handler function at all; it comes back as a 422 with a field-level error before any business logic runs.",
+   "repl": "FastAPI validates OrderCreate automatically on every POST: a missing field, a quantity below Field(ge=1), or an empty items list never reaches a handler function at all. It comes back as a 422 with a field-level error before any business logic runs.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    266
+   ],
+   "find": "The alias pattern is the wire-contract trick worth lingering on: Python fields stay snake_case for every tool that cares about PEP 8, while the JSON on the wire is camelCase, because the field population reads customerId off the request body but the Python code everywhere else just writes order.customer_id.",
+   "repl": "The alias pattern is the wire-contract trick worth lingering on: Python fields stay snake_case for every tool that cares about PEP 8, while the JSON on the wire is camelCase. The field population reads customerId off the request body, but the Python code everywhere else just writes order.customer_id.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    266
+   ],
+   "find": "There is no shared schema module across services: each one hand-authors its own structurally identical copy of a consumed event's shape, which is the real cost of a JSON contract with no schema registry, the gap an Avro/registry wire envelope closes for the one demo that opts into it.",
+   "repl": "There is no shared schema module across services: each one hand-authors its own structurally identical copy of a consumed event's shape. That's the real cost of a JSON contract with no schema registry, the gap an Avro/registry wire envelope closes for the one demo that opts into it.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    291
+   ],
+   "find": "This is the proof, not just the claim: the integration test seeds a Saga row directly with status=RUNNING, step_index=1, and a context already carrying step 0's output: exactly the row a real process would leave behind if it died right after committing enrich but before attempting dispatch.",
+   "repl": "This is the proof, not just the claim: the integration test seeds a Saga row directly with status=RUNNING, step_index=1, and a context already carrying step 0's output. That's exactly the row a real process would leave behind if it died right after committing enrich but before attempting dispatch.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    288
+   ],
+   "find": "advance() recurses forward through the steps until COMPLETED or hands off to compensate(), which walks only the already-completed steps in reverse and writes the terminal shipment.failed outbox event in the same transaction as the COMPENSATED status flip; never a saga marked done with no outcome event queued.",
+   "repl": "advance() recurses forward through the steps until COMPLETED, or hands off to compensate(), which walks only the already-completed steps in reverse and writes the terminal shipment.failed outbox event in the same transaction as the COMPENSATED status flip. A saga is never marked done with no outcome event queued.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    295
+   ],
+   "find": "Every standalone service splits tests into two independent layers: a Kafka-free, gRPC-free unit layer against a real but already-migrated Postgres, and an integration layer where Testcontainers stands up its own isolated Postgres and Kafka per test run, independent of whatever dev database happens to be running locally.",
+   "repl": "Every standalone service splits tests into two independent layers: a Kafka-free, gRPC-free unit layer against a real but already-migrated Postgres, and an integration layer where Testcontainers stands up its own isolated Postgres and Kafka per test run. That integration layer is independent of whatever dev database happens to be running locally.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    295
+   ],
+   "find": "This crash-resume test is the proof behind the Together section's crash-resume diagram: it simulates a crash by inserting a Saga row directly, bypassing the normal handler entirely, then calls the exact same resume_running_sagas() function the app's own lifespan calls on every real startup.",
+   "repl": "This crash-resume test is the proof behind the Together section's crash-resume diagram: it simulates a crash by inserting a Saga row directly, bypassing the normal handler entirely. Then it calls the exact same resume_running_sagas() function the app's own lifespan calls on every real startup.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    272
+   ],
+   "find": "register_or_resolve is idempotent by construction: the first call creates the Apicurio artifact's version 1, and every later call with the same schema text resolves back to the existing registration instead of creating a duplicate, so restarting this demo never grows the registry.",
+   "repl": "register_or_resolve is idempotent by construction: the first call creates the Apicurio artifact's version 1, and every later call with the same schema text resolves back to the existing registration instead of creating a duplicate. Restarting this demo never grows the registry.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    272
+   ],
+   "find": "Note the scope: this module is a standalone demonstrator with no database and no outbox of its own, publishing directly to its own order.events.avro.demo topic; it's here to show the registry envelope mechanics clearly, not to replace the JSON order.placed event every other service already depends on.",
+   "repl": "Note the scope: this module is a standalone demonstrator with no database and no outbox of its own, publishing directly to its own order.events.avro.demo topic. It's here to show the registry envelope mechanics clearly, not to replace the JSON order.placed event every other service already depends on.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    260
+   ],
+   "find": "The flush after adding the order is what SQLAlchemy needs to run the INSERT and populate order.id before the order_items and the outbox payload can reference it; flush is not commit, it just forces the pending SQL to run inside the still-open transaction.",
+   "repl": "The flush after adding the order is what SQLAlchemy needs to run the INSERT and populate order.id before the order_items and the outbox payload can reference it. Flush is not commit: it just forces the pending SQL to run inside the still-open transaction.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "notes",
+   "sldIds": [
+    260
+   ],
+   "find": "This is the same shape SQLAlchemy's synchronous unit-of-work pattern uses; the only thing async adds is the await in front of flush and commit, because asyncpg's wire protocol is non-blocking and SQLAlchemy's async engine exposes that as coroutines instead of hiding it behind a thread pool.",
+   "repl": "This is the same shape SQLAlchemy's synchronous unit-of-work pattern uses. The only thing async adds is the await in front of flush and commit, because asyncpg's wire protocol is non-blocking and SQLAlchemy's async engine exposes that as coroutines instead of hiding it behind a thread pool.",
+   "expect": 1,
+   "cat": "terse"
+  },
+  {
+   "op": "replace_picture",
+   "sldId": 285,
+   "shape_id": 6,
+   "png": "/home/rsedor/Dev/modernizing-enterprise-applications-python/presentation/modernizing-201-fastapi/png/mesh-hero-trace-waterfall.png"
+  },
+  {
+   "op": "replace_picture",
+   "sldId": 286,
+   "shape_id": 6,
+   "png": "/home/rsedor/Dev/modernizing-enterprise-applications-python/presentation/modernizing-201-fastapi/png/chassis-scorecard.png"
+  }
+ ]
+}

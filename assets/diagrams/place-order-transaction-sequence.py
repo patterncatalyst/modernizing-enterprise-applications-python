@@ -42,7 +42,7 @@ steps = [
     ("charge", ["Charge payment", "payment_services.charge()", "decline -> rolls back all above"]),
     ("confirm", ["Confirm order", "order.confirm()", "status -> CONFIRMED"]),
     ("dispatch", ["Dispatch shipment", "shipping_services.dispatch()", "SHIP-FAIL sentinel raises here"]),
-    ("outbox", ["Write outbox row", "OutboxEvent(event_type=order.placed)", "SMELL #5/#6 CURED (r03)"]),
+    ("outbox", ["Write outbox row", "OutboxEvent(event_type=order.placed)", "SMELL #5/#6 CURED"]),
     ("commit", ["COMMIT", "one Postgres transaction", "five contexts' writes, atomic"]),
 ]
 
@@ -86,14 +86,14 @@ edges.append({"x1": rollback["x"] + 60, "y1": rollback["y"], "x2": step_nodes["r
               "label": "one shared Postgres transaction: undone automatically, free", "ly": -8})
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.08: _place_order_local: one transaction.atomic() spans five bounded contexts",
+    {"x": W / 2, "y": 32, "text": "_place_order_local: one transaction.atomic() spans five bounded contexts",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56,
      "text": "validate -> reserve -> persist -> charge -> confirm -> dispatch -> write outbox row -> commit, in-process, one database",
      "anchor": "middle", "size": 12, "color": "#555555"},
 
     {"x": 40, "y": H - 46,
-     "text": "SMELL #2: this rollback-for-free behavior disappears the moment any one of these contexts gets its own database (ch.22/ch.23/ch.24).",
+     "text": "SMELL #2: this rollback-for-free behavior disappears the moment any one of these contexts gets its own database.",
      "anchor": "start", "size": 10.5, "color": "#555555"},
     {"x": 40, "y": H - 16,
      "text": "Sourced from examples/00-monolith/order/services.py::_place_order_local (the INVENTORY_MODE=local / PAYMENT_MODE=synchronous / SHIPPING_MODE=inprocess default path).",

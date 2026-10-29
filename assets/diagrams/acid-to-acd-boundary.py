@@ -55,12 +55,12 @@ a_async = node(970, y2 + 90, 310, 130,
                ["payment + shipping resolve", "OUTSIDE any local transaction,", "asynchronously, via the saga"], style="accent")
 after_outer_nodes = [a_window, a_async]
 after_outer_edges = [
-    connect(a_outbox, a_window, dashed=True, amber=True, label="the window ch.22 names"),
+    connect(a_outbox, a_window, dashed=True, amber=True, label="the window this opens"),
     connect(a_window, a_async),
 ]
 
 notes = [
-    {"x": W / 2, "y": 30, "text": "ch.22 -- ACID -> ACD: Atomicity, Consistency, Durability survive the cut; Isolation does not",
+    {"x": W / 2, "y": 30, "text": "ACID -> ACD: Atomicity, Consistency, Durability survive the cut; Isolation does not",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": 40, "y": H - 46, "text": "This is not a bug introduced by the extraction -- it's the real cost of a saga replacing a single shared",
      "anchor": "start", "size": 11, "color": "#555555"},

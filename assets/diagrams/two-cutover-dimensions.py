@@ -37,7 +37,7 @@ cell_gt = node(680, 440, 520, 220,
     style="accent")
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.19 -- two independent cutover dimensions, locked together in this book's exercised runs",
+    {"x": W / 2, "y": 32, "text": "two independent cutover dimensions, locked together in this book's exercised runs",
      "anchor": "middle", "bold": True, "size": 18},
     {"x": 360, "y": 150, "text": "STRANGLER_INVENTORY_ENABLED=false/unset", "anchor": "middle", "bold": True, "size": 13},
     {"x": 940, "y": 150, "text": "STRANGLER_INVENTORY_ENABLED=true", "anchor": "middle", "bold": True, "size": 13},

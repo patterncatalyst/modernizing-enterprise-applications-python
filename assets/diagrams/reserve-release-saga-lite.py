@@ -32,9 +32,9 @@ g.OUT = os.path.dirname(__file__)
 W, H = 1400, 800
 
 band_before = {"x": 20, "y": 60, "w": 1360, "h": 220,
-               "label": "BEFORE -- INVENTORY_MODE=local (r01-r03): one transaction, free rollback (SMELL[ch.22])", "fill": "#fafafa"}
+               "label": "BEFORE -- INVENTORY_MODE=local: one transaction, free rollback", "fill": "#fafafa"}
 band_after = {"x": 20, "y": 320, "w": 1360, "h": 420,
-              "label": "AFTER -- INVENTORY_MODE=grpc (ch.19): Reserve crosses the boundary FIRST, outside any local transaction.atomic()", "fill": "#f1f5f9"}
+              "label": "AFTER -- INVENTORY_MODE=grpc: Reserve crosses the boundary FIRST, outside any local transaction.atomic()", "fill": "#f1f5f9"}
 
 b1_reserve = node(50, 150, 240, 110, ["Reserve stock", "in-process, SAME tx", "pessimistic-lock query"], style="box")
 b1_order = node(330, 150, 200, 110, ["Create Order row"], style="box")
@@ -60,7 +60,7 @@ release_edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.19 -- reserve/release across the boundary: where the free rollback went",
+    {"x": W / 2, "y": 32, "text": "reserve/release across the boundary: where the free rollback went",
      "anchor": "middle", "bold": True, "size": 18},
     {"x": 40, "y": H - 60, "text": "Postgres's WAL can only unwind writes inside ITS OWN transaction -- a commit in inventory-service's own database is",
      "anchor": "start", "size": 11, "color": "#555555"},
