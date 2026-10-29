@@ -45,8 +45,8 @@ The more interesting case is **multi-agent orchestration**: more than one
 agent, each with a distinct role and a distinct set of tools, coordinated so
 that one agent's output becomes another's input, and, critically, so that
 no single agent is trusted to grade its own work. This project's Plan and
-Verify phases are carried out by exactly this pattern, implemented as the
-**`lgtm-relay`** skill, under a name worth being precise about: **plan →
+Verify phases are carried out by exactly this pattern, implemented as a dedicated
+relay skill, under a name worth being precise about: **plan →
 execute → validate**.
 
 {% include excalidraw.html file="plan-execute-validate-relay" alt="Six boxes in a row: Frame (human, states intent, writes the decision-log entry), Plan tier (Opus, reads Frame plus Map recon, drafts the step plan), Human gate 1 (plan approval, before any diff exists), Execute tier (Sonnet, Generate: scaffolds, writes code and tests, runs them), Validate tier (Opus again, adversarial: re-reads plan and diff against the equivalence suite), Human gate 2 (equivalence sign-off, Verify phase). A dashed line below the row connects the Plan and Validate boxes, labeled: same model tier, now adversarial, not self-vouching." caption="Figure 6.1: The relay: the planning tier drafts, the execution tier builds, the same planning tier validates adversarially, with a human gate on either side of Generate" %}
@@ -121,26 +121,26 @@ worked conventions, so that the fifth time an agent scaffolds a FastAPI
 service it makes the same choices the first time did.
 
 This project runs on a family of skills with a shared naming convention,
-the **`lgtm-*`** family, and naming them concretely is more useful than
+and naming their roles concretely is more useful than
 describing skills in the abstract:
 
-- **`lgtm-relay`** is the plan → execute → validate tiering described
+- **The relay skill** is the plan → execute → validate tiering described
   above: the mechanism every extraction's Plan and Verify phases run
   through.
-- **`lgtm-python`** scaffolds the dev toolchain for a new Python service:
+- **A scaffolding skill** sets up the dev toolchain for a new Python service:
   uv, the Python 3.14 interpreter pin, the FastAPI/aiokafka/grpcio/
   Strawberry service shapes, the structured logging convention, the
   pytest/ruff/Testcontainers test layout, so every service extraction in
   this book starts from the same known-good baseline instead of a
   hand-assembled one that drifts service to service.
-- **`lgtm-diagram-generator`** generates figures from a short Python spec
+- **A diagram-generator skill** generates figures from a short Python spec
   of boxes and arrows, so the diagrams across many chapters share one
   visual language instead of each chapter inventing its own: every figure
   in this book, including this one, is built this way.
-- **`lgtm-docker-stack`** stands up the local observability substrate
+- **A local-stack skill** stands up the local observability substrate
   (Postgres, Kafka, the LGTM stack) that every extraction's tests and
   behavior-equivalence suite run against.
-- **`lgtm-github`** carries the release-sync and commit-convention
+- **A release skill** carries the release-sync and commit-convention
   discipline for pushing a finished iteration upstream, gated, per this
   project's own standing rule, on a human's explicit go-ahead.
 
@@ -174,10 +174,9 @@ that exposes a fixed set of callable tools (not a chat interface, a set of
 functions with real inputs and real, structured outputs) that an agent can
 call mid-loop to get ground truth instead of a guess.
 
-Here is where this chapter has to say something the Java sibling's
-equivalent chapter doesn't: **there is no framework-specific MCP server for
-this project's stack.** No tool exposes live, version-matched FastAPI
-documentation the way a Quarkus-aware MCP server exposes Quarkus
+Here is where this chapter has to be plain about a real gap: **there is no
+framework-specific MCP server for this project's stack.** No tool exposes live, version-matched FastAPI
+documentation the way a framework-aware MCP server exposes that framework's
 documentation; no tool scaffolds an aiokafka consumer or validates a
 Starlette route's structure the way an integration-framework-aware MCP
 server validates a route definition before it's deployed. This book names
@@ -189,8 +188,8 @@ Three substitutes fill that gap in this project's day-to-day practice, and
 naming them concretely is more useful than leaving "manual reconnaissance"
 as an unexplained phrase:
 
-1. **The `lgtm-python` skill's scaffold conventions** stand in for a live
-   scaffolding tool: the same job `quarkus_create`-style scaffolding does
+1. **A scaffolding skill's conventions** stand in for a live
+   scaffolding tool: the same job a live scaffolding tool does
    elsewhere, done by a skill's packaged conventions instead of an MCP
    call against a running service.
 2. **Manual reconnaissance**, actually reading the Django app's models,
@@ -255,14 +254,14 @@ ADLC's seven phases are where they combine.
 - **Frame** stays entirely human: no agent, skill, or tool substitutes
   for a person stating intent and writing the decision-log entry.
 - **Map** is where the gap named above shows up first: manual
-  reconnaissance plus the `lgtm-python` skill's conventions ground the
+  reconnaissance plus a scaffolding skill's conventions ground the
   agent's understanding of the Django app's shape before any plan gets
   drafted, in place of a live MCP-driven dependency map.
 - **Plan** is the planning tier of the relay, informed by whatever Map
   turned up, producing the step plan that sits in front of the first human
   gate.
 - **Generate** is the execution tier, using the project's skills
-  (`lgtm-python`, the per-service `AGENTS.md` governance files) to produce
+  (the scaffolding skill, the per-service `AGENTS.md` governance files) to produce
   the actual diff: a hand-rolled ASGI proxy, a FastAPI service shape, an
   aiokafka consumer, whatever the step calls for.
 - **Verify** returns to the planning tier in its adversarial role, checking
@@ -277,7 +276,7 @@ ADLC's seven phases are where they combine.
 ## What's next
 
 This chapter named the actors: the relay's two tiers in a supervisor
-relationship, the `lgtm-*` skills and the `AGENTS.md` governance layer, and
+relationship, the skills and the `AGENTS.md` governance layer, and
 the plain accounting of what substitutes for an MCP surface this stack
 doesn't have, without yet proving any of it holds together under real
 pressure. That proof is Chapter 7's entire job: it runs this exact

@@ -83,7 +83,7 @@ otherwise get re-litigated by accident three weeks later:
 
 ```
 Compose engine = docker-primary, podman-compatible (the project's own
-choice). | User-fixed. Matches the Java sibling's current engine so the
+choice). | User-fixed. Docker is the primary engine so the
 dev-loop instructions transfer; "podman-compatible" is stated as a
 constraint (no Docker-only compose syntax) rather than a second maintained
 compose file. | fixed
@@ -176,10 +176,10 @@ precedes Part 2 rather than following it: you need to recognize these files
 on sight before you watch a chapter narrate the loop that writes to them.
 
 The same table's second row is also worth sitting with, because this book's
-own ADLC differs from its Java sibling's in exactly the place that table
-names: Map has no Quarkus Agent MCP or Camel MCP equivalent to lean on for
+own ADLC has a gap in exactly the place that table
+names: Map has no framework-aware MCP server to lean on for
 this stack, so that cell reads **manual reconnaissance plus the
-`lgtm-python` skill** instead of a live, framework-aware tool. Chapter 6
+scaffolding skill** instead of a live, framework-aware tool. Chapter 6
 explains why that gap exists and what it costs in practice; this chapter's
 job is only to show you where the gap is recorded, in the same phase table
 that names every other phase's tooling, in plain sight rather than tucked
@@ -263,16 +263,14 @@ it reported, not merely that an agent claims it passed.
 The phase table names a third ledger artifact alongside the decision log and
 the build plan: the reconciliation log, an append-only record that tracks
 every piece of code or design this project reused or adapted from another
-source, chiefly its own Java sibling book, and, for one service, a
+source, including for one service a
 database-backed saga orchestrator reused from a separate pattern catalog,
 against exactly what diverged and why. Each extraction's reconcile pass
 appends a new section naming the source, what was kept, what changed, and a
 verdict: a **clean adaptation** if every divergence is named and traced to an
 accepted decision, or **drift** if something changed without being recorded,
-which has to be resolved before that extraction counts as done. Unlike the
-planning-only round this chapter's own sibling chapter in the Java book
-describes, where this exact artifact was still an idea, not yet created,
-this project built all three ledger artifacts together from its very first
+which has to be resolved before that extraction counts as done.
+This project built all three ledger artifacts together from its very first
 iteration, and the reconciliation log has been live and growing ever
 since: by the time this project's last chapter was authored, it carried a
 dedicated section for nearly every iteration this book's extractions went

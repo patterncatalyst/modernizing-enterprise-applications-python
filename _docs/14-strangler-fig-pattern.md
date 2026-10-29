@@ -15,7 +15,7 @@ By the end of this chapter you can:
 - Explain why `_select_backend()` reads only from a frozen `Settings` dataclass rather than request data, and how pinning the forwarding target to operator configuration closes an SSRF seam by construction.
 - Diagnose the chunked-body bug: why `httpx.ASGITransport`'s in-process test suite stayed green while forwarding `request.stream()` unread silently emptied every POST/PUT/PATCH the proxy sent to Django's WSGI stack.
 - Design the 502 fail-safe and the reversibility-window negative check (killing review-service to force a real 502) that prove a routing decision is correct independent of whether two backends happen to agree.
-- Match the full `request.url.path` rather than a route-relative path segment, and explain why that distinction is what a sibling project's predicate bug got wrong.
+- Match the full `request.url.path` rather than a route-relative path segment, and explain why that distinction is what a real predicate bug in this kind of proxy got wrong.
 - Explain why decommissioning the monolith's `review` app is deferred to a later, separate step, and why it is the one irreversible move in the whole sequence.
 
 ## Why this matters
@@ -250,8 +250,8 @@ here is nothing, because the route is mounted at the application root).
 Today those two values happen to differ only by a leading slash, because
 this proxy has no mount point to be relative to. Getting it backwards is a
 known failure
-mode in exactly this kind of code: a sibling Camel-based strangler proxy
-in this book's sister project matched a route-relative path against a bare
+mode in exactly this kind of code: a strangler proxy that
+matched a route-relative path against a bare
 `"reviews"` prefix instead of the full `"/api/reviews"`, and every request
 silently fell through to the old backend regardless of the flag, for weeks,
 because the review candidate happened to read and write the same shared

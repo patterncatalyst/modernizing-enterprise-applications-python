@@ -69,9 +69,9 @@ p. 7
 
 - The agent authors the change; the human frames the seam, sets the acceptance bar, and gates the merge, the same division of labor across all ten build iterations behind this modernization.
 - The method rests on an automated equivalence gate, not on trust in a model's output: every cutover re-runs the same Newman contract suite the monolith already had to pass.
-- No Quarkus Agent MCP or Camel MCP equivalent exists for this Python stack; unlike the Java sibling's tooling, the Map and Generate phases here substitute manual reconnaissance plus the lgtm-python skill's scaffold conventions, named as a real difference rather than glossed over.
+- The Map and Generate phases here use manual reconnaissance plus a scaffolding skill's conventions, since this stack has no framework-aware MCP server.
 
-> This is the one place in the deck that explicitly contrasts with the Java sibling implementation. This Python/FastAPI stack has no dev-mode reload loop as tight as Quarkus's, and no MCP server that knows FastAPI/aiokafka the way quarkus-agent knows Quarkus. That gap is named directly rather than worked around quietly.
+> This Python/FastAPI stack has no framework-aware MCP server that knows FastAPI/aiokafka. That gap is named directly rather than worked around quietly.
 
 ## [008] THE ADLC · THE LOOP · Frame, Map, Plan, Generate, Verify, Operate, Reconcile (sldId 263)
 
@@ -376,7 +376,7 @@ async def advance(session_factory, settings, saga_id: int) -> None:
 
 examples/06-shipping-service/app/orchestrator.py: one coordinator, four steps; resume_running_sagas() crash-resumes from the persisted step_index
 
-> Adapted from the house cloud-native-design-patterns saga orchestrator onto this project's async SQLAlchemy stack: select(Saga).with_for_update() instead of raw asyncpg FOR UPDATE. The crash-resume scan at startup is a durability upgrade over the role this plays in the Java sibling's in-memory coordinator: kill the process mid-saga, restart, and it resumes from the persisted step without re-running what already completed.
+> A database-backed saga orchestrator on this project's async SQLAlchemy stack: select(Saga).with_for_update() instead of raw asyncpg FOR UPDATE. The crash-resume scan at startup is a durability upgrade over an in-memory coordinator: kill the process mid-saga, restart, and it resumes from the persisted step without re-running what already completed.
 
 ## [032] COORDINATING · IDEMPOTENT CONSUMERS · A redelivered event must not double-apply (sldId 287)
 
@@ -681,7 +681,7 @@ p. 61
 
 Figure 28.1: Two hand-duplicated copies of the same event contract, one already drifted, versus one schema registered once and resolved by every producer and consumer against the same registry.
 
-> This project's drift is independently re-derived from its own producer/consumer code, not a replayed anecdote from the Java sibling. The code has stayed forward-compatible by discipline (every field addition has been additive-and-optional) rather than by any enforcement mechanism.
+> This project's drift is independently re-derived from its own producer/consumer code, not a replayed anecdote. The code has stayed forward-compatible by discipline (every field addition has been additive-and-optional) rather than by any enforcement mechanism.
 
 ## [062] APPENDIX · THE gRPC CONTRACT, VISUALLY · Inventory's protobuf ACL, as a diagram (sldId 317)
 

@@ -39,7 +39,7 @@ top_nodes = [node(x, TOP_Y, top_w, NH, lbl, style="accent") for x, lbl in zip(to
 
 bottom_phases = [
     ["Frame", "author intent + PRD"],
-    ["Map", "manual recon + lgtm-python"],
+    ["Map", "manual recon + a scaffolding skill"],
     ["Plan", "Opus drafts the step plan"],
     ["Generate", "Sonnet: scaffold + code + tests"],
     ["Verify", "Opus: pytest/Newman + scan"],

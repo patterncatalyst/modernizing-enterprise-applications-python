@@ -158,7 +158,7 @@ re-embeds the reused CNDP Python DB-backed coordinator (`select(...)
 .with_for_update()`, an idempotent `advance()`, a reverse-order
 `compensate()`) as one process that calls every step and owns the decision
 to undo. The orchestrator's `resume_running_sagas()` is itself a durability
-upgrade over its own Java sibling's in-memory coordinator: a crash mid-saga
+upgrade over an in-memory coordinator: a crash mid-saga
 resumes from its last persisted step instead of losing the saga's progress
 entirely. **Idempotent Compensation** (also ch.23) closes the gap gRPC's
 `Reserve`/`Release` pair opened: a compensating `Release` survives

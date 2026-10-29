@@ -33,10 +33,9 @@ chapter answers that question with `deploy/k8s/`: a kustomize `base` of
 eight Deployment+Service pairs plus two StatefulSets, and a single
 `overlays/minikube` that adapts that base to a local cluster with no
 image registry. It is additive: no application code, no `compose.yaml`
-line, and no CI gate from any earlier chapter changes, and it is a
-*re-authoring*, not a port, of the Java sibling's own `k8s/` tree, because
-this project's Python services carry a config model that diverges from
-the Java one in a way that changes what the manifests actually say.
+line, and no CI gate from any earlier chapter changes. This project's
+Python services carry a config model that shapes what the manifests
+actually say.
 
 {% include excalidraw.html file="deploy-k8s-namespace-topology" alt="The mea namespace: strangler-proxy as the single NodePort 30888 edge, six bounded-context services plus graphql-gateway's own ClusterIP-only front door, a shared postgres StatefulSet (schema-per-service in app code) and a shared kafka StatefulSet, with order-service and graphql-gateway each a gRPC client of inventory-service" caption="Figure 29.1: The mea namespace: 8 Deployments/Services, 2 StatefulSets, one NodePort edge" %}
 
@@ -160,12 +159,12 @@ from `docker.io/mea/...`, a registry path that was never going to resolve.
 
 ## Config as data: one DATABASE_URL, not six
 
-This is the one place this chapter diverges hardest from its Java sibling,
-and the divergence changes enough of the manifests that `app-config.yaml`'s own
-header comment in this repository spends twenty lines on it. The Java
-services each build their own JDBC URL with a `?currentSchema=...` query
-parameter baked in, so the Java `k8s/` tree needs six different
-ConfigMap keys: one JDBC URL string per service, each pointing at the same
+This project's config model shapes enough of the manifests that
+`app-config.yaml`'s own header comment in this repository spends twenty
+lines on it. One common approach is for each service to build its own
+connection URL with a schema selector (for example a `?currentSchema=...`
+query parameter) baked in, which needs a different ConfigMap key per
+service: one URL string per service, each pointing at the same
 server but a different schema by construction.
 
 This project's six DB-backed services (`review-`, `notification-`,
@@ -459,12 +458,11 @@ endpoints, but the one broker must resolve its own controller address
 place; without that flag, the broker would deadlock waiting on a DNS
 record that can't exist until the broker itself is marked ready.
 
-Schema creation is simpler here than it is in the Java sibling's own
-`infra/` tree. Each Python service's own Alembic migration already issues
+Schema creation is simple here. Each Python service's own Alembic migration
+already issues
 its own `CREATE SCHEMA IF NOT EXISTS` as part of `alembic upgrade head`,
 which runs as every service's own container startup command: there is no
-separate schema-bootstrap ConfigMap the way the Java StatefulSet needs one
-for Flyway. `review-service` is the one exception, and it needs a
+separate schema-bootstrap ConfigMap. `review-service` is the one exception, and it needs a
 dedicated bootstrap step of its own.
 
 ## review-service's bootstrap: a one-time dependency on the frozen monolith
@@ -553,18 +551,17 @@ observability stack land on top of this same base, on a cluster that is
 actually up.
 
 > **ADLC in Action**: This chapter's probe table could have been written
-> by copying the Java sibling's uniform `httpGet /health` convention onto
-> all eight services and calling it done; every one of that book's services
-> has a health endpoint, courtesy of a shared MicroProfile Health
-> dependency. Confirming whether the same convention held here meant
+> by assuming a uniform `httpGet /health` convention across
+> all eight services and calling it done. Confirming whether that convention
+> actually held here meant
 > opening `examples/01-strangler-proxy/app/main.py` and
 > `examples/02-review-service/app/main.py` directly rather than assuming
 > symmetry with the other six services' `app/main.py` files, and finding,
 > in both, no `/health` route of any kind. The same discipline applied to
-> the config model: drafting this chapter from the Java `k8s/` tree's shape
-> alone would have produced six per-service JDBC-URL ConfigMap keys that
+> the config model: drafting this chapter from an assumed manifest shape
+> alone would have produced six per-service connection-URL ConfigMap keys that
 > don't correspond to anything in this project's actual `app/db.py` files.
 > Reading `app-config.yaml`'s own header comment first, and then the six
 > services' `search_path` logic it describes, is what kept this chapter's
-> "one `DATABASE_URL`" claim grounded in code instead of in the pattern the
-> Java sibling happened to use.
+> "one `DATABASE_URL`" claim grounded in code instead of in an assumed
+> pattern.
