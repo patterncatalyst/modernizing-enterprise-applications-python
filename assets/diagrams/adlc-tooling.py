@@ -34,11 +34,11 @@ def heptagon_positions(cx, cy, rx, ry):
 
 phases = [
     ["1. Frame", "human: intent + PRD"],
-    ["2. Map", "manual recon + lgtm-python", "(no MCP equivalent)"],
-    ["3. Plan", "lgtm-relay -- Opus plans"],
-    ["4. Generate", "lgtm-relay -- Sonnet executes", "+ lgtm-python scaffolds"],
-    ["5. Verify", "lgtm-relay -- Opus validates", "pytest + Newman + scan"],
-    ["6. Operate", "lgtm-docker-stack /", "lgtm-minikube-stack + flags"],
+    ["2. Map", "manual recon + a scaffolding skill", "(no MCP equivalent)"],
+    ["3. Plan", "the relay -- Opus plans"],
+    ["4. Generate", "the relay -- Sonnet executes", "+ a scaffolding skill"],
+    ["5. Verify", "the relay -- Opus validates", "pytest + Newman + scan"],
+    ["6. Operate", "a local-stack /", "cluster-stack skill + flags"],
     ["7. Reconcile", "the three ledger files"],
 ]
 
@@ -56,7 +56,7 @@ for i in range(7):
 notes = [
     {"x": 500, "y": 40, "text": "ADLC Tooling: the Real Role at Each Phase",
      "anchor": "middle", "bold": True, "size": 20},
-    {"x": 500, "y": 68, "text": "lgtm-relay tiers Plan/Generate/Verify; Map has no MCP equivalent and says so",
+    {"x": 500, "y": 68, "text": "the relay tiers Plan/Generate/Verify; Map has no MCP equivalent and says so",
      "anchor": "middle", "size": 12, "color": "#555555"},
     {"x": 500, "y": H - 24,
      "text": "Sourced from _plans/build-plan.md (section F.1) and _plans/decisions.md.",

@@ -200,9 +200,8 @@ Every DTO on the wire is camelCase, even though the ORM underneath is
 ordinary snake_case Python: `OrderCreateSerializer` maps `customerId` to
 `customer_id`, `paymentMethod` to `payment_method`, and so on; `OrderSerializer`
 does the same in reverse for reads. That translation layer does two jobs
-at once: it matches the contract the Java sibling project established
-(so the two books describe the same wire shape even though neither runtime
-shares a line of code with the other), and it means every DRF serializer in
+at once: it fixes the wire contract as camelCase independent of the
+snake_case names underneath, and it means every DRF serializer in
 this project is already doing the one job a hand-rolled FastAPI Pydantic
 schema will do later, once a context leaves the monolith: translate
 between "what Python calls this" and "what the contract calls this," in one

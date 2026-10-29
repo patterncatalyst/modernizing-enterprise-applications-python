@@ -155,23 +155,23 @@ the ceremony they replace.
 
 Every phase in that loop needs an actor to carry it out, and this project
 names its actors concretely rather than describing the loop in the
-abstract. The **`lgtm-relay`** skill supplies three of the seven phases as
+abstract. The **relay** skill supplies three of the seven phases as
 a single tiered relay: one model tier plans, a second executes, and the
 first tier returns, now adversarial, to validate. The mechanics of that
 relay, and why the same tier that proposed the plan is the one that
 doubles back to doubt it, are Chapter 6's subject in full. The
-**`lgtm-python`** skill supplies the scaffold conventions Generate draws
+**scaffolding** skill supplies the scaffold conventions Generate draws
 on: FastAPI service shapes, `pytest`/`pytest-django` layout, the
 Containerfile pattern every extracted service follows.
 
-{% include excalidraw.html file="adlc-tooling" alt="A seven-phase cycle, each phase annotated with the real tool role for this project's stack: Frame: human, intent plus PRD; Map: manual reconnaissance plus the lgtm-python skill, no MCP equivalent; Plan: lgtm-relay, Opus plans; Generate: lgtm-relay, Sonnet executes, plus lgtm-python scaffolds; Verify: lgtm-relay, Opus validates, pytest plus Newman plus a security scan; Operate: lgtm-docker-stack or lgtm-minikube-stack plus feature flags; Reconcile: the three ledger files." caption="Figure 5.3: The ADLC's seven phases, annotated with the real tool at each one, including where the tooling runs out" %}
+{% include excalidraw.html file="adlc-tooling" alt="A seven-phase cycle, each phase annotated with the tool role for this project's stack: Frame: human, intent plus PRD; Map: manual reconnaissance plus a scaffolding skill, no MCP equivalent; Plan: the relay, Opus plans; Generate: the relay, Sonnet executes, plus a scaffolding skill scaffolds; Verify: the relay, Opus validates, pytest plus Newman plus a security scan; Operate: a local-stack skill or a cluster-stack skill plus feature flags; Reconcile: the three ledger files." caption="Figure 5.3: The ADLC's seven phases, annotated with the tool at each one, including where the tooling runs out" %}
 
 Figure 5.3 names a gap directly rather than papering over it: Map has no
 MCP server standing behind it the way a framework-specific migration
 toolchain might. There is no live, version-matched migration assistant for
 this project's stack to query the way an equivalent tool exists for
 other ecosystems; Map substitutes careful manual reading of the Django
-app plus the `lgtm-python` skill's scaffold conventions. This is named
+app plus the scaffolding skill's scaffold conventions. This is named
 explicitly, not implied away, because a reader following this book's loop
 in their own Python project shouldn't expect a tool that doesn't exist to
 show up later. Chapter 6 returns to this gap and names what actually
@@ -251,7 +251,7 @@ assertion while hiding a real defect underneath.
 This chapter named the lifecycle (seven phases, two gates, three ledger
 artifacts) without yet naming who or what actually carries each phase out
 day to day. **Chapter 6, "Agents, Skills & MCP Tools in the Loop,"** opens
-that up: the `lgtm-relay` tiering in full, the skill map this project
+that up: the relay tiering in full, the skill map this project
 draws on, and a plain accounting of what substitutes for the MCP surface
 this project's stack doesn't have. **Chapter 7** then runs the whole loop
 once, end to end, on real work, and shows exactly what its safety net

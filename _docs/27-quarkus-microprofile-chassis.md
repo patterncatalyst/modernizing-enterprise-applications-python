@@ -46,9 +46,9 @@ carrying it forward unexamined.
 
 ## What "chassis" means when there is no framework BOM
 
-The Java sibling of this book can answer "what's in the chassis" by
-grepping eight `pom.xml` files for a shared `quarkus-bom` and a short list
-of MicroProfile extensions: Config, Health, Fault Tolerance, Metrics,
+A framework built around a shared BOM can answer "what's in the chassis" by
+grepping eight build files for that BOM and a short list
+of extensions: Config, Health, Fault Tolerance, Metrics,
 OpenAPI, REST Client, Security each arrive as a dependency line, and
 turning one on is a one-line diff. FastAPI has no equivalent catalog.
 Starlette gives a service an ASGI application, a routing table, and a
@@ -59,8 +59,8 @@ of that ships a health endpoint, a uniform error body, a retry policy, or a
 metrics exporter: every one of those is either a third-party package a
 service's `pyproject.toml` chooses to add, or plain application code
 someone writes once and copies into the next service. That's the real
-difference this chapter has to keep surfacing: in the Quarkus book, "is
-Health used" is a dependency-presence question; in this one, it's a
+difference this chapter has to keep surfacing: with a framework BOM, "is
+Health used" is a dependency-presence question; here, it's a
 code-presence question, because there is no framework switch to flip. A
 chassis capability here becomes real the moment someone writes the file
 that provides it, not when a BOM happens to include it.
@@ -248,8 +248,7 @@ six implementations as directly as any source in this project does:
 Every one of the six is liveness-only, "this process is up and able to
 answer HTTP", never readiness in the MicroProfile sense of "and every
 downstream I depend on is also reachable." That's a real, stated design
-decision this project has made twice now (once in prose here, once
-implicitly in the Java sibling's own Health section): coupling a service's
+decision this project has made: coupling a service's
 own health signal to a downstream's availability means one slow
 dependency can cascade into marking an otherwise-healthy process as down,
 which is the opposite of what a liveness probe is for. `07-order-
@@ -500,6 +499,6 @@ bugs, not before.
 Chapter 28 turns from the chassis a service runs on to the question of
 what a service promises the services calling it: contracts, versioning,
 and the service registry a system this size eventually needs once
-"whichever base URL is in `application.properties`'s Python sibling,
-`config.py`, today" stops being a sufficient answer for who's allowed to
+"whichever base URL is in `config.py` today" stops being a sufficient
+answer for who's allowed to
 call whom, and with what guarantee the shape won't change underneath them.

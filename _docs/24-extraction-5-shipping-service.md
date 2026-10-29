@@ -15,7 +15,7 @@ By the end of this chapter you can:
 - Walk the four disciplines a DB-backed orchestrator needs to be safe under concurrency and crashes: a row lock per step (`FOR UPDATE`), an idempotent status guard before executing anything, one transaction per step rather than one for the whole saga, and reassigning (not mutating) a JSONB context column so SQLAlchemy's change tracking sees the update.
 - Explain why cross-context compensation is delegated rather than performed directly: the shipping service emits `shipment.failed`, and `order_saga_listener`, which owns the reserved-line snapshot, issues the actual gRPC `Release`.
 - Trace the new order lifecycle states `AWAITING_SHIPMENT` and `SHIPPING_FAILED`, and explain how `SHIPPING_MODE` makes a previously invisible window observable without changing the external `202`/pollable contract.
-- Explain how persisting `status`/`step_index`/`context` as a row, rather than tracking saga progress in memory the way the Java sibling's Camel coordinator does, turns a crash mid-saga into a resumable condition, and how the resulting `shipment.failed` event finally lets payment-service's refund hop close the stranded-payment gap Chapters 22 and 23 left open.
+- Explain how persisting `status`/`step_index`/`context` as a row, rather than tracking saga progress in memory, turns a crash mid-saga into a resumable condition, and how the resulting `shipment.failed` event finally lets payment-service's refund hop close the stranded-payment gap Chapters 22 and 23 left open.
 - Use the suite's live cutover (a deterministic `SHIP-FAIL` sentinel, a redelivered `shipment.failed` against an already-refunded payment) to prove the orchestrated compensation and the refund each fire exactly once rather than merely appearing to.
 
 ## Why this matters
@@ -190,14 +190,12 @@ record of how far it got.
 
 {% include excalidraw.html file="orchestrated-shipping-saga-sequence" alt="The four-step orchestrated saga top to bottom, with one coordinator sequencing enrich, dispatch, book_carrier, and emit, and the reverse-order compensation path on a book_carrier failure" caption="Figure 24.2: The orchestrated saga: one coordinator, four steps, one compensation decision" %}
 
-## Crash-resume: the durability upgrade over the Java sibling
+## Crash-resume: a durability upgrade over an in-memory coordinator
 
-The Java sibling (`modernizing-enterprise-applications/examples/06-shipping-service`)
-implements the identical four-step saga as a Camel Saga EIP route. Camel's
-`CamelSagaService` coordinator tracks which saga is in which step **in
-memory**, correct while the process is alive, with no documented resume
+An in-memory saga coordinator tracks which saga is in which step **in
+memory**, correct while the process is alive, with no resume
 path if a pod restarts mid-saga. That is not a minor footnote; it means a
-crash between `dispatch` and `book_carrier` in the Java implementation loses
+crash between `dispatch` and `book_carrier` loses
 the saga's progress entirely, and nothing on restart knows there was ever a
 shipment in flight for that order.
 
@@ -228,7 +226,7 @@ code path; it is the exact same `advance()` call any fresh trigger would
 make, just aimed at a saga that already has a `step_index` and `context` to
 pick up from instead of starting at zero.
 
-{% include excalidraw.html file="saga-state-machine-crash-resume" alt="The saga's status state machine, the saga_log row each step appends, and the crash-resume path that is this service's durability upgrade over the Java sibling's in-memory saga coordinator" caption="Figure 24.3: Resumable by construction: the row remembers what the process forgot" %}
+{% include excalidraw.html file="saga-state-machine-crash-resume" alt="The saga's status state machine, the saga_log row each step appends, and the crash-resume path that is this service's durability upgrade over an in-memory saga coordinator" caption="Figure 24.3: Resumable by construction: the row remembers what the process forgot" %}
 
 This claim is not asserted from authoring alone: it is tested, and then
 re-proven live. `tests/integration/test_crash_resume.py` seeds a `RUNNING`
@@ -245,8 +243,7 @@ was `docker restart`ed, and the startup log showed `resuming saga <id>
 (status=RUNNING)` followed immediately by `dispatch`/`emit`, with **no**
 new `GET /api/orders/{id}` HTTP request logged for that order, confirming
 `enrich` was not re-run, and `/health` reported `resumedSagaCount: 1` after
-restart. The Java sibling has no equivalent test, because its coordinator
-has no equivalent recovery path to test against.
+restart.
 
 ## Enrich: reading across the seam, and the ACL boundary
 
@@ -488,7 +485,7 @@ iteration.
   transaction for the whole saga), and reassigning (not mutating) a JSONB
   context column so the ORM's change-tracking actually sees the update.
 - Persisting `status`/`step_index`/`context` as a row, instead of tracking
-  saga progress in memory the way the Java sibling's Camel coordinator does,
+  saga progress in memory,
   turns a crash mid-saga into a resumable condition instead of a lost one;
   `resumedSagaCount: 1` and an `enrich` step that was never re-invoked are the
   live proof, not just a unit test's assertion.

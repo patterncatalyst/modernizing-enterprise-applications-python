@@ -590,9 +590,7 @@ because both services verify against the same row.
 
 ## What Phase A would have cost: the measured numbers
 
-Unlike the Java sibling project, where Phase A was a real, previously
-committed build that could be checked out and measured directly, this
-project's Phase A was never shipped as code (see above). Its cost is
+This project's Phase A was never shipped as code (see above). Its cost is
 measured here via a faithful proxy instead: the real, on-this-machine
 import/startup weight of `django.setup()` against the monolith's actual
 `config.settings` (all six apps installed) plus a real `import fastapi,
@@ -613,15 +611,12 @@ Phase A and Phase B's import-time and import-RSS numbers are statistically
 indistinguishable at the proxy level: that's not the result expected going
 in. FastAPI and Pydantic v2's own import graph (`pydantic-core` is a
 sizable compiled extension) dominates both columns, so swapping Django's
-ORM for SQLAlchemy barely moves process-startup granularity at all. The
-Java sibling project measured a real, dramatic win on this same comparison,
-but on a completely different axis (native image versus JVM startup, a
-distinction with no Python equivalent), not on raw import time.
+ORM for SQLAlchemy barely moves process-startup granularity at all.
 
 So what did Phase B actually buy, if not a faster cold start? The
 **structural** costs documented in "Phase A: lift onto FastAPI" above,
-which don't show up in a startup-time number in either language's version
-of this chapter: every Django ORM query bridged through `sync_to_async` on
+which don't show up in a startup-time number at all: every Django ORM query
+bridged through `sync_to_async` on
 every single request under FastAPI's async event loop, forever, for as
 long as Phase A kept running; and a hard build-time dependency on the
 entire monolith's codebase just to reach one model, so that an unrelated

@@ -76,7 +76,7 @@ notes = [
     {"x": 40, "y": 58, "text": "Real span IDs, durations, and the Tempo capture come from a live run, not from this figure.",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 40, "y": H - 40,
-     "text": "The async Kafka saga hops (order.placed -> payment -> shipping) are out of this trace: mesh-visible in Kiali, app-level-deferred (same posture as the Java sibling).",
+     "text": "The async Kafka saga hops (order.placed -> payment -> shipping) are out of this trace: mesh-visible in Kiali, app-level-deferred.",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 40, "y": H - 22,
      "text": "Grey = mesh span (Envoy sidecar, free on all 8 services). Green = app span (OTel SDK, only strangler-proxy / order-service / inventory-service). White = asyncpg child span.",

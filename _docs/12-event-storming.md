@@ -242,8 +242,8 @@ read, following call-stack order, tends to paper over.
 today, "stock got reserved" is indistinguishable from "a function returned
 without raising." `inventory_services.reserve()`'s own
 `InsufficientStock` is raised before any row is updated, so a failed
-reservation needs no rollback, a tell, the same way it was for the Java
-sibling, that synchronous validation is standing in for what should be an
+reservation needs no rollback, a tell that synchronous validation is
+standing in for what should be an
 asynchronous reaction to a fact that already happened.
 
 **StockReserved** feeds the next policy: *whenever StockReserved, then
