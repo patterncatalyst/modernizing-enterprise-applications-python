@@ -21,8 +21,8 @@ g.OUT = os.path.dirname(__file__)
 
 W, H = 1320, 760
 
-band_l = {"x": 20, "y": 60, "w": 620, "h": 660, "label": "r05 -- choreographed payment (ch.23)", "fill": "#fafafa"}
-band_r = {"x": 680, "y": 60, "w": 620, "h": 660, "label": "r06 -- orchestrated shipping (ch.24)", "fill": "#f1f5f9"}
+band_l = {"x": 20, "y": 60, "w": 620, "h": 660, "label": "choreographed payment", "fill": "#fafafa"}
+band_r = {"x": 680, "y": 60, "w": 620, "h": 660, "label": "orchestrated shipping", "fill": "#f1f5f9"}
 
 # Left: choreography -- three independent reactive boxes, no coordinator
 l1 = node(60, 120, 540, 70, ["monolith: order.placed outbox", "(no knowledge of payment-service)"], style="box")

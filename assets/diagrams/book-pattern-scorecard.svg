@@ -8,55 +8,55 @@
 <text x="32" y="530" font-size="12" font-weight="700" fill="#1d1d1d">NAMED, DEFERRED -- scoped out with a stated condition, not skipped silently</text>
 <rect x="40" y="95" width="330" height="105" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="205.0" y="138.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Strangler Fig + ASGI proxy</text>
-<text x="205.0" y="155.0" font-size="11.5" fill="#555555" text-anchor="middle">ch.14 -- the spine;</text>
-<text x="205.0" y="170.0" font-size="11.5" fill="#555555" text-anchor="middle">decommission complete r07</text>
+<text x="205.0" y="155.0" font-size="11.5" fill="#555555" text-anchor="middle">the spine;</text>
+<text x="205.0" y="170.0" font-size="11.5" fill="#555555" text-anchor="middle">decommission complete</text>
 <rect x="390" y="95" width="330" height="105" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="555.0" y="138.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Content-Based Routing + ACL</text>
-<text x="555.0" y="155.0" font-size="11.5" fill="#555555" text-anchor="middle">ch.16, ch.19 -- notification +</text>
+<text x="555.0" y="155.0" font-size="11.5" fill="#555555" text-anchor="middle">notification +</text>
 <text x="555.0" y="170.0" font-size="11.5" fill="#555555" text-anchor="middle">the inventory.proto gRPC seam</text>
 <rect x="740" y="95" width="330" height="105" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="905.0" y="138.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Shared -&gt; Owned Data + sync gRPC</text>
-<text x="905.0" y="155.0" font-size="11.5" fill="#555555" text-anchor="middle">ch.18, ch.19 -- CDC-backfilled,</text>
+<text x="905.0" y="155.0" font-size="11.5" fill="#555555" text-anchor="middle">CDC-backfilled,</text>
 <text x="905.0" y="170.0" font-size="11.5" fill="#555555" text-anchor="middle">then Alembic-migrated</text>
 <rect x="1090" y="95" width="330" height="105" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="1255.0" y="138.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Transactional Outbox + event-driven</text>
-<text x="1255.0" y="155.0" font-size="11.5" fill="#555555" text-anchor="middle">ch.17, ch.20 -- cures the sync-send</text>
+<text x="1255.0" y="155.0" font-size="11.5" fill="#555555" text-anchor="middle">cures the sync-send</text>
 <text x="1255.0" y="170.0" font-size="11.5" fill="#555555" text-anchor="middle">and dual-write smells</text>
 <rect x="40" y="210" width="330" height="105" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="205.0" y="253.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">CQRS + ACID -&gt; ACD</text>
-<text x="205.0" y="270.0" font-size="11.5" fill="#555555" text-anchor="middle">ch.21, ch.22, ch.26 -- order_view,</text>
+<text x="205.0" y="270.0" font-size="11.5" fill="#555555" text-anchor="middle">order_view,</text>
 <text x="205.0" y="285.0" font-size="11.5" fill="#555555" text-anchor="middle">the 201 -&gt; 202 PENDING flip</text>
 <rect x="390" y="210" width="330" height="105" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="555.0" y="253.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Saga: Choreographed + Orchestrated</text>
-<text x="555.0" y="270.0" font-size="11.5" fill="#555555" text-anchor="middle">ch.23, ch.24 -- payment reacts,</text>
+<text x="555.0" y="270.0" font-size="11.5" fill="#555555" text-anchor="middle">payment reacts,</text>
 <text x="555.0" y="285.0" font-size="11.5" fill="#555555" text-anchor="middle">shipping&#x27;s coordinator decides</text>
 <rect x="740" y="210" width="330" height="105" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="905.0" y="253.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Deployment (kustomize)</text>
-<text x="905.0" y="270.0" font-size="11.5" fill="#555555" text-anchor="middle">ch.29 -- base + overlays/minikube,</text>
+<text x="905.0" y="270.0" font-size="11.5" fill="#555555" text-anchor="middle">base + overlays/minikube,</text>
 <text x="905.0" y="285.0" font-size="11.5" fill="#555555" text-anchor="middle">23/23 kubeconform-strict Valid</text>
 <rect x="1090" y="210" width="330" height="105" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="1255.0" y="253.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">CI/CD + Supply Chain</text>
-<text x="1255.0" y="270.0" font-size="11.5" fill="#555555" text-anchor="middle">ch.31 -- syft/grype/policy,</text>
+<text x="1255.0" y="270.0" font-size="11.5" fill="#555555" text-anchor="middle">syft/grype/policy,</text>
 <text x="1255.0" y="285.0" font-size="11.5" fill="#555555" text-anchor="middle">fixable-findings-only gate</text>
 <rect x="40" y="375" width="260" height="105" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
 <text x="170.0" y="418.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Microservices Chassis</text>
-<text x="170.0" y="435.0" font-size="11.5" fill="#555555" text-anchor="middle">ch.27 -- convention copied per</text>
+<text x="170.0" y="435.0" font-size="11.5" fill="#555555" text-anchor="middle">convention copied per</text>
 <text x="170.0" y="450.0" font-size="11.5" fill="#555555" text-anchor="middle">service, not a shared library</text>
 <rect x="320" y="375" width="260" height="105" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
 <text x="450.0" y="418.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Contracts &amp; Schema Registry</text>
-<text x="450.0" y="435.0" font-size="11.5" fill="#555555" text-anchor="middle">ch.28 -- Apicurio, scoped to one</text>
+<text x="450.0" y="435.0" font-size="11.5" fill="#555555" text-anchor="middle">Apicurio, scoped to one</text>
 <text x="450.0" y="450.0" font-size="11.5" fill="#555555" text-anchor="middle">demo, not every event topic</text>
 <rect x="600" y="375" width="260" height="105" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
 <text x="730.0" y="418.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Service Mesh + Observability</text>
-<text x="730.0" y="435.0" font-size="11.5" fill="#555555" text-anchor="middle">ch.30 -- mesh mTLS STRICT on all</text>
+<text x="730.0" y="435.0" font-size="11.5" fill="#555555" text-anchor="middle">mesh mTLS STRICT on all</text>
 <text x="730.0" y="450.0" font-size="11.5" fill="#555555" text-anchor="middle">8; app-level OTel on 3 of 8</text>
 <rect x="880" y="375" width="260" height="105" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
 <text x="1010.0" y="418.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">CDC / Transaction Log Tailing</text>
-<text x="1010.0" y="435.0" font-size="11.5" fill="#555555" text-anchor="middle">ch.19 -- transition-only, retired</text>
+<text x="1010.0" y="435.0" font-size="11.5" fill="#555555" text-anchor="middle">transition-only, retired</text>
 <text x="1010.0" y="450.0" font-size="11.5" fill="#555555" text-anchor="middle">on schedule once owned</text>
 <rect x="1160" y="375" width="260" height="105" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
 <text x="1290.0" y="418.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Event Sourcing (light)</text>
-<text x="1290.0" y="435.0" font-size="11.5" fill="#555555" text-anchor="middle">ch.21 -- outbox-as-event-log</text>
+<text x="1290.0" y="435.0" font-size="11.5" fill="#555555" text-anchor="middle">outbox-as-event-log</text>
 <text x="1290.0" y="450.0" font-size="11.5" fill="#555555" text-anchor="middle">framing, not full replay</text>
 <rect x="40" y="545" width="213" height="95" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
 <text x="146.5" y="583.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Full event sourcing</text>
@@ -73,7 +73,7 @@
 <rect x="739" y="545" width="213" height="95" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
 <text x="845.5" y="583.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Loki log aggregation</text>
 <text x="845.5" y="600.0" font-size="11.5" fill="#555555" text-anchor="middle">LGTM ships it; only Tempo</text>
-<text x="845.5" y="615.0" font-size="11.5" fill="#555555" text-anchor="middle">is wired into ch.30</text>
+<text x="845.5" y="615.0" font-size="11.5" fill="#555555" text-anchor="middle">is wired in</text>
 <rect x="972" y="545" width="213" height="95" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
 <text x="1078.5" y="583.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Kafka saga-hop tracing</text>
 <text x="1078.5" y="600.0" font-size="11.5" fill="#555555" text-anchor="middle">mesh sees the hop; no app-</text>

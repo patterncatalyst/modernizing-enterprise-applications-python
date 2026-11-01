@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""ch.12 figure: event-storm-checkout — two readings of one call chain.
+"""ch.12 figure: event-storm-checkout: two readings of one call chain.
 
 TOP band: today's `order/services.py::_place_order_local` as it actually
-executes — one synchronous call chain, one `transaction.atomic()` (SMELL #2,
+executes: one synchronous call chain, one `transaction.atomic()` (SMELL #2,
 SMELL #1). BOTTOM band: the same business process re-read with the
-event-storming grammar — actor, command, aggregate, domain events,
+event-storming grammar: actor, command, aggregate, domain events,
 policies/reactions, an external system, and a read model. Five of the
 domain-event names below are REAL Kafka topic constants already defined in
 `config/settings.py` (`ORDER_PLACED_TOPIC`, `PAYMENT_CAPTURED_TOPIC`,
 `PAYMENT_DECLINED_TOPIC`, `SHIPMENT_DISPATCHED_TOPIC`,
-`SHIPMENT_FAILED_TOPIC` — wired for the `choreographed`/`orchestrated` modes
+`SHIPMENT_FAILED_TOPIC`: wired for the `choreographed`/`orchestrated` modes
 r05/r06 added); `StockReserved`, `OrderConfirmed`, and `NotificationSent`
-have no topic constant today — they are this chapter's own re-reading of a
+have no topic constant today: they are this chapter's own re-reading of a
 fact that, on the default synchronous path, never leaves process memory as
 an event at all.
 
@@ -101,17 +101,17 @@ bottom_edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 30, "text": "ch.12 — Event-storming the checkout flow: two readings of one call chain",
+    {"x": W / 2, "y": 30, "text": "Event-storming the checkout flow: two readings of one call chain",
      "anchor": "middle", "bold": True, "size": 18},
 
-    {"x": 40, "y": 65, "text": "TOP — today: _place_order_local, one transaction.atomic(), four contexts + an outbox write, synchronous calls",
+    {"x": 40, "y": 65, "text": "TOP: today: _place_order_local, one transaction.atomic(), four contexts + an outbox write, synchronous calls",
      "anchor": "start", "bold": True, "size": 14},
-    {"x": 40, "y": 345, "text": "BOTTOM — the same process, event-stormed: actor -> command -> aggregate -> domain events, "
+    {"x": 40, "y": 345, "text": "BOTTOM: the same process, event-stormed: actor -> command -> aggregate -> domain events, "
                                 "policies/reactions, an external system, a read model",
      "anchor": "start", "bold": True, "size": 14},
 
-    {"x": 1020, "y": 360, "text": "ch.25: timeout/retry sit here once this is a network call", "anchor": "start", "size": 10, "color": "#555555"},
-    {"x": 1020, "y": 745, "text": "ch.23: saga compensation releases the stock reservation here instead of an ACID rollback",
+    {"x": 1020, "y": 360, "text": "timeout/retry sit here once this is a network call", "anchor": "start", "size": 10, "color": "#555555"},
+    {"x": 1020, "y": 745, "text": "saga compensation releases the stock reservation here instead of an ACID rollback",
      "anchor": "start", "size": 10, "color": "#555555"},
 
     {"x": 380, "y": 505, "text": "settings.ORDER_PLACED_TOPIC", "anchor": "start", "size": 9, "color": "#3d7a4e"},

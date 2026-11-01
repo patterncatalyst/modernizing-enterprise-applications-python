@@ -42,7 +42,7 @@ band_irreversible = {
 }
 
 box1 = node(60, 220, 280, 110,
-            ["1. Intercept -- ch.14", "the proxy sees every request first", ":8888, Starlette + httpx"],
+            ["1. Intercept", "the proxy sees every request first", ":8888, Starlette + httpx"],
             style="box")
 box2 = node(380, 220, 280, 110,
             ["2. Route", "the flag decides the backend", "for /api/reviews* only"],
@@ -74,7 +74,7 @@ edges.append(connect(box3, ghost, dashed=True,
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.14 -- the strangler fig's four moves, in the order that matters",
+     "text": "the strangler fig's four moves, in the order that matters",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56,
      "text": "retiring out of order is how an \"incremental\" migration quietly becomes a big-bang rewrite",

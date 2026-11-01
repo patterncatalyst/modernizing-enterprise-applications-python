@@ -51,7 +51,7 @@ edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 30, "text": "ch.17 -- at-least-once delivery, exactly-once effect: check-then-insert plus a DB backstop",
+    {"x": W / 2, "y": 30, "text": "at-least-once delivery, exactly-once effect: check-then-insert plus a DB backstop",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": 30, "y": H - 40, "text": "Two layers, not one: the application-level check (get_by_order_id) is the common case; the partial unique index",
      "anchor": "start", "size": 11, "color": "#555555"},

@@ -16,7 +16,7 @@ zero Django import anywhere in the service.
 
 Both phases still read/write the SAME shared Postgres schema (ch.18/19 give
 review its own database later) -- that line is the same in both panels,
-on purpose: this figure is about the code path, not the data topology.
+by design: this figure is about the code path, not the data topology.
 
 Sourced from examples/02-review-service/MIGRATION.md (the per-component
 refactor table and the "why Phase A isn't shipped as code" findings) and
@@ -86,7 +86,7 @@ edges_all = a_edges + b_edges + [
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.15 -- Review extraction: Phase A (ORM lift, illustrative) vs Phase B (idiomatic, shipped)",
+     "text": "Review extraction: Phase A (ORM lift, illustrative) vs Phase B (idiomatic, shipped)",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56,
      "text": "startup/RSS were statistically indistinguishable at the proxy level; the real win is structural, not raw speed",

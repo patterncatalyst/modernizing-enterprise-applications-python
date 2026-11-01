@@ -37,7 +37,7 @@
 <path d="M1170,220 L190,360" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
 <text x="686.0" y="284.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Kafka: payment.captured / payment.declined</text>
 <text x="686.0" y="284.0" font-size="11" fill="#2f5f3d" text-anchor="middle">Kafka: payment.captured / payment.declined</text>
-<text x="680.0" y="28" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.20/ch.23 -- two outboxes chained end to end, no orchestrator anywhere in this picture</text>
+<text x="680.0" y="28" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">two outboxes chained end to end, no orchestrator anywhere in this picture</text>
 <text x="40" y="574" font-size="11" fill="#555555" text-anchor="start">Each hop (outbox -&gt; relay -&gt; topic -&gt; consumer) is independently at-least-once; the monolith is BOTH the first producer</text>
 <text x="40" y="592" font-size="11" fill="#555555" text-anchor="start">and the final consumer -- a request that started as a checkout ends as a Kafka message the same process reacts to.</text>
 </svg>

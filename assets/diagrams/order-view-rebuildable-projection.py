@@ -58,9 +58,9 @@ bot_edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 30, "text": "ch.21 -- a rebuildable read model: the projection-disabled negative is the proof the read path never falls back to the aggregate",
+    {"x": W / 2, "y": 30, "text": "a rebuildable read model: the projection-disabled negative is the proof the read path never falls back to the aggregate",
      "anchor": "middle", "bold": True, "size": 15},
-    {"x": 40, "y": H - 24, "text": "This is CQRS-lite, not event sourcing: order_view is derived from current rows, not replayed from an event log -- see ch.21's scoping section.",
+    {"x": 40, "y": H - 24, "text": "This is CQRS-lite, not event sourcing: order_view is derived from current rows, not replayed from an event log.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.27 figure: chassis-scorecard -- the used/partial/deferred
+"""chassis-scorecard figure: the used/partial/deferred
 scorecard for the cross-cutting chassis across all 8 FastAPI/Starlette
 services, as three stacked bands rather than a single mixed list, so the
 reader sees at a glance how much of the chassis is actually wired in
@@ -25,9 +25,9 @@ g.OUT = os.path.dirname(__file__)
 
 W, H = 1220, 900
 
-band_used = {"x": 20, "y": 50, "w": 1180, "h": 190, "label": "USED -- every service, proven by real code", "fill": "#f1f5f9"}
-band_partial = {"x": 20, "y": 270, "w": 1180, "h": 260, "label": "PARTIAL -- real, but not universal or not consumed", "fill": "#fafafa"}
-band_deferred = {"x": 20, "y": 560, "w": 1180, "h": 300, "label": "DEFERRED -- named, not built", "fill": "#fafafa"}
+band_used = {"x": 20, "y": 50, "w": 1180, "h": 190, "label": "USED: every service, proven by real code", "fill": "#f1f5f9"}
+band_partial = {"x": 20, "y": 270, "w": 1180, "h": 260, "label": "PARTIAL: real, but not universal or not consumed", "fill": "#fafafa"}
+band_deferred = {"x": 20, "y": 560, "w": 1180, "h": 300, "label": "DEFERRED: named, not built", "fill": "#fafafa"}
 
 n_config = node(50, 95, 350, 110,
                 ["Config: frozen dataclass + from_env()", "7 of 8 (02-review-service still reads", "os.environ.get directly in db.py)"], style="accent")
@@ -36,19 +36,19 @@ n_logging = node(430, 95, 350, 110,
                   ["Logging: stdlib logging to", "logs/<service>.log via RotatingFileHandler", "8 of 8, identical shape"], style="accent")
 
 n_container = node(810, 95, 350, 110,
-                     ["Containerfile", "8 of 8 -- every service ships one", "verified by directory listing"], style="accent")
+                     ["Containerfile", "8 of 8: every service ships one", "verified by directory listing"], style="accent")
 
 n_health = node(50, 315, 350, 120,
-                 ["Health: GET /health", "6 of 8 (absent: 01-strangler-proxy,", "02-review-service) -- liveness only,", "no downstream probed anywhere"], style="user")
+                 ["Health: GET /health", "6 of 8 (absent: 01-strangler-proxy,", "02-review-service), liveness only,", "no downstream probed anywhere"], style="user")
 
 n_errors = node(430, 315, 350, 120,
-                 ["Errors: errors.py uniform mapping", "6 of 8 (absent: 01-strangler-proxy,", "08-graphql-gateway -- proxy passes", "status through, GraphQL has its own)"], style="user")
+                 ["Errors: errors.py uniform mapping", "6 of 8 (absent: 01-strangler-proxy,", "08-graphql-gateway; proxy passes", "status through, GraphQL has its own)"], style="user")
 
 n_resilience = node(810, 315, 350, 120,
-                      ["Resilience: tenacity retry", "1 of 8 -- 06-shipping-service's", "enrich_client.py ONLY; the system's", "one outbound HTTP call site"], style="user")
+                      ["Resilience: tenacity retry", "1 of 8: 06-shipping-service's", "enrich_client.py ONLY; the system's", "one outbound HTTP call site"], style="user")
 
 n_otel = node(50, 605, 350, 130,
-               ["Metrics / OTel", "no opentelemetry or prometheus import", "anywhere under examples/*/app/", "ch.30 adds OTel to 3 services"], style="ghost")
+               ["Metrics / OTel", "no opentelemetry or prometheus import", "anywhere under examples/*/app/", "OTel added to 3 services"], style="ghost")
 
 n_fault = node(430, 605, 350, 130,
                 ["pybreaker / bulkhead", "no circuit breaker, no concurrency cap", "named in build-plan prose, zero", "lines of code anywhere"], style="ghost")
@@ -62,11 +62,11 @@ nodes = [n_config, n_logging, n_container, n_health, n_errors, n_resilience,
 edges = []
 
 notes = [
-    {"x": W / 2, "y": 30, "text": "ch.27 -- the chassis scorecard across all 8 services: used, partial, and deferred, each row cites its file",
+    {"x": W / 2, "y": 30, "text": "The chassis scorecard across all 8 services: used, partial, and deferred, each row cites its file",
      "anchor": "middle", "bold": True, "size": 14},
-    {"x": 40, "y": H - 40, "text": "Partial is a real count (6 of 8, 1 of 8), not a euphemism -- every absence above has a named reason in the chapter text.",
+    {"x": 40, "y": H - 40, "text": "Partial is a real tally (6 of 8, 1 of 8); each gap above has a named reason.",
      "anchor": "start", "size": 11, "color": "#555555"},
-    {"x": 40, "y": H - 22, "text": "Deferred means zero footprint today, re-checkable by grep -- not a capability quietly half-wired and left unexamined.",
+    {"x": 40, "y": H - 22, "text": "Deferred means zero footprint today, re-checkable by grep; not a capability quietly half-wired and left unexamined.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

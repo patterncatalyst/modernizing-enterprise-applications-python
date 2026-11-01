@@ -62,7 +62,7 @@
 <path d="M1012.2222222222222,350.0 L735.1851851851852,570.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <text x="879.7037037037037" y="454.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">shared DB</text>
 <text x="879.7037037037037" y="454.0" font-size="11" fill="#555" text-anchor="middle">shared DB</text>
-<text x="680.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.15 -- Review extraction: Phase A (ORM lift, illustrative) vs Phase B (idiomatic, shipped)</text>
+<text x="680.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">Review extraction: Phase A (ORM lift, illustrative) vs Phase B (idiomatic, shipped)</text>
 <text x="680.0" y="56" font-size="11.5" fill="#555555" text-anchor="middle">startup/RSS were statistically indistinguishable at the proxy level; the real win is structural, not raw speed</text>
 <text x="60" y="604" font-size="10" fill="#777777" text-anchor="start">Phase A measured via a faithful proxy (real django.setup() + import fastapi,uvicorn) -- never run as a server.</text>
 </svg>

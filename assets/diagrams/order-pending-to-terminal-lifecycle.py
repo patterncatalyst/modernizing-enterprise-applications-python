@@ -21,7 +21,7 @@ g.OUT = os.path.dirname(__file__)
 W, H = 1260, 640
 
 n_pending = node(500, 40, 260, 110,
-                 ["PENDING", "(checkout returned 202;", "the window ch.22 names)"], style="accent")
+                 ["PENDING", "(checkout returned 202;", "the consistency window)"], style="accent")
 n_confirmed = node(80, 280, 280, 120,
                     ["CONFIRMED", "payment.captured +", "shipping dispatch OK"], style="accent")
 n_shipfail = node(490, 280, 280, 120,
@@ -44,7 +44,7 @@ edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 20, "text": "ch.22 -- PENDING has exactly three terminal exits, each idempotent against redelivery",
+    {"x": W / 2, "y": 20, "text": "PENDING has exactly three terminal exits, each idempotent against redelivery",
      "anchor": "middle", "bold": True, "size": 16},
     {"x": 40, "y": H - 40, "text": "\"stuck PENDING\" is not a fourth terminal state -- it's the real failure mode of a dead consumer, caught by a",
      "anchor": "start", "size": 11, "color": "#555555"},

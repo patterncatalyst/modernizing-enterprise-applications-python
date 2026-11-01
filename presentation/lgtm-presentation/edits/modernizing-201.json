@@ -1,0 +1,297 @@
+{
+ "ops": [
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "Ten sections, same order the book builds in:",
+   "repl": "Ten sections, same order the system is built in:",
+   "expect": 1,
+   "sldIds": [257],
+   "cat": "standalone"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "this whole book was built with",
+   "repl": "this whole modernization was built with",
+   "expect": 1,
+   "sldIds": [261],
+   "cat": "standalone"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "across all ten build iterations behind this book.",
+   "repl": "across all ten build iterations behind this modernization.",
+   "expect": 1,
+   "sldIds": [262],
+   "cat": "standalone"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "This is the one place in the deck that explicitly contrasts with the Java sibling book: there's no live dev-mode reload loop as tight as Quarkus's for this stack, and no MCP server that already knows FastAPI/aiokafka the way quarkus-agent knows Quarkus. That gap is named directly rather than worked around quietly.",
+   "repl": "This is the one place in the deck that explicitly contrasts with the Java sibling implementation. This Python/FastAPI stack has no dev-mode reload loop as tight as Quarkus's, and no MCP server that knows FastAPI/aiokafka the way quarkus-agent knows Quarkus. That gap is named directly rather than worked around quietly.",
+   "expect": 1,
+   "sldIds": [262],
+   "cat": "standalone"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "the coupling chapters 18-19 unwind, context by context.",
+   "repl": "the coupling this system unwinds, context by context.",
+   "expect": 1,
+   "sldIds": [266],
+   "cat": "standalone"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "the coupling this book unwinds one seam at a time",
+   "repl": "the coupling this system unwinds one seam at a time",
+   "expect": 1,
+   "sldIds": [266],
+   "cat": "standalone"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "map 1:1 onto the six services this book eventually extracts",
+   "repl": "map 1:1 onto the six services the system eventually extracts",
+   "expect": 1,
+   "sldIds": [266],
+   "cat": "standalone"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "every extraction in this book.",
+   "repl": "every extraction here.",
+   "expect": 1,
+   "sldIds": [268],
+   "cat": "standalone"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "the bounded contexts this book extracts in rising order of difficulty",
+   "repl": "the bounded contexts the system extracts in rising order of difficulty",
+   "expect": 1,
+   "sldIds": [269],
+   "cat": "standalone"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "Contrast two ACL instances this book built: the content-based router is a one-dimensional routing decision (pick a backend by path); inventory.proto is the harder case, a wire contract kept distinct from both the monolith's and the service's own domain vocabulary, with a drift guard that fails the build the moment the checked-in .proto and the generated stubs disagree.",
+   "repl": "Contrast two ACL instances built here: the content-based router is a one-dimensional routing decision (pick a backend by path). inventory.proto is the harder case: a wire contract kept distinct from both the monolith's and the service's own domain vocabulary, with a drift guard that fails the build the moment the checked-in .proto and the generated stubs disagree.",
+   "expect": 1,
+   "sldIds": [274],
+   "cat": "standalone+terse"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "This is the single highest-leverage pattern in the whole book, used and reused: it cures the dual-write hazard in the monolith's own checkout, then gets a second, more mature instance in payment-service's own outbox. A declined or failed checkout leaves zero outbox rows, proven by test, not asserted.",
+   "repl": "This pattern is used and reused across the whole system: it cures the dual-write hazard in the monolith's own checkout, then gets a second, more mature instance in payment-service's own outbox. A declined or failed checkout leaves zero outbox rows, confirmed by test.",
+   "expect": 1,
+   "sldIds": [278],
+   "cat": "standalone+voice"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "This is the pattern this book can show at every stage of its own lifecycle",
+   "repl": "This is the pattern this system shows at every stage of its own lifecycle",
+   "expect": 1,
+   "sldIds": [280],
+   "cat": "standalone"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "Figure 32.2: The book-wide pattern scorecard, matching build-plan.md section C: eight patterns earned outright, five adapted into a narrower shape, six named and deferred with the condition that would change the answer.",
+   "repl": "Figure 32.2: The system-wide pattern scorecard: eight patterns earned outright, five adapted into a narrower shape, six named and deferred with the condition that would change the answer.",
+   "expect": 1,
+   "sldIds": [303],
+   "cat": "standalone+voice"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "every OpenShift-specific concern is confined to openshift/ and this one appendix chapter.",
+   "repl": "every OpenShift-specific concern is confined to openshift/ and this one appendix.",
+   "expect": 1,
+   "sldIds": [306],
+   "cat": "standalone"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "useful as a quick compatibility check before someone tries to reproduce a chapter locally.",
+   "repl": "useful as a quick compatibility check before someone tries to reproduce an example locally.",
+   "expect": 1,
+   "sldIds": [335],
+   "cat": "standalone"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "every diagram in a figure from the published chapters; nothing here is illustrative-only.",
+   "repl": "every diagram a figure from the reference system; nothing here is illustrative-only.",
+   "expect": 1,
+   "sldIds": [337],
+   "cat": "standalone"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "The pattern-coverage matrix in build-plan.md section C is the single source of truth this deck's scorecard slides draw from; check any claim in this deck against it.",
+   "repl": "The pattern-coverage matrix behind this deck's scorecard slides is the single source of truth; check any claim in this deck against it.",
+   "expect": 1,
+   "sldIds": [337],
+   "cat": "voice"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "REVIEW, PHASE A VS. PHASE B",
+   "repl": "REVIEW, SHIM VS. NATIVE",
+   "expect": 1,
+   "sldIds": [329],
+   "cat": "voice"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "The review service's two extraction phases",
+   "repl": "The review service's two extraction designs",
+   "expect": 1,
+   "sldIds": [329],
+   "cat": "voice"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "Figure 15.1: Phase A (a thin FastAPI shim over the Django ORM, documented but never shipped) versus Phase B (native async SQLAlchemy, no monolith import at all), the same read contract either way.",
+   "repl": "Figure 15.1: The shim design (a thin FastAPI shim over the Django ORM, documented but never shipped) versus the native design (native async SQLAlchemy, no monolith import at all), the same read contract either way.",
+   "expect": 1,
+   "sldIds": [329],
+   "cat": "voice"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "Phase A was never committed as running code once two concrete problems surfaced while sketching it: bridging Django's synchronous ORM into FastAPI's async loop, and a backwards build-time dependency on the entire monolith just to reach one model. The real payoff is structural, not a startup-time number: Phase A/B import timing came back statistically indistinguishable.",
+   "repl": "The shim design was never committed as running code once two concrete problems surfaced while sketching it: bridging Django's synchronous ORM into FastAPI's async loop, and a backwards build-time dependency on the entire monolith just to reach one model. The real payoff is structural, not a startup-time number: shim vs. native import timing came back statistically indistinguishable.",
+   "expect": 1,
+   "sldIds": [329],
+   "cat": "voice"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "This deck walks the full pattern set that gets there: the strangler fig, owned data, both saga shapes, contracts, and the operating model that keeps the result running as one system.",
+   "repl": "The full pattern set gets there: the strangler fig, owned data, both saga shapes, contracts, and the operating model that keeps the result running as one system.",
+   "expect": 1,
+   "sldIds": [259],
+   "cat": "voice"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "not glossed over with a uniform probe that would silently lie about two services' real readiness.",
+   "repl": "not glossed over with a uniform probe that would lie about two services' real readiness.",
+   "expect": 1,
+   "sldIds": [296],
+   "cat": "voice"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "trace the three terminal outcomes (captured, declined, and the downstream shipping-failed refund hop) and notice that no single component ever holds the whole sequence in view.",
+   "repl": "trace the three terminal outcomes (captured, declined, and the downstream shipping-failed refund hop); no single component ever holds the whole sequence in view.",
+   "expect": 1,
+   "sldIds": [321],
+   "cat": "voice"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "Both outcomes were observed against a real, pinned Apicurio 3.3.3 instance, not inferred from documentation: the actual HTTP status (400 RuleViolationException) is what's recorded, including a note that an earlier version of Apicurio returned 409 for the same kind of rejection.",
+   "repl": "Both outcomes were observed against a real, pinned Apicurio 3.3.3 instance: the HTTP status recorded is 400 (RuleViolationException); an earlier version of Apicurio returned 409 for the same rejection.",
+   "expect": 1,
+   "sldIds": [314],
+   "cat": "voice+terse"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "That fourth run is the one worth narrating: with the extracted service killed outright, the suite goes RED (6/6 assertions failed) rather than quietly passing, proof the equivalence gate actually gates, not just a green checkmark that never turns red.",
+   "repl": "That fourth run is the one worth narrating: with the extracted service killed outright, the suite goes RED (6/6 assertions failed) rather than quietly passing, proof the equivalence gate enforces rather than rubber-stamps.",
+   "expect": 1,
+   "sldIds": [330],
+   "cat": "voice+terse"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "which combinations were actually exercised",
+   "repl": "which combinations were exercised",
+   "expect": 1,
+   "sldIds": [332],
+   "cat": "voice"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "Walk the seven phases against a concrete example if there's time: the chassis extraction's own plan assumed pydantic-settings as the configuration mechanism; the Verify/Reconcile phase caught that no service ever adopted it (every service uses a frozen @dataclass with from_env()) by grepping all eight config.py files directly, not by re-trusting the plan.",
+   "repl": "Walk the seven phases against a concrete example if there's time: the chassis extraction's own plan assumed pydantic-settings as the configuration mechanism. The Verify/Reconcile phase caught that no service ever adopted it (every service uses a frozen @dataclass with from_env()) by grepping all eight config.py files directly, not by re-trusting the plan.",
+   "expect": 1,
+   "sldIds": [263],
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "it proves the whole checkout's transaction.atomic() rolls back, including the inventory reservation, leaving stock net-zero: the exact behavior the ACID→ACD shift has to replace with an explicit compensation.",
+   "repl": "it proves the whole checkout's transaction.atomic() rolls back, including the inventory reservation, leaving stock net-zero. That is the exact behavior the ACID→ACD shift has to replace with an explicit compensation.",
+   "expect": 1,
+   "sldIds": [264],
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "This slide is the map the deck keeps returning to: the anti-corruption layer cures smell #5 (no ACL) and #6 (review tangled in auth), owned data and the outbox cure #1 and #4 (shared schema, synchronous send), and the saga cures #2 and #3 (god service, one ACID transaction).",
+   "repl": "The map the deck keeps returning to: the anti-corruption layer cures smell #5 (no ACL) and #6 (review tangled in auth); owned data and the outbox cure #1 and #4 (shared schema, synchronous send); the saga cures #2 and #3 (god service, one ACID transaction).",
+   "expect": 1,
+   "sldIds": [267],
+   "cat": "terse"
+  },
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "The real result landed harder than planned: both order-service and the frozen monolith scanned 35 High-severity findings in the shared UBI base layer, every one fix-state not-fixed, confirmed with skopeo that no newer patched tag exists to re-pin onto.",
+   "repl": "The real result landed harder than planned. Both order-service and the frozen monolith scanned 35 High-severity findings in the shared UBI base layer, every one fix-state not-fixed, confirmed with skopeo that no newer patched tag exists to re-pin onto.",
+   "expect": 1,
+   "sldIds": [299],
+   "cat": "terse"
+  },
+  {
+   "op": "replace_picture",
+   "sldId": 312,
+   "shape_id": 6,
+   "png": "presentation/modernizing-201/png/chassis-scorecard.png",
+   "cat": "diagram"
+  },
+  {
+   "op": "replace_picture",
+   "sldId": 298,
+   "shape_id": 6,
+   "png": "presentation/modernizing-201/png/mesh-hero-trace-waterfall.png",
+   "cat": "diagram"
+  }
+ ]
+}

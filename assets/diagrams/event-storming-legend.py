@@ -53,7 +53,7 @@ ROW_Y0, ROW_H, GUTTER = 118, 96, 14
 bands = []
 nodes = []
 notes = [
-    {"x": W / 2, "y": 34, "text": "ch.12 -- Event-storming note-type legend: the wall's color grammar",
+    {"x": W / 2, "y": 34, "text": "Event-storming note-type legend: the wall's color grammar",
      "anchor": "middle", "bold": True, "size": 18},
     {"x": W / 2, "y": 60,
      "text": "in the order a session adds them -- each sticky color named the way the grammar is usually taught, "

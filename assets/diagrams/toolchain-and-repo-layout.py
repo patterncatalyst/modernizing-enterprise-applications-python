@@ -48,8 +48,8 @@ band_tool = {"x": 20, "y": 60, "w": 720, "h": 250,
 
 uv_node = node(40, 110, 330, 85, ["uv", "installs Python 3.14, venv, lockfile", "required"], style="accent")
 ruff_pytest = node(390, 110, 330, 85, ["ruff + pytest", "uv sync --group dev", "required, every service"], style="accent")
-grpc_tools = node(40, 205, 330, 85, ["grpcio-tools", "scripts/gen-proto.sh", "scoped to Part 3 (ch.19) onward"], style="ghost")
-proto_drift = node(390, 205, 330, 85, ["check-proto-drift.sh", "buf-style breaking-change check", "scoped to Part 3 (ch.19) onward"], style="ghost")
+grpc_tools = node(40, 205, 330, 85, ["grpcio-tools", "scripts/gen-proto.sh", "scoped to Part 3 onward"], style="ghost")
+proto_drift = node(390, 205, 330, 85, ["check-proto-drift.sh", "buf-style breaking-change check", "scoped to Part 3 onward"], style="ghost")
 
 tool_nodes = [uv_node, ruff_pytest, grpc_tools, proto_drift]
 
@@ -103,7 +103,7 @@ bands = [band_tool, band_podman, band_repo]
 nodes = tool_nodes + podman_nodes + repo_nodes
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.01 -- Toolchain and repo layout: what you install, and where it lands",
+    {"x": W / 2, "y": 32, "text": "Toolchain and repo layout: what you install, and where it lands",
      "anchor": "middle", "bold": True, "size": 16},
     {"x": W / 2, "y": 52,
      "text": "uv-managed Python tooling and the docker compose stack both build and back the examples/ tree checked into this repository",
@@ -113,11 +113,11 @@ notes = [
      "text": "Required for every chapter: uv (manages Python 3.14, the venv, and the lockfile) plus ruff and pytest via uv sync --group dev.",
      "anchor": "start", "size": 10.5, "color": "#555555"},
     {"x": 20, "y": 648,
-     "text": "grpcio-tools / proto-drift checking and Debezium Connect / Apicurio are real, but scoped to later parts (ch.19 gRPC seam, ch.28 schema registry).",
+     "text": "grpcio-tools / proto-drift checking and Debezium Connect / Apicurio are real, but scoped to later parts (the gRPC seam and schema registry).",
      "anchor": "start", "size": 10.5, "color": "#555555"},
 
     {"x": 20, "y": 684,
-     "text": "Sourced from _plans/build-plan.md (\"A. Approach\"), _plans/decisions.md (r01 version matrix), compose.yaml.",
+     "text": "Sourced from _plans/build-plan.md (\"A. Approach\"), _plans/decisions.md (version matrix), compose.yaml.",
      "anchor": "start", "size": 10, "color": "#777777"},
 ]
 

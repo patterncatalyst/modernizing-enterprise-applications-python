@@ -112,12 +112,12 @@ divider_notes = [
     {"x": 800, "y": 370, "text": "strangler fig,", "anchor": "middle", "bold": True, "size": 12.5, "color": "#2f5f3d"},
     {"x": 800, "y": 386, "text": "one seam at", "anchor": "middle", "bold": True, "size": 12.5, "color": "#2f5f3d"},
     {"x": 800, "y": 402, "text": "a time", "anchor": "middle", "bold": True, "size": 12.5, "color": "#2f5f3d"},
-    {"x": 800, "y": 428, "text": "ch.14-26", "anchor": "middle", "size": 10, "color": "#555555"},
+    {"x": 800, "y": 428, "text": "extraction", "anchor": "middle", "size": 10, "color": "#555555"},
 ]
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.00 -- the outcome: one deployable, one shared schema -> six owned-data services behind an edge router",
+     "text": "the outcome: one deployable, one shared schema -> six owned-data services behind an edge router",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": 395, "y": 58, "text": "Before", "anchor": "middle", "bold": True, "size": 14, "color": "#555555"},
     {"x": 1185, "y": 58, "text": "After", "anchor": "middle", "bold": True, "size": 14, "color": "#2f5f3d"},

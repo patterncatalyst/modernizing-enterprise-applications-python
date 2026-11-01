@@ -1,0 +1,13 @@
+{
+ "ops": [
+  {
+   "op": "replace",
+   "scope": "both",
+   "find": "Figure 26.1: Three protocols, three different problems, used side by side in one system: REST for every service's own surface, gRPC for the one hot synchronous path, GraphQL for bounded aggregation at a gateway with no data of its own.",
+   "repl": "Figure 26.1: Three protocols, one system: REST for every service's own surface, gRPC for the one hot synchronous path, GraphQL for bounded aggregation at a gateway with no data of its own.",
+   "expect": 1,
+   "sldIds": [290],
+   "cat": "voice"
+  }
+ ]
+}

@@ -1,0 +1,15 @@
+{
+ "ops": [
+  {
+   "op": "replace",
+   "scope": "notes",
+   "find": "This slide walks the full pattern catalog this modernization could have drawn from and checks, pattern by pattern, what it used.",
+   "repl": "Here is the full pattern catalog this modernization could have drawn from, checked pattern by pattern against what it used.",
+   "expect": 1,
+   "sldIds": [
+    275
+   ],
+   "cat": "voice"
+  }
+ ]
+}

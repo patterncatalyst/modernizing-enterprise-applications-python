@@ -29,12 +29,12 @@ g.OUT = os.path.dirname(__file__)
 W, H = 1500, 620
 
 RUNGS = [
-    ("1. Review -- ch.15", "REST leaf, shared schema", "box", 440),
-    ("2. Notification -- ch.17", "async transactional outbox", "box", 360),
-    ("3. Inventory -- ch.19", "CDC (Debezium) + gRPC seam", "box", 280),
-    ("4. Payment -- ch.23", "choreographed saga", "box", 200),
-    ("5. Shipping -- ch.24", "orchestrated saga, crash-resume", "box", 150),
-    ("6. Order + Gateway -- ch.26", "CQRS + Strawberry GraphQL", "accent", 80),
+    ("1. Review", "REST leaf, shared schema", "box", 440),
+    ("2. Notification", "async transactional outbox", "box", 360),
+    ("3. Inventory", "CDC (Debezium) + gRPC seam", "box", 280),
+    ("4. Payment", "choreographed saga", "box", 200),
+    ("5. Shipping", "orchestrated saga, crash-resume", "box", 150),
+    ("6. Order + Gateway", "CQRS + Strawberry GraphQL", "accent", 80),
 ]
 
 COL_W, GUTTER = 210, 24
@@ -55,7 +55,7 @@ axis_edge = [{"x1": 40, "y1": axis_y, "x2": 1460, "y2": axis_y, "amber": True,
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.00 -- the extraction sequence: rising difficulty, not rising domain importance",
+     "text": "the extraction sequence: rising difficulty, not rising domain importance",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56,
      "text": "the mechanism (proxy, anti-corruption layer, equivalence gate) is proven on the cheapest seam first",
@@ -67,7 +67,7 @@ notes = [
      "text": "highest coupling (the god order flow)", "anchor": "middle", "size": 10, "color": "#555555"},
 
     {"x": 40, "y": H - 16,
-     "text": "Sourced from _plans/build-plan.md (section J, the r02-r07 iteration rows) and _docs/00-introduction.md.",
+     "text": "Sourced from _plans/build-plan.md (section J) and _docs/00-introduction.md.",
      "anchor": "start", "size": 10.5, "color": "#555555"},
 ]
 

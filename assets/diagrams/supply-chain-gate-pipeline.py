@@ -37,10 +37,10 @@ g.OUT = os.path.dirname(__file__)
 W, H = 1400, 920
 
 band_pipeline = {"x": 20, "y": 50, "w": 1360, "h": 340,
-                  "label": "examples/10-supply-chain/demo.sh == supply-chain.yml: build -> syft SBOM -> grype scan -> fixable-only policy gate (DRQ-088/090/092)",
+                  "label": "examples/10-supply-chain/demo.sh == supply-chain.yml: build -> syft SBOM -> grype scan -> fixable-only policy gate",
                   "fill": "#f1f5f9"}
 band_gates = {"x": 20, "y": 420, "w": 1360, "h": 460,
-              "label": "Four separate, additive required checks -- same changes / gate / *-ok summary-job shape, no paths: filter (DRQ-091/092)",
+              "label": "Four separate, additive required checks -- same changes / gate / *-ok summary-job shape, no paths: filter",
               "fill": "#fafafa"}
 
 # ---- Band 1, row A: order-service, the "after", gate: required ------------
@@ -109,7 +109,7 @@ gate_edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 30, "text": "ch.31 -- the supply-chain gate pipeline (top) and the four additive, separately-gated CI checks it joins (bottom)",
+    {"x": W / 2, "y": 30, "text": "the supply-chain gate pipeline (top) and the four additive, separately-gated CI checks it joins (bottom)",
      "anchor": "middle", "bold": True, "size": 16},
     {"x": 40, "y": H - 46, "text": "Both images inherit the SAME 35 High CVEs from the shared ubi10/python-314-minimal base layer -- none from either service's own Python dependencies.",
      "anchor": "start", "size": 11, "color": "#555555"},

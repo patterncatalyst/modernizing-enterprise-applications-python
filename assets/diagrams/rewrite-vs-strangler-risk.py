@@ -69,7 +69,7 @@ left_edges = [
 STEP_W, STEP_GUTTER = 150, 18
 STEP_X0, STEP_Y = 800, 150
 steps_meta = [
-    ("Step 1", "review (ch.15) --", "ships behind a flag"),
+    ("Step 1", "review --", "ships behind a flag"),
     ("Step 2", "notification,", "same pattern"),
     ("Step 3", "inventory,", "same pattern"),
     ("Step 4", "payment, shipping,", "order, gateway"),
@@ -101,7 +101,7 @@ right_edges.append(connect(reversible, payoff_r))
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.03 -- same migration, two risk shapes: one irreversible bet versus many reversible steps",
+     "text": "same migration, two risk shapes: one irreversible bet versus many reversible steps",
      "anchor": "middle", "bold": True, "size": 16},
 
     {"x": STEP_X0 + (STEP_W * 4 + STEP_GUTTER * 3) / 2, "y": STEP_Y - 16,

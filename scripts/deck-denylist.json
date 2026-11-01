@@ -1,0 +1,236 @@
+[
+ {
+  "id": "old-engine",
+  "regex": "p[o]dman",
+  "flags": "i",
+  "why": "Docker Engine / docker compose is the runtime (S1)"
+ },
+ {
+  "id": "poetry",
+  "regex": "\\bPoetry\\b|\\bpoetry (install|add|lock|run)\\b",
+  "why": "Python examples use pip with a full == requirements.txt freeze (S5)"
+ },
+ {
+  "id": "fastapi-on-event",
+  "regex": "@app\\.on_event\\b|\\.on_event\\(",
+  "why": "FastAPI on_event replaced by lifespan (S5)"
+ },
+ {
+  "id": "faust",
+  "regex": "\\bfaust\\b(?![-.])",
+  "flags": "i",
+  "exempt": "faust-streaming",
+  "why": "stream processing is faust-streaming 0.15.3 (S5); its Python module is `faust` (faust.App), which stays"
+ },
+ {
+  "id": "modern-cpp-kafka",
+  "regex": "modern-cpp-kafka|kafka::clients",
+  "flags": "i",
+  "exempt": "archived",
+  "why": "C++ Kafka is librdkafka's C++ API rdkafka++ (S7)"
+ },
+ {
+  "id": "masstransit",
+  "regex": "MassTransit",
+  "flags": "i",
+  "exempt": "dropped|commercial licen[cs]e",
+  "why": ".NET Kafka is Confluent.Kafka; MassTransit dropped (S4)"
+ },
+ {
+  "id": "kafka-ui",
+  "regex": "kafka-ui",
+  "flags": "i",
+  "why": "kafka-ui removed; kcat or kafka-console-consumer.sh (S8)"
+ },
+ {
+  "id": "kubeval",
+  "regex": "\\bkubeval\\b",
+  "flags": "i",
+  "exempt": "kubeconform",
+  "why": "kubeval is unmaintained; kubeconform v0.8.0"
+ },
+ {
+  "id": "libpqxx",
+  "regex": "\\b(lib)?pqxx\\b",
+  "exempt": "\\bnot (lib)?pqxx\\b",
+  "why": "C++ uses libpq directly (S7)"
+ },
+ {
+  "id": "cxx-old-standard",
+  "regex": "[Cc]\\+\\+ ?(17|20)\\b|c\\+\\+2a|-std=c\\+\\+(17|20)|CMAKE_CXX_STANDARD (17|20)\\b",
+  "exempt": "\\b(since|in|from) [Cc]\\+\\+ ?(17|20)\\b",
+  "why": "C++23 (S7); history ('since C++20') stays"
+ },
+ {
+  "id": "gcc-old",
+  "regex": "\\bGCC 1[0-4]\\b|gcc-toolset-1[0-4]\\b",
+  "why": "GCC 15 via gcc-toolset-15 (S7)"
+ },
+ {
+  "id": "cmake-old",
+  "regex": "\\bCMake 3\\.\\d+",
+  "exempt": "UBI ships",
+  "why": "CMake 4.4.4 (S7)"
+ },
+ {
+  "id": "quarkus-old",
+  "regex": "\\bQuarkus 3\\.(?!40\\b)\\d+",
+  "why": "Quarkus 3.40.1 LTS (S2)"
+ },
+ {
+  "id": "spring-boot-old",
+  "regex": "\\bSpring Boot (3\\.\\d+|3\\.x|4\\.0)\\b",
+  "exempt": "migrat|upgrad|from Spring Boot 3",
+  "why": "Spring Boot 4.1.1 (S3)"
+ },
+ {
+  "id": "go-old",
+  "regex": "\\bGo 1\\.(1\\d|2[0-6])\\b|golang:1\\.(1\\d|2[0-6])\\b",
+  "exempt": "go-toolset|Go 1\\.22\\b|since Go 1\\.\\d+",
+  "why": "Go 1.27.2 (S6); Go 1.22 (method-aware ServeMux patterns) is the version a feature arrived in and stays"
+ },
+ {
+  "id": "python-old",
+  "regex": "\\bPython 3\\.([0-9]|1[0-3])\\b|python:3\\.([0-9]|1[0-3])\\b|python-3(9|1[0-3])\\b",
+  "why": "Python 3.14 (S5)"
+ },
+ {
+  "id": "dotnet-old-tfm",
+  "regex": "\\bnet[5-9]\\.0\\b|dotnet-[5-9]0\\b|dotnet/(sdk|aspnet):[5-9]\\.",
+  "why": ".NET 10 (net10.0, ubi9/dotnet-100) (S4)"
+ },
+ {
+  "id": "ubi8",
+  "regex": "\\bubi8\\b",
+  "flags": "i",
+  "why": "UBI 10 (UBI 9 only for .NET)"
+ },
+ {
+  "id": "confluent-kafka-version",
+  "regex": "Confluent\\.Kafka[\\\" ]*(Version=\\\")?[ @]?2\\.(?!16\\.0)\\d+\\.\\d+",
+  "why": "Confluent.Kafka 2.16.0 (S4)"
+ },
+ {
+  "id": "streamiz-version",
+  "regex": "Streamiz(\\.Kafka\\.Net)?[\\\" ]*(Version=\\\")?[ @]?1\\.(?!8\\.2)\\d+\\.\\d+",
+  "why": "Streamiz.Kafka.Net 1.8.2 (S4)"
+ },
+ {
+  "id": "jackson2",
+  "regex": "com\\.fasterxml\\.jackson\\.(databind|core)\\b|\\bJackson 2\\b",
+  "why": "Jackson 3 (tools.jackson) with Spring Boot 4 (S3)"
+ },
+ {
+  "id": "spring-kafka-json-serde",
+  "regex": "support\\.serializer\\.Json(Serializer|Deserializer)\\b",
+  "why": "Spring Kafka 4 uses the Jackson 3 JacksonJson serializers (S3)"
+ },
+ {
+  "id": "topic-order-placed",
+  "regex": "\\border-placed\\b",
+  "exempt": "artifact|@(Channel|Incoming|Outgoing)\\(|mp\\.messaging\\.|channel|\\.avsc",
+  "why": "the Kafka topic is order.placed; the Quarkus channel name order-placed (bound to topic order.placed, as in every Quarkus example) and the Apicurio artifact id order-placed (Example 09) stay"
+ },
+ {
+  "id": "graphql-go",
+  "regex": "\\bgraphql-go\\b|github\\.com/graphql-go/",
+  "why": "Go GraphQL is gqlgen (S6)"
+ },
+ {
+  "id": "go-deck-python-leftovers",
+  "regex": "pyproject|requirements\\.txt|\\bpip install\\b|uvicorn|FastAPI",
+  "files": [
+   "Designing-Cloud-Native-APIs-Go"
+  ],
+  "why": "the Go deck was retargeted from the Python deck; no Python tooling belongs in it"
+ },
+ {
+  "id": "ocp-docs-old",
+  "regex": "openshift_container_platform/4\\.(1\\d|2[01])/",
+  "why": "OpenShift 4.22 (CRC 2.64.0 / OCP 4.22.14)"
+ },
+ {
+  "id": "kafka-image",
+  "regex": "apache/kafka:(?!4\\.3\\.1\\b)\\d+\\.\\d+",
+  "why": "apache/kafka:4.3.1 (S8)"
+ },
+ {
+  "id": "postgres-image",
+  "regex": "\\bpostgres:(?!18\\.6-alpine\\b)\\d+\\.\\d+",
+  "why": "postgres:18.6-alpine (S8)"
+ },
+ {
+  "id": "redis-image",
+  "regex": "\\bredis:(?!8\\.10\\.2-alpine\\b)\\d+\\.\\d+",
+  "why": "redis:8.10.2-alpine (S8)"
+ },
+ {
+  "id": "otel-lgtm-image",
+  "regex": "otel-lgtm:(?!0\\.36\\.0\\b)\\d",
+  "why": "grafana/otel-lgtm:0.36.0 (S8)"
+ },
+ {
+  "id": "envoy-image",
+  "regex": "envoyproxy/envoy:v(?!1\\.39\\.3\\b)\\d",
+  "why": "envoyproxy/envoy:v1.39.3 (S8)"
+ },
+ {
+  "id": "apicurio-image",
+  "regex": "apicurio-registry:(?!3\\.3\\.3\\b)\\d",
+  "why": "apicurio-registry:3.3.3 (S8)"
+ },
+ {
+  "id": "flagd-image",
+  "regex": "flagd:v(?!0\\.17\\.0\\b)\\d",
+  "why": "ghcr.io/open-feature/flagd:v0.17.0 (S8)"
+ },
+ {
+  "id": "debezium-image",
+  "regex": "debezium/connect:(?!3\\.7\\.0\\.Final\\b)\\d",
+  "why": "quay.io/debezium/connect:3.7.0.Final (S8)"
+ },
+ {
+  "id": "five-implementations",
+  "regex": "\\b(five|5) (implementations|backends)\\b",
+  "flags": "i",
+  "why": "six language implementations (Go added)"
+ },
+ {
+  "id": "latest-tag",
+  "regex": "[a-z0-9]:latest\\b",
+  "exempt": "never|no |not |nothing uses|sketchy|\\bblock\\b",
+  "why": "every image is pinned; :latest appears only as the thing not to do"
+ },
+ {
+  "id": "cloud-sdk",
+  "regex": "aws-sdk|\\bboto3\\b|AWSSDK|IAmazonS3|software\\.amazon|@aws-sdk|AWS SDK|azure-sdk|Azure\\.Storage|google-cloud-|cloud\\.google\\.com/go",
+  "flags": "i",
+  "why": "decision 7: no vendor cloud SDKs; valet key and claim check follow examples/12-security (a ticket the service signs itself)"
+ },
+ {
+  "id": "vendor-cloud",
+  "regex": "\\bAWS\\b|\\bAmazon\\b|\\bS3\\b|\\bSTS\\b|Azure|\\bGCS\\b|Google Cloud|Google IAP|\\bEKS\\b|\\bGKE\\b|\\bAKS\\b|CloudTrail|AWS Lambda|Cloudflare Access|Apigee|Confluent Cloud",
+  "why": "decision 7: no AWS, Azure, Google Cloud or other managed-service framing in examples or recommendations (object storage is described generically)"
+ },
+ {
+  "id": "minio",
+  "regex": "minio-go|\\bminio\\b",
+  "flags": "i",
+  "why": "decision 7: minio-go removed (Go valet key is a golang-jwt ticket)"
+ },
+ {
+  "id": "acs",
+  "regex": "\\bACS\\b|[Aa]dvanced [Cc]luster [Ss]ecurity|StackRox|roxctl",
+  "why": "decision 7: nothing relies on ACS; the network advisory uses CNI flow logs, Inspektor Gadget, Kyverno/Gatekeeper, Trivy and Falco"
+ },
+ {
+  "id": "openshift",
+  "regex": "OpenShift|\\bOCP\\b|EgressFirewall|OperatorHub|\\bSCCs?\\b|OVN-K|\\boc (apply|adm|get|create|new-project)\\b",
+  "why": "decision 7: decks carry no Appendix S and no OpenShift-only feature; generic Kubernetes (Ingress/Gateway API, Pod Security Standards, Helm/upstream operators)"
+ },
+ {
+  "id": "vendor-framework",
+  "regex": "Cloud Adoption Framework|Well-Architected Framework|Azure Architecture Center|AWS Prescriptive Guidance",
+  "why": "decision 7 (fix round A): cite vendor-neutral references (CNCF, NIST, OWASP, the books) instead of a cloud vendor's framework"
+ }
+]

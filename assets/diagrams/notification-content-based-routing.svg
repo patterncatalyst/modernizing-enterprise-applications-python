@@ -32,11 +32,11 @@
 <text x="666.0" y="301.4390243902439" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">path-prefix match</text>
 <text x="666.0" y="301.4390243902439" font-size="11" fill="#555" text-anchor="middle">path-prefix match</text>
 <path d="M578.4444444444445,370.0 L778.8888888888889,480.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
-<text x="684.6666666666667" y="419.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">path-prefix match (ch.17&#x27;s seam)</text>
-<text x="684.6666666666667" y="419.0" font-size="11" fill="#2f5f3d" text-anchor="middle">path-prefix match (ch.17&#x27;s seam)</text>
-<text x="640.0" y="30" font-size="18" fill="#1d1d1d" text-anchor="middle" font-weight="700">ch.16 -- one routing decision, generalized past a single URL-path predicate</text>
-<text x="60" y="450" font-size="12" fill="#1d1d1d" text-anchor="start">Today, this proxy matches on PATH (request.url.path, the full path -- see ch.14&#x27;s</text>
-<text x="60" y="470" font-size="12" fill="#1d1d1d" text-anchor="start">full-path-prefix lesson). The same _select_backend() shape generalizes to:</text>
+<text x="684.6666666666667" y="419.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">path-prefix match</text>
+<text x="684.6666666666667" y="419.0" font-size="11" fill="#2f5f3d" text-anchor="middle">path-prefix match</text>
+<text x="640.0" y="30" font-size="18" fill="#1d1d1d" text-anchor="middle" font-weight="700">one routing decision, generalized past a single URL-path predicate</text>
+<text x="60" y="450" font-size="12" fill="#1d1d1d" text-anchor="start">Today, this proxy matches on PATH (request.url.path, the full path).</text>
+<text x="60" y="470" font-size="12" fill="#1d1d1d" text-anchor="start">The same _select_backend() shape generalizes to:</text>
 <text x="76" y="495" font-size="12" fill="#64748b" text-anchor="start">- HEADER match -- e.g. route by X-Tenant-Id to a tenant-specific backend</text>
 <text x="76" y="515" font-size="12" fill="#64748b" text-anchor="start">- PAYLOAD/content match -- e.g. route by order total or customer segment</text>
 <text x="60" y="545" font-size="12" fill="#1d1d1d" text-anchor="start">The constraint that doesn&#x27;t generalize away: the predicate&#x27;s INPUTS stay</text>

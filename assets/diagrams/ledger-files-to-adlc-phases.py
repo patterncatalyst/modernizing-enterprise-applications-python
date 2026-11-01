@@ -5,7 +5,7 @@ reconciliation log) onto the ADLC's seven phases: "Frame -> Map -> Plan ->
 Generate -> Verify -> Operate -> Reconcile."
 
 Phase glosses are this project's own tooling column, which differs from the
-Java sibling on purpose: Map substitutes manual reconnaissance plus the
+Java sibling by design: Map substitutes manual reconnaissance plus the
 `lgtm-python` skill, because no Quarkus-Agent-MCP or Camel-MCP equivalent
 exists for this stack; Plan/Generate/Verify run through the `lgtm-relay`
 tiering (Opus plan -> Sonnet execute -> Opus validate).
@@ -46,7 +46,7 @@ W, H = 1600, 680
 PHASE_Y, PHASE_H, PHASE_W, GUTTER, PHASE_X0 = 90, 70, 200, 20, 40
 PHASES = [
     ("frame", "Frame", "human states intent + PRD", "sub"),
-    ("map", "Map", "manual recon + lgtm-python", "sub"),
+    ("map", "Map", "manual recon + a scaffolding skill", "sub"),
     ("plan", "Plan", "Opus drafts the step plan", "user"),
     ("generate", "Generate", "Sonnet writes code + tests", "box"),
     ("verify", "Verify", "Opus validates: pytest/Newman", "user"),
@@ -72,7 +72,7 @@ LEDGER = [
     ("rnn_plan", 348, 288, ["Per-iteration plan", "lanes + acceptance criteria,", "header records approval status"], "box"),
     ("decisions", 656, 288, ["Decision log", "append decision outcomes --", "rows: fixed / accepted / proposed"], "box"),
     ("reconciliation", 964, 288, ["Reconciliation log", "append artifact-vs-source verdicts --", "live: one section per iteration"], "box"),
-    ("lgtm_python", 1272, 288, ["lgtm-python skill", "Map/Generate substitute --", "no MCP equivalent"], "ghost"),
+    ("lgtm_python", 1272, 288, ["a scaffolding skill", "Map/Generate substitute --", "no MCP equivalent"], "ghost"),
 ]
 ledger_nodes = {}
 for key, x, w, lines, style in LEDGER:
@@ -129,7 +129,7 @@ resume_band = {"x": 150, "y": 400, "w": 1300, "h": 180,
 
 notes = [
     {"x": W / 2, "y": 32,
-     "text": "ch.02 -- The ledger's files, mapped onto the ADLC's own phases",
+     "text": "The ledger's files, mapped onto the ADLC's own phases",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56,
      "text": "Plan and Verify (blue) are this project's two human gates; Reconcile (green) is where the ledger actually gets written",

@@ -23,9 +23,9 @@ g.OUT = os.path.dirname(__file__)
 W, H = 1280, 760
 
 band_before = {"x": 30, "y": 60, "w": 1220, "h": 220,
-               "label": "BEFORE -- OrderItem.inventory_item: a cross-context FK (SMELL[ch.18])", "fill": "#fafafa"}
+               "label": "BEFORE -- OrderItem.inventory_item: a cross-context FK", "fill": "#fafafa"}
 band_after = {"x": 30, "y": 320, "w": 1220, "h": 220,
-              "label": "AFTER (r04/ch.19) -- sku/item_name/unit_price_cents: a denormalized SNAPSHOT, no FK", "fill": "#f1f5f9"}
+              "label": "AFTER -- sku/item_name/unit_price_cents: a denormalized SNAPSHOT, no FK", "fill": "#f1f5f9"}
 
 order_item_before = node(110, 140, 320, 120,
     ["OrderItem", "order_id, quantity,", "inventory_item_id (FK)"], style="box")
@@ -51,7 +51,7 @@ step_edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 32, "text": "ch.18 -- from foreign key to snapshot: the denormalization move, concretely",
+    {"x": W / 2, "y": 32, "text": "from foreign key to snapshot: the denormalization move, concretely",
      "anchor": "middle", "bold": True, "size": 18},
     migration_label,
     {"x": W / 2, "y": 568, "text": "Operation order matters: backfill BEFORE dropping the FK, or there is nothing left to read from.",

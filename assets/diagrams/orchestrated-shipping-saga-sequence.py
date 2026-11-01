@@ -63,11 +63,11 @@ edges = [
 ]
 
 notes = [
-    {"x": W / 2, "y": 18, "text": "ch.24 -- the orchestrated saga: ONE coordinator sequences every step and owns the compensation decision",
+    {"x": W / 2, "y": 18, "text": "the orchestrated saga: ONE coordinator sequences every step and owns the compensation decision",
      "anchor": "middle", "bold": True, "size": 16},
     {"x": 40, "y": H - 46, "text": "enrich and book_carrier persist nothing of their own, so neither has a compensation entry -- only dispatch's Shipment row needs undoing.",
      "anchor": "start", "size": 11, "color": "#555555"},
-    {"x": 40, "y": H - 28, "text": "Compare ch.23's choreographed-payment-saga-sequence: no box in this picture's counterpart decides anything for another box.",
+    {"x": 40, "y": H - 28, "text": "Compare the choreographed payment saga: no box in this picture's counterpart decides anything for another box.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 
