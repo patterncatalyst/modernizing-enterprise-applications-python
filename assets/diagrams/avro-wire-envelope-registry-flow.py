@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""ch.28 figure: avro-wire-envelope-registry-flow -- the hand-rolled wire
+"""ch.28 figure: avro-wire-envelope-registry-flow, the hand-rolled wire
 envelope ([1-byte magic][8-byte global id][Avro bytes]) plus the
 register/resolve round trip against Apicurio, pure-Python (fastavro +
-aiokafka + a plain httpx REST client -- DRQ-033 rejected confluent-kafka,
+aiokafka + a plain httpx REST client, DRQ-033 rejected confluent-kafka,
 so there is no Confluent/Apicurio Avro serde available to supply a wire
 format). Top band is the byte layout itself; bottom band is the live
 produce/consume flow against Apicurio's v3 REST API.
@@ -11,7 +11,7 @@ Sourced from examples/09-schema-registry-demo/app/envelope.py
 (encode_envelope/decode_envelope, struct.Struct(">BQ")),
 app/producer.py::OrderAvroProducer (register_or_resolve on start(), then
 encode_envelope on every send), app/consumer.py::OrderAvroConsumer
-(decode_envelope, then get_schema_by_global_id -- never assumes its local
+(decode_envelope, then get_schema_by_global_id, never assumes its local
 schema copy matches what produced the bytes), and
 app/registry_client.py's module docstring (the exact Apicurio v3 REST
 shapes, verified by hand against quay.io/apicurio/apicurio-registry:3.3.3).
@@ -29,7 +29,7 @@ BAND1_H = 160
 BAND2_H = 420
 
 band_envelope = {"x": 30, "y": 60, "w": 1260, "h": BAND1_H,
-                  "label": "The wire envelope -- app/envelope.py (NOT Confluent's wire format; this demo's own, documented framing)",
+                  "label": "The wire envelope: app/envelope.py (NOT Confluent's wire format; this demo's own, documented framing)",
                   "fill": "#fafafa"}
 band_flow = {"x": 30, "y": 60 + BAND1_H + 30, "w": 1260, "h": BAND2_H,
              "label": "Produce / consume against a live Apicurio registry",
@@ -64,7 +64,7 @@ edges = [
 notes = [
     {"x": W / 2, "y": 32, "text": "the hand-rolled envelope and the register/resolve round trip, pure-Python (fastavro + aiokafka + httpx)",
      "anchor": "middle", "bold": True, "size": 18},
-    {"x": 50, "y": H - 22, "text": "The consumer always fetches the writer schema by global id -- it never trusts its own locally parsed .avsc matches what produced the bytes.",
+    {"x": 50, "y": H - 22, "text": "The consumer always fetches the writer schema by global id, it never trusts its own locally parsed .avsc matches what produced the bytes.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

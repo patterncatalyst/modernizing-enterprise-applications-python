@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-"""ch.04 figure: strangler-evolution-arc -- the staged evolution this book
+"""ch.04 figure: strangler-evolution-arc, the staged evolution this book
 actually executes: four left-to-right snapshots, each a miniature topology
 rather than a text label, re-grounded in this project's own six contexts
 and real ports.
 
 Four snapshots:
-  1. Monolith (ch.08) -- one Django deployable, six in-process apps, one
+  1. Monolith (ch.08), one Django deployable, six in-process apps, one
      shared Postgres schema.
-  2. Proxy-fronted monolith (ch.14) -- the ASGI strangler proxy stands in
+  2. Proxy-fronted monolith (ch.14), the ASGI strangler proxy stands in
      front; every call still passes straight through to the monolith
      unchanged.
-  3. Incrementally strangled (ch.15-24) -- review and notification are live
+  3. Incrementally strangled (ch.15-24), review and notification are live
      FastAPI services behind the proxy; the remaining four contexts still
      answer from the shrinking monolith.
-  4. Fully extracted (ch.26) -- the proxy is now a flagless edge router in
+  4. Fully extracted (ch.26), the proxy is now a flagless edge router in
      front of all six services + the Strawberry GraphQL gateway; the
      monolith is decommissioned from the running topology and kept frozen,
      unwired, as the "before" referent (per
@@ -97,7 +97,7 @@ notes = [
      "anchor": "middle", "bold": True, "size": 16.5},
 
     {"x": 40, "y": H - 16,
-     "text": "Sourced from _plans/build-plan.md (\"A. Approach\") and final-monolith-free-topology.py.",
+     "text": "Sourced from the project build plan and final-monolith-free-topology.py.",
      "anchor": "start", "size": 10.5, "color": "#555555"},
 ]
 

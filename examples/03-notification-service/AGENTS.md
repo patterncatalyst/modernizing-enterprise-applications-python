@@ -1,4 +1,4 @@
-# AGENTS.md -- 03-notification-service
+# AGENTS.md: 03-notification-service
 
 Context for an AI agent (or a human) picking this module up.
 
@@ -15,9 +15,9 @@ original to match byte-for-byte.
 
 This is the Python sibling of
 `~/Dev/modernizing-enterprise-applications/examples/03-notification-service`
-(Java/Quarkus) -- same role in the book, same chapter -- but it is its own
+(Java/Quarkus) (same role in the book, same chapter) but it is its own
 independent implementation (aiokafka instead of SmallRye Reactive Messaging,
-no WebSocket push lane -- DRQ-037 defers that).
+no WebSocket push lane, DRQ-037 defers that).
 
 ## Toolchain
 
@@ -50,51 +50,51 @@ normalized onto the asyncpg driver scheme by `app/db.py::resolve_database_url`.
 
 ## Structure
 
-- `app/main.py` -- FastAPI app factory + lifespan (creates the async
+- `app/main.py`: FastAPI app factory + lifespan (creates the async
   engine/session factory AND starts the `order.placed` consumer as a
   background `asyncio.Task`, cancels it on shutdown), structured file
   logging setup, `redirect_slashes=False`, `/health` (consumer
   partition-assignment for CI readiness waits).
-- `app/routes.py` -- the one `/api/notifications` endpoint.
-- `app/consumer.py` -- `OrderPlacedConsumer`, an `aiokafka` consumer
+- `app/routes.py`: the one `/api/notifications` endpoint.
+- `app/consumer.py`: `OrderPlacedConsumer`, an `aiokafka` consumer
   lifecycle wrapper (`group_id=notification-service`,
   `auto_offset_reset=earliest`), delegating persistence to `app/service.py`.
-- `app/service.py` -- `record_order_placed`, the single owner of the
+- `app/service.py`: `record_order_placed`, the single owner of the
   idempotent write path (check-then-insert, dedupe by `order_id`).
-- `app/schemas.py` -- Pydantic v2 models: `NotificationOut` (response,
+- `app/schemas.py`: Pydantic v2 models: `NotificationOut` (response,
   camelCase via `Field(alias=...)`) and `OrderPlacedEvent` (this service's
   own copy of the frozen Kafka payload shape).
-- `app/repository.py` -- async SQLAlchemy queries against the owned schema.
-- `app/models.py` -- SQLAlchemy declarative mapping for `notification.notifications`,
+- `app/repository.py`: async SQLAlchemy queries against the owned schema.
+- `app/models.py`: SQLAlchemy declarative mapping for `notification.notifications`,
   including the partial unique index on `order_id`.
-- `app/db.py` -- async engine/session factory; sets
+- `app/db.py`: async engine/session factory; sets
   `search_path=notification,public` on every connection.
-- `app/config.py` -- `Settings.from_env()`, read at call time (not frozen at
+- `app/config.py`: `Settings.from_env()`, read at call time (not frozen at
   import), so tests can override env vars before building an app/consumer.
-- `app/errors.py` -- the uniform `{"error","message","timestamp"}` body,
+- `app/errors.py`: the uniform `{"error","message","timestamp"}` body,
   ported from review-service's `app/errors.py`.
-- `migrations/` -- Alembic, async (`Connection.run_sync`), `version_table_schema="notification"`.
+- `migrations/`: Alembic, async (`Connection.run_sync`), `version_table_schema="notification"`.
   `versions/0001_create_notification_schema.py` creates the schema, table,
   and both indexes (customer_id lookup + the idempotency backstop).
-- `tests/unit/` -- REST contract tests + a Kafka-free `app.service` idempotency
+- `tests/unit/`: REST contract tests + a Kafka-free `app.service` idempotency
   test, against a real, already-migrated Postgres.
-- `tests/integration/` -- Testcontainers (Kafka + Postgres) proof that
+- `tests/integration/`: Testcontainers (Kafka + Postgres) proof that
   redelivering the identical `order.placed` event yields exactly one row.
 
-## Contract notes (don't "fix" these -- they match the monolith on purpose)
+## Contract notes (don't "fix" these, they match the monolith on purpose)
 
 - JSON is **camelCase**, no trailing slash, same uniform error body as
-  `00-monolith`'s `common/exceptions.py` -- see `README.md`'s endpoint table.
+  `00-monolith`'s `common/exceptions.py`: see `README.md`'s endpoint table.
 - `orderId` is nullable in the response/model (matches the monolith's
   `Notification.order` being `null=True`) even though every row this
-  service's own consumer writes has one set -- the schema leaves room for a
+  service's own consumer writes has one set, the schema leaves room for a
   future non-order-originated notification without a migration.
 - `GET /api/notifications` with no `customerId` -> `400 VALIDATION_FAILED`,
   via FastAPI's required `Query(...)` raising `RequestValidationError`
   (remapped by `app/errors.py`), matching DRF's generic 400 rule the
   monolith's `NotificationListView` relies on.
 - Idempotency is **check-then-insert plus a DB partial unique index**, not
-  just one or the other -- see `README.md`'s "Idempotency" section for why
+  just one or the other, see `README.md`'s "Idempotency" section for why
   both layers exist (application-level dedupe is the common case, the index
   is the concurrent-redelivery backstop).
 
@@ -117,7 +117,7 @@ uv run pytest -m integration
 ```
 
 `tests/integration/conftest.py`'s `KafkaContainer` fixture calls
-`.with_kraft()` explicitly -- `confluentinc/cp-kafka:8.3.2` dropped the
+`.with_kraft()` explicitly: `confluentinc/cp-kafka:8.3.2` dropped the
 legacy ZooKeeper boot path entirely (it fails fast with
 `"KAFKA_PROCESS_ROLES is not set"` without it); `testcontainers`'
 `KafkaContainer` still defaults to ZooKeeper configuration unless told

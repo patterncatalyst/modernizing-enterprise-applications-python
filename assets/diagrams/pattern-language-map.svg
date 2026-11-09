@@ -4,9 +4,9 @@
 <rect x="30" y="34" width="170" height="28" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="115.0" y="53.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Earned a lasting role</text>
 <rect x="220" y="34" width="170" height="28" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
-<text x="305.0" y="53.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Adapted -- real, narrower</text>
+<text x="305.0" y="53.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Adapted: real, narrower</text>
 <rect x="410" y="34" width="230" height="28" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
-<text x="525.0" y="53.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Named horizon -- scoped, not built</text>
+<text x="525.0" y="53.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Named horizon: scoped, not built</text>
 <rect x="30" y="80" width="230" height="110" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="145.0" y="125.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Strangler Fig + ASGI proxy</text>
 <text x="145.0" y="142.5" font-size="11.5" fill="#555555" text-anchor="middle">decommission</text>
@@ -88,6 +88,6 @@
 <path d="M770.0,330.0 L770.0,390.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <path d="M1070.0,330.0 L1070.0,390.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <path d="M1170.0,330.0 L1279.090909090909,390.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
-<text x="760.0" y="20" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">The pattern language, revisited -- one connected flow, colored by verdict, not a list of 45 isolated rows</text>
+<text x="760.0" y="20" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">The pattern language, revisited: one connected flow, colored by verdict, not a list of 45 isolated rows</text>
 <text x="30" y="526" font-size="11" fill="#555555" text-anchor="start">Dashed arrows: the pattern that would be extended to reach each named horizon, not a dependency that blocks it today.</text>
 </svg>

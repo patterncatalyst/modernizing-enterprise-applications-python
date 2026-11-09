@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""ch.15 figure: review-phase-a-vs-phase-b -- the two-phase extraction
+"""ch.15 figure: review-phase-a-vs-phase-b, the two-phase extraction
 strategy for the Review service, side by side.
 
-Phase A (illustrative, documented but never shipped as code -- see
+Phase A (illustrative, documented but never shipped as code, see
 examples/02-review-service/MIGRATION.md "Why Phase A isn't shipped as code")
 lifts the monolith's own Django ORM onto FastAPI behind a `uv` path
 dependency and `django.setup()`, paying for every query with
@@ -15,7 +15,7 @@ the shared `auth_user` table via passlib's django_pbkdf2_sha256 scheme --
 zero Django import anywhere in the service.
 
 Both phases still read/write the SAME shared Postgres schema (ch.18/19 give
-review its own database later) -- that line is the same in both panels,
+review its own database later), that line is the same in both panels,
 by design: this figure is about the code path, not the data topology.
 
 Sourced from examples/02-review-service/MIGRATION.md (the per-component
@@ -34,8 +34,8 @@ W, H = 1360, 620
 PANEL_W = 620
 LX, RX = 60, 60 + PANEL_W + 60
 
-band_a = {"x": LX, "y": 90, "w": PANEL_W, "h": 460, "label": "Phase A -- illustrative, never shipped", "fill": "#fafafa"}
-band_b = {"x": RX, "y": 90, "w": PANEL_W, "h": 460, "label": "Phase B -- live code, app/", "fill": "#eaf4ec"}
+band_a = {"x": LX, "y": 90, "w": PANEL_W, "h": 460, "label": "Phase A: illustrative, never shipped", "fill": "#fafafa"}
+band_b = {"x": RX, "y": 90, "w": PANEL_W, "h": 460, "label": "Phase B: live code, app/", "fill": "#eaf4ec"}
 
 # ---- Phase A column ---------------------------------------------------
 a_fastapi = node(LX + 30, 130, PANEL_W - 60, 60, ["FastAPI routes", "async def handlers"], style="box")
@@ -77,7 +77,7 @@ b_edges = [
 ]
 
 pg = node(LX + (PANEL_W + 60 + PANEL_W) / 2 - 130, 570, 260, 40,
-          ["PostgreSQL -- SAME shared schema both phases target"], style="sub")
+          ["PostgreSQL: SAME shared schema both phases target"], style="sub")
 nodes_all = a_nodes + b_nodes + [pg]
 edges_all = a_edges + b_edges + [
     connect(a_orm, pg, label="shared DB"),
@@ -93,7 +93,7 @@ notes = [
      "anchor": "middle", "size": 11.5, "color": "#555555"},
 
     {"x": LX, "y": H - 16,
-     "text": "Phase A measured via a faithful proxy (real django.setup() + import fastapi,uvicorn) -- never run as a server.",
+     "text": "Phase A measured via a faithful proxy (real django.setup() + import fastapi,uvicorn), never run as a server.",
      "anchor": "start", "size": 10, "color": "#777777"},
 ]
 

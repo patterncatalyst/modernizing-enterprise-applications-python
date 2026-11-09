@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.12 figure: storm-wall-to-backlog -- "From the wall to the backlog": the
+"""ch.12 figure: storm-wall-to-backlog, "From the wall to the backlog": the
 four event boundaries this chapter's process-level storm finds, each mapped
 to the extraction chapter that cuts it and the mechanism that chapter uses:
 the OrderPlaced -> StockReserved boundary is inventory's seam, cut with a
@@ -46,7 +46,7 @@ ROWS = [
     ("PaymentCaptured -> ShipmentDispatched", "shipping's seam",
      "Shipping",
      "Orchestrated saga", "a single FastAPI saga coordinator sequences dispatch, not peer-to-peer events"),
-    ("ShipmentDispatched -> OrderConfirmed / NotificationSent", "notification's seam -- cut first",
+    ("ShipmentDispatched -> OrderConfirmed / NotificationSent", "notification's seam: cut first",
      "Notification",
      "Transactional outbox", "feeding an asynchronous aiokafka consumer"),
 ]
@@ -63,10 +63,10 @@ for i, (boundary, seam_note, ctx, mech, mech_detail) in enumerate(ROWS):
     edges.append(connect(a, b))
     edges.append(connect(b, c))
 
-# ---- footnote: place_order() / ch.26 -- extracted last, no single mechanism --
+# ---- footnote: place_order() / ch.26, extracted last, no single mechanism --
 foot = node(COL_A_X, ROW_Y0 + 4 * (ROW_H + GUTTER) + 10, COL_A_W + (COL_B_X - COL_A_X - COL_A_W) + COL_B_W,
             90,
-            ["order/services.py::place_order() itself -- cut last",
+            ["order/services.py::place_order() itself, cut last",
              "issues every policy's command above; waits until all four boundaries already fire events"],
             style="ghost")
 nodes.append(foot)

@@ -2,283 +2,117 @@
 title: "Agents, Skills & MCP Tools in the Loop"
 order: 6
 part: "The Agentic Development Lifecycle (ADLC)"
-description: "The agent-tier relay (plan, execute, validate); the MCP surface for Python tooling; the reusable skill map; when the human must decide."
+description: "The plan, execute, validate relay of model tiers; skills and AGENTS.md as packaged boundaries; the MCP gap in a Python stack; and what substitutes for it."
 ---
 
-Chapter 5 named the seven phases of the ADLC and the two places a human has
-to stop the loop and decide. It also named, in passing, three building
-blocks that fill those phases: a tiered model relay, a family of skills, and
-an MCP surface this project's stack doesn't fully have. This chapter opens
-each of those up. Three building blocks compose into every ADLC phase:
-**agents** (a model in a loop with tools, deciding what to do next),
-**skills** (packaged, repeatable instructions an agent loads before it
-acts), and **MCP tools** (servers that hand an agent a real toolchain to
-act against, not just a prompt to reason from), and this chapter is where
-the last of those three gets named directly for what this stack doesn't
-have, not just what it does.
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Say what makes an agent more than a prompt: a loop, tools and a stopping condition.
+- Run a plan, execute, validate relay in which no tier grades its own work.
+- Use skills and an `AGENTS.md` file to make repeated work and project boundaries stable.
+- Name what substitutes for a framework-specific MCP server, and what the substitute can't catch.
+- Assign each ADLC phase to a human, a tier, a skill or a tool.
+
+## Why this matters
+
+Three building blocks fill the ADLC's phases: **agents** (a model in a loop with tools), **skills** (packaged instructions an agent loads before it acts) and **MCP tools** (servers that give an agent a real toolchain to act against). For this Python stack the third is mostly absent, and the gap changes where the other two have to carry weight.
 
 ## Agents: a model in a loop with tools
 
-An agent, in the sense this book uses the word, is not a single clever
-prompt. It's a model given three things a prompt alone doesn't have: a loop
-(the model can take an action, observe the result, and decide what to do
-next, repeatedly, without a human re-prompting it after every step), a set
-of tools (the ability to read a file, run a shell command, call an MCP
-server, or launch another agent), and a stopping condition (a task is
-"done," a plan is "approved," a gate is "passed"). Strip away the loop and
-you have a chatbot that can describe what it would do. Strip away the tools
-and you have a model that can only talk about the codebase, never touch it.
-The loop plus the tools is what turns "the agent understood the request"
-into "the agent produced a passing diff."
+An agent is not a single clever prompt. It's a model given a **loop** (act, observe, decide the next step without a human re-prompting), a set of **tools** (read a file, run a shell command, call an MCP server, launch another agent) and a **stopping condition** (a task is done, a plan is approved, a gate is passed). Without the loop you have a chatbot that describes what it would do. Without the tools you have a model that can only talk about the codebase.
 
-The simplest version of this is a single agent: one model, one loop, one
-set of tools, working a task start to finish. Much of the mechanical work in
-a build like this (scaffolding a FastAPI service, writing a chapter's
-prose) runs as a single agent, because a single loop with the right tools
-is the cheapest way to get a bounded task done, and adding a second agent to
-a task that doesn't need one is pure coordination overhead with no
-offsetting benefit.
+A single agent, one model with one loop, is the cheapest way to finish a bounded task such as scaffolding a FastAPI service. A second agent on a task that doesn't need one is coordination overhead.
 
 ## The relay: plan, execute, validate
 
-The more interesting case is **multi-agent orchestration**: more than one
-agent, each with a distinct role and a distinct set of tools, coordinated so
-that one agent's output becomes another's input, and, critically, so that
-no single agent is trusted to grade its own work. This project's Plan and
-Verify phases are carried out by exactly this pattern, implemented as a dedicated
-relay skill, under a name worth being precise about: **plan →
-execute → validate**.
+**Multi-agent orchestration** coordinates agents with distinct roles and tools so one's output feeds another's input and no agent grades its own work. The Plan and Verify phases run as a relay skill with three roles.
 
-{% include excalidraw.html file="plan-execute-validate-relay" alt="Six boxes in a row: Frame (human, states intent, writes the decision-log entry), Plan tier (Opus, reads Frame plus Map recon, drafts the step plan), Human gate 1 (plan approval, before any diff exists), Execute tier (Sonnet, Generate: scaffolds, writes code and tests, runs them), Validate tier (Opus again, adversarial: re-reads plan and diff against the equivalence suite), Human gate 2 (equivalence sign-off, Verify phase). A dashed line below the row connects the Plan and Validate boxes, labeled: same model tier, now adversarial, not self-vouching." caption="Figure 6.1: The relay: the planning tier drafts, the execution tier builds, the same planning tier validates adversarially, with a human gate on either side of Generate" %}
+{% include excalidraw.html file="plan-execute-validate-relay" alt="Six boxes in a row: Frame (human, states intent, writes the decision-log entry), Plan tier (Opus, reads Frame plus Map recon, drafts the step plan), Human gate 1 (plan approval, before any diff exists), Execute tier (Sonnet, Generate: scaffolds, writes code and tests, runs them), Validate tier (Opus again, adversarial: re-reads plan and diff against the equivalence suite), Human gate 2 (equivalence sign-off, Verify phase). A dashed line below the row connects the Plan and Validate boxes, labeled: same model tier, now adversarial, not self-vouching." caption="Figure 6.1: The relay. The planning tier drafts, the execution tier builds, the same planning tier validates adversarially, with a human gate on either side of Generate" %}
 
-One model tier (Opus, in the planning role) reads the Frame statement,
-does the Map-phase reconnaissance, and drafts a concrete step plan: what
-becomes a decision-log entry and a row in the build plan. That plan sits
-in front of a human gate before anything else happens; Chapter 5 called
-this the cheapest place in the whole lifecycle to catch a wrong assumption,
-and a second model's enthusiasm for its own plan is not a substitute for
-that human's sign-off. Once the plan is approved, a second model tier
-(Sonnet, in the execution role) carries out Generate: it scaffolds the
-FastAPI/aiokafka/grpcio/Strawberry service shape, writes the code, writes
-the tests, and runs them. It does not get to decide, on its own authority,
-that its own output is correct: that question goes back to the first
-tier, now acting in a third, *adversarial* role: it re-reads the approved
-plan, re-reads the diff the execution tier actually produced, and checks the
-two against each other and against the behavior-equivalence suite before
-recommending the second human gate. The same model tier that proposed the
-plan is the one skeptical enough to doubt whether its own plan was executed
-faithfully: a different posture than "wrote it, therefore vouches for it."
+1. **Plan tier (Opus).** Reads the Frame statement, does the Map reconnaissance and drafts the step plan: a decision-log entry and a row in the build plan. A human approves it before anything else happens. A second model's enthusiasm for the plan doesn't substitute for that sign-off.
+2. **Execute tier (Sonnet).** Carries out Generate: scaffolds the FastAPI, aiokafka, grpcio and Strawberry service shape, writes the code and tests, and runs them. It doesn't decide that its own output is correct.
+3. **Validate tier (Opus again).** Acts adversarially. It re-reads the approved plan and the diff the execution tier produced, checks them against each other and against the behavior-equivalence suite, then recommends the second human gate. The tier that proposed the plan is the one skeptical enough to doubt it was executed faithfully, which is a different posture from "wrote it, therefore vouches for it."
+
+The planning tier's validating pass isn't peer review between equals. It supervises: it holds authority over whether the execution tier's work is accepted. A plan draft for the Review extraction looks like this, stopped at the first gate:
 
 ```
-A review-extraction plan draft -- the planning tier's output, before the
-first human gate
+Review-extraction plan draft, the planning tier's output before the first human gate
 
-S1  Build the behavior-equivalence suite against the running monolith
-    (Newman collection; happy path + out-of-stock + payment-decline).
-S2  Stand up a flag-gated ASGI strangler proxy, default every request
-    to the monolith.
-S3  Build examples/02-review-service as idiomatic FastAPI + async
-    SQLAlchemy; equivalence gate must go green before cutover.
-S4  Flip STRANGLER_REVIEW_ENABLED; re-run the equivalence suite through
-    the proxy; decommission the monolith's review module only after a
-    green re-run.
+1  Build the behavior-equivalence suite against the running monolith
+   (Newman collection; happy path + out-of-stock + payment-decline).
+2  Stand up a flag-gated ASGI strangler proxy, default every request
+   to the monolith.
+3  Build examples/02-review-service as idiomatic FastAPI + async
+   SQLAlchemy; equivalence gate must go green before cutover.
+4  Flip STRANGLER_REVIEW_ENABLED; re-run the equivalence suite through
+   the proxy; decommission the monolith's review module only after a
+   green re-run.
 
--- awaiting human approval before S3 begins --
+Awaiting human approval before step 3 begins
 ```
 
-Why call this "orchestration" rather than just "two models talking to each
-other"? Because the planning tier's validating pass is not a peer review
-between equals: it supervises, in the specific sense of holding authority
-over whether the execution tier's work is accepted. The walkthrough in
-Chapter 7 shows exactly what that relay caught, and what it didn't catch on
-the first pass, on the Review extraction.
-
-One more distinction matters here: *orchestration* is not the same thing
-as *parallelism*. The plan → execute → validate relay is strictly
-sequential: each phase's output gates the next, and the whole point is
-that nothing in Generate starts before a human has approved Plan.
-Elsewhere, independent agents *do* run in parallel: authoring separate
-chapter files or generating diagrams can be parallelized because they touch
-disjoint files, while a shared build artifact or ledger is serialized to
-one writer at a time under a single-writer rule. Multi-agent orchestration,
-in other words, is a design decision about *dependencies between tasks*,
-not a blanket instruction to use more agents. A task with no shared state
-and no approval gate between its pieces is a good candidate for parallel
-agents; a task where one piece's output must be approved before the next
-begins (Plan before Generate, Generate before Verify) is not, no matter
-how tempting it is to save wall-clock time by running them together.
+Orchestration isn't parallelism. The relay is strictly sequential: each phase's output gates the next, and nothing in Generate starts before a human approves Plan. Independent agents do run in parallel where they touch disjoint files, such as authoring separate chapters or generating diagrams, while a shared build artifact or ledger is serialized to one writer. Orchestration is a decision about dependencies between tasks. Tasks with no shared state and no approval gate between them are candidates for parallel agents; Plan before Generate and Generate before Verify are not, however tempting the wall-clock saving.
 
 ## Skills: packaged, repeatable instructions
 
-An agent with tools can do almost anything; that's also its biggest
-liability, because "almost anything" includes solving a well-understood
-problem in a slightly different, slightly wrong way every single time it's
-asked. A **skill**, in the sense this project uses the term, is a packaged,
-named set of instructions an agent loads before it acts on a particular
-kind of task, not a suggestion buried in a long system prompt, but a
-discrete, invocable unit with its own name, its own triggers, and its own
-worked conventions, so that the fifth time an agent scaffolds a FastAPI
-service it makes the same choices the first time did.
+An agent with tools can do almost anything, including solving a well-understood problem in a slightly different, slightly wrong way each time. A **skill** is a named set of instructions an agent loads before acting on a kind of task, with its own triggers and conventions, so the fifth FastAPI scaffold makes the same choices as the first. The project uses five:
 
-This project runs on a family of skills with a shared naming convention,
-and naming their roles concretely is more useful than
-describing skills in the abstract:
+| Skill | Job |
+| --- | --- |
+| **Relay** | The plan, execute, validate tiering that every extraction's Plan and Verify phases run through. |
+| **Scaffolding** | The dev toolchain for a new Python service: uv, the Python 3.14 pin, the FastAPI, aiokafka, grpcio and Strawberry service shapes, structured logging, and the pytest, ruff and Testcontainers layout. Every extraction starts from the same baseline instead of a hand-assembled one that drifts. |
+| **Diagram generator** | Figures from a short Python spec of boxes and arrows, so diagrams share one visual language. |
+| **Local stack** | The local observability substrate (Postgres, Kafka, the LGTM stack) that tests and the equivalence suite run against. |
+| **Release** | Release-sync and commit-convention discipline, gated on a human's explicit go-ahead. |
 
-- **The relay skill** is the plan → execute → validate tiering described
-  above: the mechanism every extraction's Plan and Verify phases run
-  through.
-- **A scaffolding skill** sets up the dev toolchain for a new Python service:
-  uv, the Python 3.14 interpreter pin, the FastAPI/aiokafka/grpcio/
-  Strawberry service shapes, the structured logging convention, the
-  pytest/ruff/Testcontainers test layout, so every service extraction in
-  this book starts from the same known-good baseline instead of a
-  hand-assembled one that drifts service to service.
-- **A diagram-generator skill** generates figures from a short Python spec
-  of boxes and arrows, so the diagrams across many chapters share one
-  visual language instead of each chapter inventing its own: every figure
-  in this book, including this one, is built this way.
-- **A local-stack skill** stands up the local observability substrate
-  (Postgres, Kafka, the LGTM stack) that every extraction's tests and
-  behavior-equivalence suite run against.
-- **A release skill** carries the release-sync and commit-convention
-  discipline for pushing a finished iteration upstream, gated, per this
-  project's own standing rule, on a human's explicit go-ahead.
+A skill is also a packaged *boundary*. Each generated service directory carries an `AGENTS.md` that constrains every agent that works on it later. The review service's `AGENTS.md` records the module's two-phase migration history, pins the dependency versions in use, and tells a future agent not to look for a Phase A implementation (FastAPI over the monolith's own Django ORM), which was never committed as code, only measured and written up in `MIGRATION.md`. Phase B, idiomatic FastAPI with async SQLAlchemy, is the final state. It doesn't rely on an agent's memory of how a prior session ended, and nobody re-derives context from a transcript nobody kept. It does the job of a style guide or an architecture review board, except it travels with the repository and applies to every agent that opens it.
 
-A skill is not only a packaged *task*; it's also a packaged *boundary*.
-The second kind of skill this project leans on hardest is project
-governance through a context file, `AGENTS.md`, that lives inside each
-generated service directory and constrains every agent that works on it
-afterward, whether or not that agent remembers how the project started.
-`examples/02-review-service/AGENTS.md` states the pattern directly: it
-records the module's two-phase migration history, pins the exact dependency
-versions in use, and tells an agent picking the module up later not to go
-looking for a Phase A implementation that was never committed as code,
-only measured and written up in `MIGRATION.md`. Read that for what it
-actually does: it doesn't trust an agent's memory of how a prior session
-left things, and it doesn't make a future agent re-derive context from a
-transcript nobody kept. That's a governance file doing exactly the job a
-style guide or an architecture review board does in a traditional SDLC,
-except it travels with the repository, applies to every agent that opens
-it rather than to whichever reviewer is on call, and costs nothing to
-re-read on the hundredth feature the way it did on the first.
+## The MCP gap
 
-## The MCP surface, and the gap this stack doesn't paper over
+Skills say how to approach a task; they don't give an agent anything new to act on. Without tools it describes a library from training data that may be a year stale, with no way to check it against the running version. The **Model Context Protocol (MCP)** closes that gap: an MCP server exposes a fixed set of callable functions with structured inputs and outputs that an agent calls mid-loop for ground truth.
 
-Skills tell an agent *how* to approach a task; they don't, by themselves,
-give it anything new to act on. An agent without tool access can still
-describe a library's configuration from training data that may be a year
-stale, with no way to check that claim against the version actually
-running. The **Model Context Protocol (MCP)** closes that gap for the
-ecosystems that have it: an MCP server is a small, purpose-built service
-that exposes a fixed set of callable tools (not a chat interface, a set of
-functions with real inputs and real, structured outputs) that an agent can
-call mid-loop to get ground truth instead of a guess.
+**There is no framework-specific MCP server for this stack.** Nothing serves live, version-matched FastAPI documentation, scaffolds an aiokafka consumer or validates a Starlette route's structure before deploy, the way an integration-framework-aware server validates a route definition. Three substitutes fill the gap:
 
-Here is where this chapter has to be plain about a real gap: **there is no
-framework-specific MCP server for this project's stack.** No tool exposes live, version-matched FastAPI
-documentation the way a framework-aware MCP server exposes that framework's
-documentation; no tool scaffolds an aiokafka consumer or validates a
-Starlette route's structure the way an integration-framework-aware MCP
-server validates a route definition before it's deployed. This book names
-that gap explicitly rather than implying it away: a reader following this
-book's loop in their own Python project shouldn't expect a tool that
-doesn't exist to show up later.
+1. **A scaffolding skill's conventions** stand in for a live scaffolding tool.
+2. **Manual reconnaissance** stands in for a dependency-mapping tool: read the Django app's models, views and URL configuration before drafting a plan. Map's output is only as good as this reading is thorough.
+3. **The generic MCP surface** (filesystem, shell, web fetch) still grounds an agent in the project's version-pinned `pyproject.toml` and `uv.lock`. An agent that reads `pyproject.toml` before writing an import beats one working from memory of what usually ships.
 
-Three substitutes fill that gap in this project's day-to-day practice, and
-naming them concretely is more useful than leaving "manual reconnaissance"
-as an unexplained phrase:
+### What the gap costs: the proxy
 
-1. **A scaffolding skill's conventions** stand in for a live
-   scaffolding tool: the same job a live scaffolding tool does
-   elsewhere, done by a skill's packaged conventions instead of an MCP
-   call against a running service.
-2. **Manual reconnaissance**, actually reading the Django app's models,
-   views, and URL configuration before drafting a plan, stands in for a
-   dependency-mapping tool. Map's output is only as good as this reading
-   is thorough, which is exactly why Chapter 7's Map section narrates what
-   that reading actually found on the Review extraction, not just that it
-   happened.
-3. **The generic MCP surface** (a filesystem, a shell, a web-fetch
-   tool) still grounds an agent in the real, version-pinned
-   `pyproject.toml` and `uv.lock` a project actually carries, even without
-   a framework-specific server layered on top. An agent that reads
-   `pyproject.toml` before writing an import is already doing better than
-   one working from memory of what version "usually" ships.
+Where an integration framework ships a content-based router as a component, `examples/01-strangler-proxy/` builds the equivalent from first principles.
 
-{% include excalidraw.html file="asgi-strangler-proxy-flow" alt="A client request hits the strangler proxy's one catch-all route, mounted at the application root. A backend-selection function matches the full request path against six fixed prefixes, each mapped to one operator-configured backend base URL; no match returns a real 404. The matched request is rebuilt: hop-by-hop headers are stripped, the body is buffered so the outbound request carries a correct Content-Length instead of falling back to chunked encoding, and the request streams to the backend. A reachable backend's response streams back to the client verbatim; an unreachable backend becomes a real 502, never a swallowed 200. A callout names the trap: the full request path must be matched, not a route-pattern-relative value with the mount prefix already stripped." caption="Figure 6.2: The Python analog of a content-based router, built from first principles instead of an integration framework" %}
+{% include excalidraw.html file="asgi-strangler-proxy-flow" alt="A client request hits the strangler proxy's one catch-all route, mounted at the application root. A backend-selection function matches the full request path against six fixed prefixes, each mapped to one operator-configured backend base URL; no match returns a real 404. The matched request is rebuilt: hop-by-hop headers are stripped, the body is buffered so the outbound request carries a correct Content-Length instead of falling back to chunked encoding, and the request streams to the backend. A reachable backend's response streams back to the client verbatim; an unreachable backend becomes a real 502, never a swallowed 200. A callout names the trap: the full request path must be matched, not a route-pattern-relative value with the mount prefix already stripped." caption="Figure 6.2: The strangler proxy, a Python content-based router built without an integration framework" %}
 
-That absence of a framework-specific router also shapes what Generate
-actually produces for this project's own strangler seam. Where a full
-integration framework ships a content-based router as a built-in component,
-this project's `examples/01-strangler-proxy/` builds the equivalent from
-first principles: one Starlette catch-all route, a backend-selection
-function that matches the request's full path against six fixed prefixes,
-and explicit, commented handling of the two things a hand-rolled proxy has
-to get right that a mature framework would otherwise guarantee: stripping
-hop-by-hop headers so a value computed for one hop isn't blindly forwarded
-to the next, and buffering the request body so the outbound call carries a
-correct `Content-Length` instead of silently falling back to chunked
-transfer encoding. The module's own docstring names the trap explicitly:
-match the request's *full* path, never a route-pattern-relative value with
-a mount prefix already stripped, because a future refactor that gets this
-wrong fails silently: every request falls through to nothing. Building
-this proxy without a framework-aware MCP tool to validate its structure is
-exactly the gap named above made concrete; Chapter 14 builds the proxy in
-full, and Chapter 7 narrates the real defect that single design decision
-was hiding before a real-socket test caught it.
+It's one Starlette catch-all route and a backend-selection function that matches the request's full path against six fixed prefixes. It handles the two things a hand-rolled proxy must get right and a mature framework would guarantee:
 
-{% include excalidraw.html file="structural-vs-behavioral-gates" alt="Two stacked panels. Top: the structural gate, here necessarily weaker and more manual than a live route-validator MCP tool would be: ruff check plus Python's own import-time wiring, where a Starlette or FastAPI app that fails to construct raises immediately rather than deploying silently. It catches a malformed route registration or a typo'd dependency signature, but has no opinion about whether a routing predicate matches the right requests once real traffic flows. Bottom: the behavioral gate, the Newman equivalence suite and its adversarial follow-up, run during Verify against a running service. This is the layer that caught the strangler proxy's real chunked-body bug: the in-process routing tests passed while the proxy silently sent every POST upstream with no body, because only a real socket run surfaces that class of defect." caption="Figure 6.3: The structural gate (what ruff and import-time wiring catch) and the behavioral gate (what the equivalence suite catches) are different layers, and this stack's structural layer is weaker than a framework-aware MCP tool's would be" %}
+- **Hop-by-hop headers are stripped**, so a value computed for one hop isn't forwarded to the next.
+- **The request body is buffered**, so the outbound call carries a correct `Content-Length` instead of falling back to chunked transfer encoding.
 
-That weaker structural layer is worth being precise about, because it's the
-direct consequence of the MCP gap named above. `ruff check` and Python's
-own import-time wiring (a Starlette or FastAPI app that fails to construct
-raises immediately rather than deploying silently) catch a malformed route
-registration, an unresolved import, or a typo'd dependency signature: the
-class of defect that would otherwise surface as a confusing traceback. They
-have no opinion about whether a routing predicate matches the right
-requests once real traffic flows through it. That gap is exactly where the
-behavioral gate (the Newman equivalence suite and its adversarial
-follow-up, run during Verify against a running service) has to do more
-work in this project than it would if a live structural validator existed
-to narrow the search space first. Chapter 7's chunked-body bug is the
-concrete proof: the in-process routing tests passed cleanly, because
-nothing about Python's import-time checks or a mock ASGI transport could
-see that the proxy's outbound request silently carried no body. Only a
-real socket, against a real WSGI backend, could.
+The trap is in the matching: use the request's *full* path, never a route-pattern-relative value with the mount prefix already stripped. A refactor that gets this wrong fails silently, because every request falls through to nothing.
 
-## How the three compose, phase by phase
+{% include excalidraw.html file="structural-vs-behavioral-gates" alt="Two stacked panels. Top: the structural gate, here necessarily weaker and more manual than a live route-validator MCP tool would be: ruff check plus Python's own import-time wiring, where a Starlette or FastAPI app that fails to construct raises immediately rather than deploying silently. It catches a malformed route registration or a typo'd dependency signature, but has no opinion about whether a routing predicate matches the right requests once real traffic flows. Bottom: the behavioral gate, the Newman equivalence suite and its adversarial follow-up, run during Verify against a running service. This is the layer that caught the strangler proxy's real chunked-body bug: the in-process routing tests passed while the proxy silently sent every POST upstream with no body, because only a real socket run surfaces that class of defect." caption="Figure 6.3: The structural gate (ruff and import-time wiring) and the behavioral gate (the equivalence suite) are different layers, and this stack's structural layer is weaker than a framework-aware MCP tool's would be" %}
 
-None of the three building blocks in this chapter does anything alone; the
-ADLC's seven phases are where they combine.
+`ruff check` and Python's import-time wiring (a Starlette or FastAPI app that fails to construct raises immediately) catch a malformed route registration, an unresolved import or a typo'd dependency signature. They have no opinion on whether a routing predicate matches the right requests under real traffic. With no live structural validator to narrow the search, the behavioral gate does more work here: the Newman equivalence suite and its adversarial follow-up, run during Verify against a running service. In the Review extraction the in-process routing tests passed cleanly, because neither import-time checks nor a mock ASGI transport could see that the proxy's outbound request carried no body. Only a real socket against a real WSGI backend could.
 
-- **Frame** stays entirely human: no agent, skill, or tool substitutes
-  for a person stating intent and writing the decision-log entry.
-- **Map** is where the gap named above shows up first: manual
-  reconnaissance plus a scaffolding skill's conventions ground the
-  agent's understanding of the Django app's shape before any plan gets
-  drafted, in place of a live MCP-driven dependency map.
-- **Plan** is the planning tier of the relay, informed by whatever Map
-  turned up, producing the step plan that sits in front of the first human
-  gate.
-- **Generate** is the execution tier, using the project's skills
-  (the scaffolding skill, the per-service `AGENTS.md` governance files) to produce
-  the actual diff: a hand-rolled ASGI proxy, a FastAPI service shape, an
-  aiokafka consumer, whatever the step calls for.
-- **Verify** returns to the planning tier in its adversarial role, checking
-  the diff against the approved plan and the behavior-equivalence suite,
-  carrying more of the weight here than it would with a stronger
-  structural layer behind it, per the previous section.
-- **Operate** and **Reconcile** are mostly governance-file and ledger
-  work: `AGENTS.md` keeps constraining any agent that touches the running
-  service, and the same three ledger artifacts Chapter 5 introduced record
-  what actually happened.
+## How the three compose
 
-## What's next
+| Phase | Who or what carries it |
+| --- | --- |
+| **Frame** | Entirely human. No agent, skill or tool replaces a person stating intent and writing the decision-log entry. |
+| **Map** | Manual reconnaissance plus the scaffolding skill's conventions, in place of an MCP-driven dependency map. |
+| **Plan** | The relay's planning tier, informed by Map, producing the plan for the first gate. |
+| **Generate** | The execution tier, using the scaffolding skill and the per-service `AGENTS.md` files to produce the diff: a hand-rolled ASGI proxy, a FastAPI service, an aiokafka consumer. |
+| **Verify** | The planning tier again, adversarial, checking the diff against the approved plan and the equivalence suite. It carries more weight than it would behind a stronger structural layer. |
+| **Operate, Reconcile** | Mostly `AGENTS.md` and ledger work: `AGENTS.md` keeps constraining any agent that touches the running service, and the three ledger artifacts record what happened. |
 
-This chapter named the actors: the relay's two tiers in a supervisor
-relationship, the skills and the `AGENTS.md` governance layer, and
-the plain accounting of what substitutes for an MCP surface this stack
-doesn't have, without yet proving any of it holds together under real
-pressure. That proof is Chapter 7's entire job: it runs this exact
-machinery once, end to end, on the Review extraction, and narrates a real
-Python-shaped defect the safety net caught before it reached a reader.
+> **Decision**
+>
+> Use one agent for a bounded task with no gate inside it. Use the relay when a human approval sits between pieces of work, and never let the tier that wrote the code validate it. Where no MCP server exists, put the missing checks in the behavioral gate.
+
+> **🤖 Explore with your agent**
+>
+> "Review `examples/01-strangler-proxy/app` as the validation tier would. Check that backend selection matches the full request path, that hop-by-hop headers are stripped and that the request body is buffered before the outbound call. Report each check as pass or fail with the file and line, and change nothing."
+>
+> Check: the reply cites file and line for each of the three checks, and `uv run pytest` in `examples/01-strangler-proxy` still passes.

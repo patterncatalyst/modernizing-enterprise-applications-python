@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""ch.13 figure: context-dependency-graph-cace -- the six contexts' current
+"""ch.13 figure: context-dependency-graph-cace, the six contexts' current
 dependency graph, each node annotated with the afferent/efferent coupling
 (Ca/Ce) the chapter computes for it, resolving into an extraction order that
 matches the real build order already run in this repo (tags
 `stage/01-review` through `stage/06-order`).
 
-TOP band -- the dependency graph as it exists in `examples/00-monolith/`
+TOP band, the dependency graph as it exists in `examples/00-monolith/`
 today: `order/services.py` imports and calls `inventory.services`,
 `payment.services`, and `shipping.services` directly (order's three
-synchronous efferent edges -- the god-function orchestration coupling,
+synchronous efferent edges, the god-function orchestration coupling,
 SMELL #1), plus one decoupled, asynchronous edge into notification via the
 outbox (SMELL #5/#6, already cured, so it is NOT counted as a synchronous
 efferent edge). `payment.Payment.order` and `shipping.Shipment.order` each
 carry a direct `order_id` foreign key back into order (order's afferent
 edges); so does `notification.Notification.order`, even though notification
-is reached asynchronously. Review has neither -- "no runtime dependency on
+is reached asynchronously. Review has neither, "no runtime dependency on
 order/inventory/payment/shipping/notification," SMELL #7's one
 exception being the shared `django.contrib.auth` table, not a context
 dependency. The one dashed edge (shipping -> payment) is not part of today's
@@ -22,7 +22,7 @@ monolith graph: it is the real dependency `05-payment-service`'s own
 `app/refund_consumer.py` gains once payment is extracted, reacting to
 `shipment.failed` (r06).
 
-BOTTOM band -- the same six contexts sorted by that score into the order
+BOTTOM band, the same six contexts sorted by that score into the order
 this repo's own extraction tags already ran in: review (ch.15) ->
 notification (ch.17) -> inventory (ch.19) -> payment (ch.23) -> shipping
 (ch.24) -> order (ch.26), lowest Ca/Ce first, highest last.
@@ -43,10 +43,10 @@ g.OUT = os.path.dirname(__file__)
 W, H = 1300, 900
 
 # ============================================================================
-# TOP band -- current dependency graph, Ca/Ce per context
+# TOP band: current dependency graph, Ca/Ce per context
 # ============================================================================
 band_top = {"x": 20, "y": 60, "w": 1260, "h": 480,
-            "label": "Dependency graph, current monolith -- Ca/Ce per context",
+            "label": "Dependency graph, current monolith: Ca/Ce per context",
             "fill": "#fafafa"}
 
 review = node(560, 90, 200, 80,
@@ -72,18 +72,18 @@ top_edges = [
     connect(payment, order_n, label="Payment.order FK", ly=18),
     connect(shipping, order_n, label="Shipment.order FK", ly=18),
     connect(notification, order_n, label="Notification.order FK", ly=18),
-    connect(shipping, payment, dashed=True, label="future -- 05-payment-service's refund_consumer.py"),
+    connect(shipping, payment, dashed=True, label="future: 05-payment-service's refund_consumer.py"),
 ]
 
 # ============================================================================
-# BOTTOM band -- resolved extraction order
+# BOTTOM band: resolved extraction order
 # ============================================================================
 band_bottom = {"x": 20, "y": 560, "w": 1260, "h": 260,
-               "label": "Resolved extraction order -- matches stage/01-review .. stage/06-order, lowest coupling first",
+               "label": "Resolved extraction order: matches stage/01-review .. stage/06-order, lowest coupling first",
                "fill": "#eaf4ec"}
 
 SEQ = [
-    ("1. Review", "Ca~ 0, Ce~ 0 -- lowest score", "ghost"),
+    ("1. Review", "Ca~ 0, Ce~ 0: lowest score", "ghost"),
     ("2. Notification", "low Ca, low Ce", "box"),
     ("3. Inventory", "moderate Ca, Ce~ 0", "box"),
     ("4. Payment", "moderate Ca, Ce~ 0", "box"),
@@ -108,7 +108,7 @@ notes = [
      "anchor": "middle", "bold": True, "size": 16},
 
     {"x": 40, "y": 554,
-     "text": "Order's own extraction can't complete until each of the other five has removed one of its three outbound edges -- which is why order goes last, not first.",
+     "text": "Order's own extraction can't complete until each of the other five has removed one of its three outbound edges, which is why order goes last, not first.",
      "anchor": "start", "size": 10.5, "color": "#555555"},
 
     {"x": 40, "y": H - 16,

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.22 figure: order-pending-to-terminal-lifecycle -- the state machine the
+"""ch.22 figure: order-pending-to-terminal-lifecycle, the state machine the
 ACD model introduces. An order persisted PENDING has exactly three terminal
 exits, each driven by an event the order_saga_listener reacts to, each
 protected by the SAME status-transition guard so a redelivered event can
@@ -29,7 +29,7 @@ n_shipfail = node(490, 280, 280, 120,
 n_declined = node(900, 280, 280, 120,
                    ["PAYMENT_DECLINED", "payment.declined", "-> gRPC Release"], style="accent")
 n_stuck = node(500, 480, 260, 110,
-               ["stuck PENDING", "(consumer down --", "RED, not a false green)"], style="ghost")
+               ["stuck PENDING", "(consumer down:", "red, not a false green)"], style="ghost")
 
 nodes = [n_pending, n_confirmed, n_shipfail, n_declined, n_stuck]
 edges = [
@@ -46,7 +46,7 @@ edges = [
 notes = [
     {"x": W / 2, "y": 20, "text": "PENDING has exactly three terminal exits, each idempotent against redelivery",
      "anchor": "middle", "bold": True, "size": 16},
-    {"x": 40, "y": H - 40, "text": "\"stuck PENDING\" is not a fourth terminal state -- it's the real failure mode of a dead consumer, caught by a",
+    {"x": 40, "y": H - 40, "text": "\"stuck PENDING\" is not a fourth terminal state, it's the real failure mode of a dead consumer, caught by a",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 40, "y": H - 22, "text": "bounded-wait poll that fails strictly (20x750ms, 15.1s, newman exit 1) rather than waiting forever or lying green.",
      "anchor": "start", "size": 11, "color": "#555555"},

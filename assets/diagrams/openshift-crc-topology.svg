@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1540 820" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
 <defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
 <rect x="230" y="40" width="1280" height="660" rx="12" fill="#fafafa" stroke="#ddd"/>
-<text x="242" y="60" font-size="12" font-weight="700" fill="#1d1d1d">project: mea -- OpenShift Local (CRC), default restricted-v2 SCC</text>
+<text x="242" y="60" font-size="12" font-weight="700" fill="#1d1d1d">project: mea, OpenShift Local (CRC), default restricted-v2 SCC</text>
 <rect x="30" y="330" width="170" height="80" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
 <text x="115.0" y="368.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Client</text>
 <text x="115.0" y="385.0" font-size="11.5" fill="#555555" text-anchor="middle">https://&lt;route-host&gt;.apps-crc.testing</text>
@@ -69,6 +69,6 @@
 <text x="936.0" y="340.90697674418607" font-size="11" fill="#555" text-anchor="middle">KAFKA_BOOTSTRAP_SERVERS (4 consumers)</text>
 <text x="770.0" y="24" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">the mea project on OpenShift Local: three SCC postures, two Routes as the only edge</text>
 <text x="240" y="764" font-size="11" fill="#555555" text-anchor="start">restricted-v2 (8 app Deployments, no runAsUser) / nonroot-v2 (postgres, kafka via SA mea-infra) / anyuid+runAsUser:0 (otel-lgtm only).</text>
-<text x="240" y="782" font-size="11" fill="#555555" text-anchor="start">strangler-proxy and graphql-gateway are the only externally reachable workloads -- every other Service stays ClusterIP-only.</text>
+<text x="240" y="782" font-size="11" fill="#555555" text-anchor="start">strangler-proxy and graphql-gateway are the only externally reachable workloads, every other Service stays ClusterIP-only.</text>
 <text x="240" y="800" font-size="11" fill="#555555" text-anchor="start">Images are pulled in-cluster from the integrated registry (Figure 33.2); when mesh.enabled, Route traffic needs the PERMISSIVE carve-out (Figure 33.3).</text>
 </svg>

@@ -1,4 +1,4 @@
-# notification-service -- Migration Notes (ch.17 Phase A -> Phase B, DRQ-009/DRQ-027/DRQ-035)
+# notification-service: Migration Notes (ch.17 Phase A -> Phase B, DRQ-009/DRQ-027/DRQ-035)
 
 This file is the measured record of the notification extraction required by
 the r03 build plan (`_plans/r03-build-plan.md`, step S5) and follows
@@ -9,7 +9,7 @@ numbers instead of placeholders.
 review-service's Phase A -> Phase B story is a straight refactor of an
 existing synchronous REST surface (the monolith already served
 `GET /api/reviews`). Notification's write path has **no monolith original at
-all** -- the monolith never consumed its own `order.placed` outbox event, it
+all**: the monolith never consumed its own `order.placed` outbox event, it
 only ever sent the confirmation synchronously, in-process, from
 `order.services.place_order()`. So "Phase A" here can only ever cover the
 **read surface** (`GET /api/notifications?customerId=`); the `aiokafka`
@@ -54,9 +54,9 @@ async def list_notifications(customerId: int | None = None):
 The same two problems review-service's Phase A sketch surfaced apply here,
 unchanged:
 
-1. **Django's ORM is synchronous** -- every query needs `sync_to_async(...)`,
+1. **Django's ORM is synchronous**, every query needs `sync_to_async(...)`,
    a real latency/concurrency cost under FastAPI's async event loop.
-2. **The dependency direction is backwards** -- a service meant to decouple
+2. **The dependency direction is backwards**, a service meant to decouple
    `notification` from the monolith would gain a hard *build-time*
    dependency on the monolith's entire codebase just to reach one model.
 
@@ -66,7 +66,7 @@ And a third problem specific to this extraction, not present in review's:
    would have to either (a) ship with NO consumer at all (matching the
    monolith's actual pre-extraction behavior, where `/api/notifications`
    would only ever show the synchronous in-process writes the monolith
-   itself made), or (b) invent a net-new consumer anyway -- at which point
+   itself made), or (b) invent a net-new consumer anyway, at which point
    it is not meaningfully "Phase A" (a lift) anymore, it is just an earlier
    draft of Phase B. Given that, and since the acceptance bar for r03 is
    "Phase B is the final, live code, Phase A is documented" (same bar
@@ -76,7 +76,7 @@ And a third problem specific to this extraction, not present in review's:
    faithful-proxy method review-service's `MIGRATION.md` established: the
    real combined cost of `django.setup()` (against the monolith's actual
    `config.settings`, all six apps installed) plus a real `import fastapi,
-   uvicorn` in the same process -- run for real on this machine, not an
+   uvicorn` in the same process, run for real on this machine, not an
    estimate, via `uv run --with fastapi==0.143.2 --with uvicorn==0.54.0`
    against `00-monolith`'s own environment (so the proxy never gains a real
    `uv` dependency on FastAPI, keeping the "no Django-compat shim" posture
@@ -86,15 +86,15 @@ And a third problem specific to this extraction, not present in review's:
 
 | Component | Phase A (Django-ORM lift, illustrative, read-only) | Phase B (idiomatic, shipped) |
 |---|---|---|
-| HTTP layer | FastAPI route calling into Django ORM via `sync_to_async` | `app/routes.py` -- native `async`/`await` SQLAlchemy via `app/repository.py` |
-| Data access | `notification.models.Notification` (Django ORM, imported from the monolith) | `app/models.py` -- independent SQLAlchemy 2.x mapping onto this service's OWN `notification` schema, zero import from `00-monolith` |
-| Schema ownership | Shared (reads the monolith's `public.notifications` table directly) | **Owned** -- this service's own `notification` Postgres schema, created/migrated by Alembic (first owned schema in this project, DRQ-028 contrast) |
-| Serialization | DRF `NotificationSerializer`, reused directly | `app/schemas.py` -- independent Pydantic v2 `NotificationOut`, camelCase via `Field(alias=...)` |
-| Write path | *(did not exist -- the monolith's only write path was the synchronous, in-process `notification.services.send_order_confirmation`, never an event consumer)* | **Net-new** `app/consumer.py::OrderPlacedConsumer` + `app/service.py::record_order_placed` -- idempotent `aiokafka` consumer of `order.placed`, authored idiomatic-from-the-start (no original to lift) |
-| Idempotency | *(not applicable -- no consumer)* | **Net-new** -- check-then-insert dedupe by `order_id` + a database-level partial unique index backstop |
-| Exception mapping | Hand-adapt DRF's `api_exception_handler` output shape | `app/errors.py` -- native FastAPI `@app.exception_handler(...)` registrations, ported from review-service, same `{"error","message","timestamp"}` body |
+| HTTP layer | FastAPI route calling into Django ORM via `sync_to_async` | `app/routes.py`: native `async`/`await` SQLAlchemy via `app/repository.py` |
+| Data access | `notification.models.Notification` (Django ORM, imported from the monolith) | `app/models.py`: independent SQLAlchemy 2.x mapping onto this service's OWN `notification` schema, zero import from `00-monolith` |
+| Schema ownership | Shared (reads the monolith's `public.notifications` table directly) | **Owned**: this service's own `notification` Postgres schema, created/migrated by Alembic (first owned schema in this project, DRQ-028 contrast) |
+| Serialization | DRF `NotificationSerializer`, reused directly | `app/schemas.py`: independent Pydantic v2 `NotificationOut`, camelCase via `Field(alias=...)` |
+| Write path | *(did not exist: the monolith's only write path was the synchronous, in-process `notification.services.send_order_confirmation`, never an event consumer)* | **Net-new** `app/consumer.py::OrderPlacedConsumer` + `app/service.py::record_order_placed`, idempotent `aiokafka` consumer of `order.placed`, authored idiomatic-from-the-start (no original to lift) |
+| Idempotency | *(not applicable: no consumer)* | **Net-new**: check-then-insert dedupe by `order_id` + a database-level partial unique index backstop |
+| Exception mapping | Hand-adapt DRF's `api_exception_handler` output shape | `app/errors.py`: native FastAPI `@app.exception_handler(...)` registrations, ported from review-service, same `{"error","message","timestamp"}` body |
 | Process model | `django.setup()` in `lifespan`, loading all 6 monolith apps' registries just to reach 1 model | No Django import anywhere; only this service's own owned table is mapped |
-| Build dependency | `uv` path dependency on `../00-monolith` | None -- `pyproject.toml` depends only on FastAPI/SQLAlchemy/asyncpg/Pydantic/aiokafka/Alembic |
+| Build dependency | `uv` path dependency on `../00-monolith` | None: `pyproject.toml` depends only on FastAPI/SQLAlchemy/asyncpg/Pydantic/aiokafka/Alembic |
 | Concurrency | Every DB call threaded via `sync_to_async` (Django ORM is sync-only) | Native `async`/`await` all the way to the driver (`asyncpg`), plus a fully async Kafka consumer (`aiokafka`) |
 
 ## Idempotency mechanism
@@ -105,10 +105,10 @@ Kafka send and marking the outbox row published republishes the identical
 event. Two layers guarantee a redelivered `order.placed` event yields
 exactly one `Notification` row:
 
-1. **Application-level check-then-insert** --
+1. **Application-level check-then-insert**,
    `app/service.py::record_order_placed` looks up `get_by_order_id` first;
    if a row already exists, it is a no-op.
-2. **Database-level partial unique index** --
+2. **Database-level partial unique index**,
    `uq_notifications_order_id` (`UNIQUE (order_id) WHERE order_id IS NOT
    NULL`, `migrations/versions/0001_create_notification_schema.py`), the
    backstop for two deliveries racing concurrently (caught in
@@ -117,10 +117,10 @@ exactly one `Notification` row:
 Proven two ways:
 
 - `tests/unit/test_service.py::test_record_order_placed_is_idempotent_on_redelivery`
-  -- calls `record_order_placed` with the identical event twice directly
+: calls `record_order_placed` with the identical event twice directly
   (no Kafka broker), asserts exactly one row.
 - `tests/integration/test_consumer_idempotency.py::test_redelivered_order_placed_event_yields_one_notification`
-  -- publishes the identical event twice through a REAL Kafka broker
+: publishes the identical event twice through a REAL Kafka broker
   (Testcontainers) and the real `OrderPlacedConsumer`, asserts exactly one
   row after both deliveries are processed.
 
@@ -132,7 +132,7 @@ delivery hit the `"already recorded, skipping (idempotent no-op)"` path.
 
 ## Verification
 
-- `uv run pytest`: **8 passed** -- 5 REST contract tests (camelCase list,
+- `uv run pytest`: **8 passed**: 5 REST contract tests (camelCase list,
   filter-by-customer, empty-array-for-unknown-customer,
   missing-customerId-400, no-trailing-slash-redirect) +
   2 `app.service` idempotency unit tests (new-order persists,
@@ -142,7 +142,7 @@ delivery hit the `"already recorded, skipping (idempotent no-op)"` path.
 - `alembic upgrade head` against a throwaway `postgres:18.6-alpine`:
   creates the `notification` schema, the `notifications` table, the
   `idx_notifications_customer_id` index, and the partial unique
-  `uq_notifications_order_id` index -- confirmed via `psql`'s `\dn`/`\d`.
+  `uq_notifications_order_id` index: confirmed via `psql`'s `\dn`/`\d`.
   Re-running `alembic upgrade head` against an already-migrated database is
   a correct no-op (confirmed via the Containerfile build's live run).
 - Live run on `:8002` against a throwaway Postgres + Kafka pair (manual
@@ -157,13 +157,13 @@ delivery hit the `"already recorded, skipping (idempotent no-op)"` path.
   - `GET /api/notifications?customerId=1` (unknown customer) -> `200`, `[]`.
   - `GET /api/notifications/` (trailing slash) -> `404`, not a 307 redirect.
 - Containerfile: `docker build -f Containerfile -t mea-notification-service:r03 .`
-  -- builds successfully (UBI 10 multi-stage, non-root). A cross-container
+: builds successfully (UBI 10 multi-stage, non-root). A cross-container
   run against ad hoc throwaway Postgres/Kafka containers confirmed the
   image's `alembic upgrade head` step runs and no-ops correctly against an
   already-migrated schema; the consumer's Kafka connection in that specific
   run was blocked only by the throwaway Kafka container's own
   advertised-listener configuration (bound to `localhost`, not resolvable
-  from a sibling container by hostname) -- a test-harness networking
+  from a sibling container by hostname), a test-harness networking
   artifact of the manual multi-container setup used for this check, not a
   service defect. The actual Kafka connectivity path is proven correctly
   twice elsewhere in this verification: the direct host run above (service
@@ -178,14 +178,14 @@ measured proxy described above: `django.setup()` against
 plus a real `import fastapi, uvicorn` in the same process, via `uv run
 --with fastapi==0.143.2 --with uvicorn==0.54.0` from `00-monolith`'s own
 directory (so the proxy measurement never adds a real dependency to either
-service's `pyproject.toml`) -- not a running server, since Phase A code was
+service's `pyproject.toml`): not a running server, since Phase A code was
 never built. "Phase B" numbers are this service's actual shipped
 `app/main.py`, which also imports `aiokafka` (Phase A's proxy deliberately
 does not, matching the Java sibling's own Phase A/B split: messaging is
 Phase-B-only capability). Import timing is `/usr/bin/time -f '%e'` around a
 bare `python -c "import ..."` (3 runs each, warm filesystem cache; the first
 run of the ephemeral `uv run --with ...` proxy was discarded as
-resolver/cold-cache noise -- see raw data below). RSS is
+resolver/cold-cache noise: see raw data below). RSS is
 `resource.getrusage(...).ru_maxrss` (import-only) or `ps -o rss` on the real
 running uvicorn worker process (not the `uv run` wrapper process, which
 reports its own much smaller RSS).
@@ -198,13 +198,13 @@ reports its own much smaller RSS).
 | Running server RSS (actual uvicorn worker, after 20 requests) | not measured (no server built) | 92,168 KB (~90.0 MB) |
 
 **Reading the numbers honestly:** like review-service's finding, import-time
-and import-RSS are close between the two phases -- FastAPI/Pydantic v2's own
+and import-RSS are close between the two phases, FastAPI/Pydantic v2's own
 import graph dominates both, and `aiokafka`'s added import cost (Phase B
 only) is modest (~3 MB, ~0.03 s) relative to that baseline. Unlike
 review-service's near-wash story, though, Phase B's *running* RSS (~90 MB)
 reflects something Phase A's proxy cannot measure at all: a live
 `aiokafka` consumer with its own broker connection, consumer-group
-membership, and buffers, running continuously in the background -- real
+membership, and buffers, running continuously in the background, real
 capability Phase A (read-only, no messaging) never had. That gap is the
 honest cost of the async pipeline actually running, not a regression to be
 optimized away, matching the Java sibling's own Phase A -> Phase B

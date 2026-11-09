@@ -27,7 +27,7 @@ class Customer(models.Model):
 
 
 class OutboxEvent(models.Model):
-    """The transactional outbox (ch.17 cure for SMELL #5/#6, see SMELLS.md):
+    """The transactional outbox (the cure for SMELL #5/#6, see SMELLS.md):
     the ONLY notification-related side effect written inside
     `order.services.place_order()`'s `@transaction.atomic()`. A separate
     process (`common.management.commands.outbox_relay`) polls the

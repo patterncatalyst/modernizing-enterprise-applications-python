@@ -51,7 +51,7 @@ n_otel = node(50, 605, 350, 130,
                ["Metrics / OTel", "no opentelemetry or prometheus import", "anywhere under examples/*/app/", "OTel added to 3 services"], style="ghost")
 
 n_fault = node(430, 605, 350, 130,
-                ["pybreaker / bulkhead", "no circuit breaker, no concurrency cap", "named in build-plan prose, zero", "lines of code anywhere"], style="ghost")
+                ["pybreaker / bulkhead", "no circuit breaker, no concurrency cap", "named in planning prose, zero", "lines of code anywhere"], style="ghost")
 
 n_shared = node(810, 605, 350, 130,
                  ["A true shared chassis library", "each config.py/errors.py/main.py is", "copied and adapted per service, never", "imported from one shared package"], style="ghost")

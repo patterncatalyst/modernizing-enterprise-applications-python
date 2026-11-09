@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""ch.05 figure: adlc-tooling -- the ADLC's seven phases annotated with the
+"""ch.05 figure: adlc-tooling, the ADLC's seven phases annotated with the
 REAL tool role at each one for this project's stack: the `lgtm-relay`
 tiering (Opus plan -> Sonnet execute -> Opus validate), the `lgtm-python`
-skill, and the three ledger files -- not a generic "coding assistant"
+skill, and the three ledger files, not a generic "coding assistant"
 label.
 
 This is a public repo naming its own tooling, including the gap:
 Map has no live, version-matched MCP server to lean on the way the Java
-sibling's Quarkus-Agent-MCP / Camel-MCP servers do (DRQ-020) -- it
+sibling's Quarkus-Agent-MCP / Camel-MCP servers do (DRQ-020), it
 substitutes manual reconnaissance plus the `lgtm-python` skill's scaffold
 conventions. That gap is named in the figure, not glossed over.
 
@@ -35,9 +35,9 @@ def heptagon_positions(cx, cy, rx, ry):
 phases = [
     ["1. Frame", "human: intent + PRD"],
     ["2. Map", "manual recon + a scaffolding skill", "(no MCP equivalent)"],
-    ["3. Plan", "the relay -- Opus plans"],
-    ["4. Generate", "the relay -- Sonnet executes", "+ a scaffolding skill"],
-    ["5. Verify", "the relay -- Opus validates", "pytest + Newman + scan"],
+    ["3. Plan", "the relay: Opus plans"],
+    ["4. Generate", "the relay: Sonnet executes", "+ a scaffolding skill"],
+    ["5. Verify", "the relay: Opus validates", "pytest + Newman + scan"],
     ["6. Operate", "a local-stack /", "cluster-stack skill + flags"],
     ["7. Reconcile", "the three ledger files"],
 ]
@@ -59,7 +59,7 @@ notes = [
     {"x": 500, "y": 68, "text": "the relay tiers Plan/Generate/Verify; Map has no MCP equivalent and says so",
      "anchor": "middle", "size": 12, "color": "#555555"},
     {"x": 500, "y": H - 24,
-     "text": "Sourced from _plans/build-plan.md (section F.1) and _plans/decisions.md.",
+     "text": "Sourced from the project build plan (the phase table) and the decisions ledger.",
      "anchor": "middle", "size": 10, "color": "#777777"},
 ]
 

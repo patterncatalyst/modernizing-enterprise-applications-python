@@ -697,13 +697,13 @@
    "op": "replace_picture",
    "sldId": 285,
    "shape_id": 6,
-   "png": "/home/rsedor/Dev/modernizing-enterprise-applications-python/presentation/modernizing-201-fastapi/png/mesh-hero-trace-waterfall.png"
+   "png": "<repo>/presentation/modernizing-201-fastapi/png/mesh-hero-trace-waterfall.png"
   },
   {
    "op": "replace_picture",
    "sldId": 286,
    "shape_id": 6,
-   "png": "/home/rsedor/Dev/modernizing-enterprise-applications-python/presentation/modernizing-201-fastapi/png/chassis-scorecard.png"
+   "png": "<repo>/presentation/modernizing-201-fastapi/png/chassis-scorecard.png"
   }
  ]
 }

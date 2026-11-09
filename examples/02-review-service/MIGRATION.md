@@ -1,4 +1,4 @@
-# review-service -- Migration Notes (ch.15 Phase A -> Phase B, DRQ-009)
+# review-service: Migration Notes (ch.15 Phase A -> Phase B, DRQ-009)
 
 This file is the measured record of the two-phase Review extraction required
 by the r02 walking-skeleton plan and the Python sibling of the Java build's
@@ -9,7 +9,7 @@ same convention that project uses.
 **Important difference from the Java sibling:** there, Phase A was a real,
 previously-committed build (a distinct git commit, `5479d49`) that could be
 checked out and measured directly. Here, Phase A is **documented but never
-committed as code** -- see "Why Phase A isn't shipped as code" below. Its
+committed as code**: see "Why Phase A isn't shipped as code" below. Its
 numbers in this file are therefore measured via a faithful proxy (the real
 import/startup cost its approach would carry), not a full separately-running
 server. That's called out explicitly at each measurement, not glossed over.
@@ -30,7 +30,7 @@ write new persistence code. Concretely, that means:
 - DRF's `BasicAuthentication` reused directly for the write endpoint's auth
   check, since it already knows how to verify against `auth_user`.
 
-Illustrative sketch of what that `lifespan` looks like (never committed --
+Illustrative sketch of what that `lifespan` looks like (never committed,
 this is the shape, not a tested module):
 
 ```python
@@ -76,10 +76,10 @@ async def require_basic_auth(request: Request) -> str:
 ```
 
 Two real problems with actually shipping that, found by sketching it out
-(not speculative -- these are concrete, not "maybe someday" concerns):
+(not speculative: these are concrete, not "maybe someday" concerns):
 
 1. **Django's ORM is synchronous.** Every query needs `sync_to_async(...)`,
-   which hands the call to a thread-pool executor -- a real latency and
+   which hands the call to a thread-pool executor, a real latency and
    concurrency cost under FastAPI's async event loop that Phase B's native
    `async`/`await` SQLAlchemy calls simply don't pay.
 2. **The dependency direction is backwards for an extraction.** A service
@@ -97,19 +97,19 @@ to be deleted in the same iteration. The measurements below instead use a
 faithful proxy for Phase A's cost: the real combined import/startup weight
 of `django.setup()` (against the monolith's actual `config.settings`, with
 all six apps installed) plus FastAPI/uvicorn's own import, run for real on
-this machine -- not an estimate.
+this machine: not an estimate.
 
 ## Per-component refactor (A -> B), as designed (not built)
 
 | Component | Phase A (Django-ORM lift, illustrative) | Phase B (idiomatic, shipped) |
 |---|---|---|
 | HTTP layer | FastAPI routes calling into Django ORM via `sync_to_async` | FastAPI routes calling `app/repository.py`'s native `async`/`await` SQLAlchemy queries |
-| Data access | `review.models.Review`, `common.models.Customer`, `inventory.models.InventoryItem` (Django ORM, imported straight from the monolith path dependency) | `app/models.py` -- independent SQLAlchemy 2.x `DeclarativeBase` mappings onto the SAME tables, owned by this service, zero import from `00-monolith` |
-| Serialization | DRF serializers (`ReviewSerializer`/`ReviewCreateSerializer`), reused directly from the monolith | `app/schemas.py` -- independent Pydantic v2 models, camelCase via `Field(alias=...)` |
-| Auth | DRF `BasicAuthentication`, reused directly (knows how to check Django's `auth_user` already) | `app/auth.py` -- FastAPI `HTTPBasic` dependency + `passlib`'s `django_pbkdf2_sha256` scheme, verifying the SAME `auth_user` table without any Django import |
-| Exception mapping | Hand-adapt DRF's `api_exception_handler` output shape inside FastAPI exception handlers | `app/errors.py` -- native FastAPI `@app.exception_handler(...)` registrations, same `{"error","message","timestamp"}` body |
+| Data access | `review.models.Review`, `common.models.Customer`, `inventory.models.InventoryItem` (Django ORM, imported straight from the monolith path dependency) | `app/models.py`: independent SQLAlchemy 2.x `DeclarativeBase` mappings onto the SAME tables, owned by this service, zero import from `00-monolith` |
+| Serialization | DRF serializers (`ReviewSerializer`/`ReviewCreateSerializer`), reused directly from the monolith | `app/schemas.py`: independent Pydantic v2 models, camelCase via `Field(alias=...)` |
+| Auth | DRF `BasicAuthentication`, reused directly (knows how to check Django's `auth_user` already) | `app/auth.py`: FastAPI `HTTPBasic` dependency + `passlib`'s `django_pbkdf2_sha256` scheme, verifying the SAME `auth_user` table without any Django import |
+| Exception mapping | Hand-adapt DRF's `api_exception_handler` output shape inside FastAPI exception handlers | `app/errors.py`: native FastAPI `@app.exception_handler(...)` registrations, same `{"error","message","timestamp"}` body |
 | Process model | `django.setup()` in `lifespan`, loading all 6 monolith apps' registries just to reach 1 model | No Django import anywhere; only the 4 tables this service actually touches are mapped |
-| Build dependency | `uv` path dependency on `../00-monolith` (whole monolith become this service's dependency) | None -- `pyproject.toml` depends only on FastAPI/SQLAlchemy/asyncpg/Pydantic/passlib |
+| Build dependency | `uv` path dependency on `../00-monolith` (whole monolith become this service's dependency) | None: `pyproject.toml` depends only on FastAPI/SQLAlchemy/asyncpg/Pydantic/passlib |
 | Concurrency | Every DB call threaded via `sync_to_async` (Django ORM is sync-only) | Native `async`/`await` all the way to the driver (`asyncpg`) |
 
 ## Passlib / Django password-hash note (Phase B)
@@ -117,13 +117,13 @@ this machine -- not an estimate.
 `auth_user.password` is Django's own hash format,
 `pbkdf2_sha256$<iterations>$<salt>$<base64 hash>`. Verifying it correctly
 requires matching Django's exact iteration count, salt encoding, and
-constant-time comparison -- getting any of those wrong by hand is a real,
+constant-time comparison: getting any of those wrong by hand is a real,
 easy mistake (CWE-327 territory: a naive re-implementation that compares
 with `==` instead of a constant-time compare, or recomputes with the wrong
 iteration count and silently always fails/succeeds). `passlib`'s
 `django_pbkdf2_sha256` scheme (`CryptContext(schemes=["django_pbkdf2_sha256"])`)
 is purpose-built to match Django's hasher byte-for-byte and verifies in
-constant time -- confirmed locally against a real hash generated by Django's
+constant time: confirmed locally against a real hash generated by Django's
 own `make_password()` during this build:
 
 ```
@@ -141,7 +141,7 @@ False
 
 `app/auth.py` also verifies against a fixed dummy hash when the username
 isn't found, so a lookup miss costs about the same wall-clock time as a
-wrong password -- cheap insurance against timing-based username enumeration.
+wrong password: cheap insurance against timing-based username enumeration.
 
 ## Gotcha found while measuring
 
@@ -149,7 +149,7 @@ wrong password -- cheap insurance against timing-based username enumeration.
 `StarletteDeprecationWarning` on Starlette 1.8.0 pinned here: *"Using `httpx`
 with `starlette.testclient` is deprecated; install `httpx2` instead."*
 `httpx2` does not exist as a published stable release at the time of this
-build (pinned `httpx==0.28.1` is upstream's current stable) -- this is
+build (pinned `httpx==0.28.1` is upstream's current stable), this is
 Starlette signaling a future direction, not something actionable today.
 Left as a warning, not suppressed, so it resurfaces naturally once `httpx2`
 actually ships and this pin needs revisiting.
@@ -163,7 +163,7 @@ actually ships and this pin needs revisiting.
   `manage.py migrate && manage.py seed` applied first.
 - `uv run ruff check .`: **All checks passed** (one deliberate, documented
   lint suppression: `B008` for FastAPI's idiomatic `Depends(...)` default-
-  argument pattern -- see `pyproject.toml`).
+  argument pattern: see `pyproject.toml`).
 - Live run on `:8001` against that same seeded database, verified with
   `curl`:
   - `GET /api/reviews?sku=SKU-WIDGET-001` -> `200`, camelCase array.
@@ -182,11 +182,11 @@ Method: real runs on this machine (not estimates), against a throwaway
 and seeded. "Phase A" numbers are the measured proxy described above (real
 `django.setup()` against the monolith's actual `config.settings`, with all
 six apps installed, plus a real `import fastapi, uvicorn` in the SAME
-process) -- not a running server, since Phase A code was never built (see
+process): not a running server, since Phase A code was never built (see
 above). "Phase B" numbers are this service's actual shipped `app/main.py`.
 Import timing is `/usr/bin/time -f '%e'` around a bare `python -c "import ..."`
 (3 runs each, after a warm filesystem cache; first-run numbers were
-discarded as cold-cache noise -- see raw data below). RSS is
+discarded as cold-cache noise, see raw data below). RSS is
 `resource.getrusage(...).ru_maxrss` (import-only, no server loop running) or
 `ps -o rss` (the real running uvicorn worker). Latency is `curl -w
 '%{time_total}'`, 20 requests, against the live `:8001` service.
@@ -208,12 +208,12 @@ not adjusted to tell a cleaner story: FastAPI + Pydantic v2's own import
 graph (pydantic-core is a sizable compiled extension) dominates both
 columns, so swapping Django's ORM for SQLAlchemy barely moves the needle at
 process-startup granularity. The real Phase A -> Phase B win this project
-cares about isn't raw import time -- it's the **structural** costs Phase A
+cares about isn't raw import time, it's the **structural** costs Phase A
 would carry at runtime and in the build graph, laid out in the "Why Phase A
 isn't shipped as code" section above: a synchronous ORM bridged into an
 async framework via `sync_to_async` on every query, and a hard build-time
 dependency on the entire monolith just to reach one model. Those are the
 costs ch.15 exists to cure, and they don't show up in a startup-time number
 either in Python or in the Java sibling's own writeup (which measured its
-dramatic win on a completely different axis -- native image vs JVM, a
+dramatic win on a completely different axis, native image vs JVM, a
 distinction with no Python equivalent).

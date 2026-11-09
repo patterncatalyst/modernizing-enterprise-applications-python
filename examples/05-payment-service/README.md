@@ -1,12 +1,12 @@
 # 05-payment-service
 
-**r05 -- choreographed payment.** The monolith's (`../00-monolith`) `payment`
+**r05: choreographed payment.** The monolith's (`../00-monolith`) `payment`
 bounded context, extracted onto a standalone **FastAPI** service on
 **`:8085`**. Like `../03-notification-service`, there is **no Spring/Django
 original for the write path**: the monolith still charges payment
 synchronously, in-process, inside the SAME `transaction.atomic()` as the
 inventory reservation (`00-monolith/payment/services.py::charge`). This
-service is a **choreographed saga participant** -- no orchestrator, no gRPC --
+service is a **choreographed saga participant**, no orchestrator, no gRPC,
 authored idiomatic-from-the-start:
 
 - An **idempotent `aiokafka` consumer** of the frozen `order.placed` topic,
@@ -15,10 +15,10 @@ authored idiomatic-from-the-start:
   same own-schema posture `03-notification-service` established.
 - This service's **OWN transactional outbox** (`payment.outbox`) and **OWN
   relay** (`app/relay.py`), publishing `payment.captured` / `payment.declined`
-  -- the half of the outbox pattern notification-service never needed (it
+: the half of the outbox pattern notification-service never needed (it
   only ever consumes; it never publishes). The relay mirrors the monolith's
   proven `common/management/commands/outbox_relay.py` polling shape.
-- `GET /api/payments[?orderId=]` / `GET /api/payments/{id}` -- the lifted
+- `GET /api/payments[?orderId=]` / `GET /api/payments/{id}`: the lifted
   read surface, matching the monolith's `payment/views.py` contract
   byte-for-byte.
 
@@ -28,11 +28,11 @@ notes.
 
 ## Why choreography, not orchestration
 
-This step deliberately has **no saga orchestrator and no gRPC**: payment
+This step has **no saga orchestrator and no gRPC**: payment
 reacts to `order.placed` and emits its own outcome event
 (`payment.captured`/`payment.declined`) for whatever consumes it next (a
 future order-saga reaction is out of scope for this lane). That is
-choreography -- each service reacts to events it observes, with no central
+choreography: each service reacts to events it observes, with no central
 coordinator directing the sequence. Contrast with any future orchestrated
 step in this project that calls payment synchronously (HTTP/gRPC) from a
 coordinating service.
@@ -48,7 +48,7 @@ avoids that split-brain entirely.
 
 Unlike notification-service, this service also **produces** events
 (`payment.captured`/`payment.declined`), so it needs its own transactional
-outbox AND its own relay -- notification-service only ever reads the
+outbox AND its own relay, notification-service only ever reads the
 monolith's outbox-fed topic, it never writes one of its own.
 
 ## Deterministic demo decline rule
@@ -64,17 +64,17 @@ The `order.placed` publisher (the monolith's outbox relay, once it carries a
 payment method) is **at-least-once**. Two layers guarantee a redelivered
 event yields exactly one `Payment` row and exactly one outbox event:
 
-1. **Application-level check-then-insert** --
+1. **Application-level check-then-insert**,
    `app/service.py::process_order_placed` looks up `get_by_order_id` first;
    if a payment already exists for that order, it is a no-op.
-2. **Database-level unique index** -- `uq_payments_order_id` (UNIQUE on
+2. **Database-level unique index**: `uq_payments_order_id` (UNIQUE on
    `order_id`, created by
    `migrations/versions/0001_create_payment_schema.py`), the backstop for
    two deliveries racing concurrently (caught as an `IntegrityError` and
    discarded as a duplicate).
 
 The outbox relay's OWN publish side is separately at-least-once (publish,
-then stamp `published_at`) -- see `EVENTS.md`'s "Delivery guarantees"
+then stamp `published_at`): see `EVENTS.md`'s "Delivery guarantees"
 section.
 
 Proven by `tests/integration/test_payment_choreography.py` (a real Kafka
@@ -94,7 +94,7 @@ only write path is the `order.placed` consumer.
 | GET | `/api/payments/{id}` | `404 NOT_FOUND` if unknown |
 | GET | `/health` | reports Kafka consumer partition-assignment (CI readiness signal) |
 
-Response body: `{id, orderId, amountCents, method, status, createdAt}` --
+Response body: `{id, orderId, amountCents, method, status, createdAt}`,
 matches `payment.serializers.PaymentSerializer`'s field list exactly. Error
 body (every non-2xx response): `{"error": "<CODE>", "message": ...,
 "timestamp": ...}`.
@@ -106,7 +106,7 @@ Postgres **instance** every example in this project shares by default
 (`DATABASE_URL`, default
 `postgresql://monolith:monolith@localhost:5432/monolith`). `app/db.py` sets
 `search_path=payment,public` on every connection AND every model in
-`app/models.py` declares `schema="payment"` explicitly -- the search path is
+`app/models.py` declares `schema="payment"` explicitly, the search path is
 a convenience, the explicit schema is the correctness guarantee.
 
 ## Quickstart
@@ -143,7 +143,7 @@ curl "http://localhost:8085/health"            # consumer readiness
 
 A `paymentMethod` containing `DECLINE` (e.g. `"CARD-DECLINE"`) on the
 triggering `order.placed` event yields a `DECLINED` payment and a published
-`payment.declined` event instead of `payment.captured` -- see `EVENTS.md`.
+`payment.declined` event instead of `payment.captured`, see `EVENTS.md`.
 
 ## Testing
 
@@ -167,7 +167,7 @@ docker run --rm -p 8085:8085 \
 
 UBI 10 (`ubi10/python-314-minimal`, the same verified tag every other service
 in this project uses), multi-stage `uv sync`, non-root (UID 1001, GID 0). The
-container's `CMD` runs `alembic upgrade head` before starting uvicorn -- there
+container's `CMD` runs `alembic upgrade head` before starting uvicorn, there
 is no separate init-container step in this project's compose/CRC stacks.
 
 ## Structured logging

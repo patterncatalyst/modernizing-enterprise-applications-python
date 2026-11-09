@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.02 figure: ledger-files-to-adlc-phases -- maps this project's own
+"""ch.02 figure: ledger-files-to-adlc-phases, maps this project's own
 ledger (the build plan, the per-iteration plans, the decision log, and the
 reconciliation log) onto the ADLC's seven phases: "Frame -> Map -> Plan ->
 Generate -> Verify -> Operate -> Reconcile."
@@ -21,7 +21,7 @@ Ledger-to-phase ties:
   against; the build plan's status is updated as each iteration lands.
 - The decision log + reconciliation log under Reconcile: the decision log
   appends one row per decision outcome; the reconciliation log is this
-  project's own artifact-vs-source log -- live here, one section appended per
+  project's own artifact-vs-source log, live here, one section appended per
   iteration's reconcile pass (zero unexplained drift).
 - The feedback bus (Reconcile -> build plan) is the same phase-table row:
   Reconcile also updates the build plan's status, so the discipline loops
@@ -62,7 +62,7 @@ for i, (key, name, gloss, style) in enumerate(PHASES):
     nodes.append(n)
 
 phase_band = {"x": 20, "y": 68, "w": W - 40, "h": 112,
-              "label": "ADLC phases -- this project's own cycle (Frame -> Map -> Plan -> Generate -> Verify -> Operate -> Reconcile)",
+              "label": "ADLC phases: this project's own cycle (Frame -> Map -> Plan -> Generate -> Verify -> Operate -> Reconcile)",
               "fill": "#ffffff"}
 
 # ---- tier 2: the ledger this project actually keeps -----------------------
@@ -70,9 +70,9 @@ LEDGER_Y, LEDGER_H = 235, 110
 LEDGER = [
     ("build_plan", 40, 288, ["Build plan", "phase table, iteration backlog,", "status per iteration"], "box"),
     ("rnn_plan", 348, 288, ["Per-iteration plan", "lanes + acceptance criteria,", "header records approval status"], "box"),
-    ("decisions", 656, 288, ["Decision log", "append decision outcomes --", "rows: fixed / accepted / proposed"], "box"),
-    ("reconciliation", 964, 288, ["Reconciliation log", "append artifact-vs-source verdicts --", "live: one section per iteration"], "box"),
-    ("lgtm_python", 1272, 288, ["a scaffolding skill", "Map/Generate substitute --", "no MCP equivalent"], "ghost"),
+    ("decisions", 656, 288, ["Decision log", "append decision outcomes,", "rows: fixed / accepted / proposed"], "box"),
+    ("reconciliation", 964, 288, ["Reconciliation log", "append artifact-vs-source verdicts,", "live: one section per iteration"], "box"),
+    ("lgtm_python", 1272, 288, ["a scaffolding skill", "Map/Generate substitute,", "no MCP equivalent"], "ghost"),
 ]
 ledger_nodes = {}
 for key, x, w, lines, style in LEDGER:
@@ -81,7 +81,7 @@ for key, x, w, lines, style in LEDGER:
     nodes.append(n)
 
 ledger_band = {"x": 20, "y": 186, "w": W - 40, "h": 174,
-               "label": "The ledger this project keeps -- checkable against the repository as you read",
+               "label": "The ledger this project keeps, checkable against the repository as you read",
                "fill": "#fafafa"}
 
 # ---- phase -> file edges (clear space between the two bands) --------------
@@ -93,7 +93,7 @@ edges = [
     connect(phase_nodes["verify"], ledger_nodes["reconciliation"], label="equivalence-gate result recorded", ly=14),
     connect(phase_nodes["reconcile"], ledger_nodes["decisions"], amber=True, label="append decision outcomes", ly=-16),
     connect(phase_nodes["reconcile"], ledger_nodes["reconciliation"], amber=True,
-            label="append drift verdict -- zero unexplained drift", ly=12),
+            label="append drift verdict: zero unexplained drift", ly=12),
 ]
 
 # ---- feedback bus: Reconcile also updates the build plan's status ---------
@@ -105,7 +105,7 @@ bp_x = bp["x"] + bp["w"] / 2
 edges += [
     {"x1": dec_x, "y1": dec["y"] + dec["h"], "x2": dec_x, "y2": BUS_Y, "dashed": True, "amber": True},
     {"x1": dec_x, "y1": BUS_Y, "x2": bp_x, "y2": BUS_Y, "dashed": True, "amber": True,
-     "label": "Reconcile also updates the build plan's status -- same discipline"},
+     "label": "Reconcile also updates the build plan's status, same discipline"},
     {"x1": bp_x, "y1": BUS_Y, "x2": bp_x, "y2": bp["y"] + bp["h"], "dashed": True, "amber": True},
 ]
 
@@ -124,7 +124,7 @@ edges.append(connect(rnn_n, resume, dashed=True, amber=True,
                       label="status line read again to resume", lx=260, ly=-6))
 
 resume_band = {"x": 150, "y": 400, "w": 1300, "h": 180,
-               "label": "Interruption and resume -- not hypothetical; this project's own checkpoint discipline",
+               "label": "Interruption and resume: not hypothetical; this project's own checkpoint discipline",
                "fill": "#eaf4ec"}
 
 notes = [

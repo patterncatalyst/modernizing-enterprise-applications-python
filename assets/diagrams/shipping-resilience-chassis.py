@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.25 figure: shipping-resilience-chassis -- what already runs in this
+"""ch.25 figure: shipping-resilience-chassis, what already runs in this
 system (gRPC deadline, outbox at-least-once + two-layer idempotency, the
 proxy's 502 fail-safe, the saga timeout/crash-resume) plus the ONE concrete
 new mechanism r06 adds (tenacity retry-with-timeout on the enrich call), with
@@ -37,15 +37,15 @@ n_sagatimeout = node(1040, 110, 240, 100,
                       ["Saga crash-resume", "resume_running_sagas()", "picks up at step_index"], style="box")
 
 n_retry = node(380, 280, 300, 120,
-                ["NEW: tenacity retry-with-timeout", "enrich_client.py -- 3 attempts,", "exponential backoff, TRANSIENT only",
+                ["New: tenacity retry-with-timeout", "enrich_client.py: 3 attempts,", "exponential backoff, transient only",
                  "(contract errors raised immediately)"], style="accent")
 
 n_breaker = node(60, 450, 300, 110,
-                  ["DEFERRED: pybreaker", "circuit breaker -- no sustained-", "failure load to justify it yet"], style="ghost")
+                  ["DEFERRED: pybreaker", "circuit breaker: no sustained-", "failure load to justify it yet"], style="ghost")
 n_bulkhead = node(400, 450, 300, 110,
-                   ["DEFERRED: asyncio.Semaphore", "bulkhead -- one saga's enrich call", "can't yet starve another's"], style="ghost")
+                   ["DEFERRED: asyncio.Semaphore", "bulkhead: one saga's enrich call", "can't yet starve another's"], style="ghost")
 n_honesty = node(760, 450, 480, 110,
-                  ["Verification discipline: stuck-* negative checks", "make failures VISIBLE (RED, not a false green) --", "the AWAITING_SHIPMENT poll-script bug, found live"], style="accent")
+                  ["Verification discipline: stuck-* negative checks", "make failures visible (red, not a false green):", "the AWAITING_SHIPMENT poll-script bug, found live"], style="accent")
 
 nodes = [n_client, n_deadline, n_outbox, n_proxy, n_sagatimeout,
          n_retry, n_breaker, n_bulkhead, n_honesty]
@@ -66,7 +66,7 @@ notes = [
      "anchor": "middle", "bold": True, "size": 15},
     {"x": 40, "y": H - 40, "text": "Deferral is a decision, not an oversight: pybreaker/Semaphore solve problems this system doesn't have yet (sustained failure, contention).",
      "anchor": "start", "size": 11, "color": "#555555"},
-    {"x": 40, "y": H - 22, "text": "6/6 consecutive stable runs after the poll-script fix -- a resilience lesson about the TEST SUITE, not just the system under test.",
+    {"x": 40, "y": H - 22, "text": "6/6 consecutive stable runs after the poll-script fix, a resilience lesson about the TEST SUITE, not just the system under test.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

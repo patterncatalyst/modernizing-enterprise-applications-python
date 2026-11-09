@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""ch.26 figure: rest-grpc-graphql-protocol-fit -- three communication styles
+"""ch.26 figure: rest-grpc-graphql-protocol-fit, three communication styles
 this project actually uses, side by side, each labeled with the real seam it
 was chosen for and why. REST: request/reply a caller waits on, used for
 every service's own read/write surface. gRPC: a strongly-typed, low-latency
-call on a hot path that cannot proceed without an answer -- order-service's
+call on a hot path that cannot proceed without an answer, order-service's
 Reserve/Release/GetStock calls into inventory-service. GraphQL: one client
 query aggregating several services' data in a single round trip, bounded by
-depth/token limits -- the gateway's one job. Async events (the fourth style,
+depth/token limits, the gateway's one job. Async events (the fourth style,
 covered in depth in ch.23/24) are named at the bottom for completeness, not
 re-drawn here.
 
@@ -45,7 +45,7 @@ grpc_edges = [connect(g1, g2), connect(g2, g3), connect(g3, g4)]
 q1 = node(930, 110, 380, 70, ["Client -> graphql-gateway :8090", "order(id) { ... }, one round trip"], style="box")
 q2 = node(930, 200, 380, 70, ["Fans out to 5 sources lazily,", "per-field, depth/token bounded"], style="box")
 q3 = node(930, 290, 380, 70, ["Fits: a view that needs several", "services' data in one response"], style="accent")
-q4 = node(930, 380, 380, 60, ["Partial failure = null field +", "errors[], never a 500 -- see Fig 26.4"], style="ghost")
+q4 = node(930, 380, 380, 60, ["Partial failure = null field +", "errors[], never a 500: see the GraphQL partial-failure figure"], style="ghost")
 gql_nodes = [q1, q2, q3, q4]
 gql_edges = [connect(q1, q2), connect(q2, q3), connect(q3, q4)]
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.33 figure: openshift-image-delivery -- the podman-on-host -> integrated
+"""ch.33 figure: openshift-image-delivery, the podman-on-host -> integrated
 -registry -> in-cluster-pull loop `openshift/build-and-push.sh` and
 `openshift/install-infra.sh` run, replacing `minikube image load` (DRQ-108).
 Python has no `quarkus-openshift`-style S2I path, so the image is built on
@@ -24,9 +24,9 @@ g.OUT = os.path.dirname(__file__)
 W, H = 1540, 660
 
 band_host = {"x": 30, "y": 40, "w": 560, "h": 580, "fill": "#fafafa",
-             "label": "host -- podman (no quarkus-openshift S2I path for Python)"}
+             "label": "host: podman (no quarkus-openshift S2I path for Python)"}
 band_cluster = {"x": 630, "y": 40, "w": 880, "h": 580, "fill": "#fafafa",
-                 "label": "project: mea -- OpenShift Local (CRC)"}
+                 "label": "project: mea, OpenShift Local (CRC)"}
 
 build = node(60, 90, 220, 72,
              ["podman build", "8 service Containerfiles"],
@@ -80,10 +80,10 @@ notes = [
     {"x": W / 2, "y": 24, "text": "image delivery: podman build+push on the host, pulled in-cluster from the integrated registry",
      "anchor": "middle", "bold": True, "size": 15},
     {"x": 60, "y": H - 36,
-     "text": "No in-cluster BuildConfig: 8 host-built Python images push faster and simpler than a Docker-strategy S2I build per service (rejected, _plans/r11-build-plan.md A.3).",
+     "text": "No in-cluster BuildConfig: 8 host-built Python images push faster and simpler than a Docker-strategy S2I build per service.",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 60, "y": H - 18,
-     "text": "On a cluster WITH Docker Hub egress, drop --mirror-infra and point values.yaml's postgres.image / kafka.image at the upstream refs instead.",
+     "text": "On a cluster with Docker Hub egress, drop --mirror-infra and point values.yaml's postgres.image / kafka.image at the upstream refs instead.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

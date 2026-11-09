@@ -2,7 +2,7 @@
 title: "The Deliberate Smells"
 order: 9
 part: "The Reference Monolith"
-description: "The coupling, god-service, shared-table, and transaction-scope smells planted in the reference monolith, each tagged to the pattern that will later cure it."
+description: "The coupling, god-service, shared-schema and transaction-scope smells planted in the reference monolith, each tagged in code to the extraction that cures it."
 duration: 30 minutes
 ---
 
@@ -10,53 +10,33 @@ duration: 30 minutes
 
 By the end of this chapter you can:
 
-- Locate every `# SMELL[ch.NN]:` tag with `grep -rn 'SMELL\[ch\.' examples/00-monolith` and map each of the seven to the chapter that cures it.
-- Explain why a "seam" is a conceptual boundary the implementation currently welds shut, not an arbitrary place where code could be split.
-- Diagnose the shared-schema smell (one Postgres schema, one Django migration history across six apps) and explain why cross-context foreign keys stay invisible until a migration from another app breaks a query it never knew it was leaning on.
-- Diagnose the god `place_order()` function using the "describe it in one sentence without 'and'" heuristic, and explain why no change local to `place_order()` itself, only removing other contexts' direct calls, can cure it.
-- Explain why one `transaction.atomic()` block spanning five contexts is correct only because every context shares one Postgres instance, and name what has to replace it (sagas, ch.22-24) once those contexts get separate databases.
-- Diagnose the synchronous-notification and dual-write-hazard smells, already cured, and name the pattern (transactional outbox plus an idempotent consumer) that cures each.
-- Use review's already-cured smell 7 (shared Basic-auth coupling) as the existence proof that "tag it, name the cure, extract it" survives contact with a real codebase, verified by ch.15's 11/11 passing pytest suite.
+- Find every `SMELL` tag in the monolith with one `grep` and map each of the seven smells to its cure.
+- Explain a seam as a boundary the implementation currently welds shut, not an arbitrary place to split code.
+- Diagnose the shared-schema smell and say why cross-context foreign keys stay invisible until a migration in one app breaks a query in another.
+- Diagnose the god `place_order()` function with the "describe it in one sentence without 'and'" test, and say why only removing other contexts' direct calls cures it.
+- Explain why one `transaction.atomic()` across five contexts is correct only while they share a Postgres instance, and name what replaces it (sagas) once they don't.
+- Name the pattern that cures the synchronous-notification and dual-write smells: a transactional outbox plus an idempotent consumer.
 
 ## Why this matters
 
-Ch.8 built the monolith as a defensible "before." This chapter reads the
-same codebase a second time, this time hunting: seven smells, planted by
-design, each one tagged in-code with a comment of the exact shape
-`# SMELL[ch.NN]: ...`, naming the chapter, later in this book, that cures
-it. None of them are bugs. Every one of them is the ordinary, idiomatic way
-to write this code *inside one process with one shared database*, which is
-exactly why this chapter names them now, before Part 5 starts cutting seams.
-
-Find every one of them yourself:
+The monolith is a defensible "before." Read a second time, it has seven smells planted by design, each tagged in code with a comment of the form `# SMELL[ch.NN]: ...` that names the cure. None is a bug. Each is the ordinary way to write the code inside one process with one shared database, and naming them now gives every later extraction a target.
 
 ```sh
 grep -rn 'SMELL\[ch\.' examples/00-monolith
 ```
 
-{% include excalidraw.html file="smell-map" alt="Map of the monolith's seven deliberate smells, each pointing from its planted location to the chapter that cures it" caption="Figure 9.1: Seven smells, seven curing chapters" %}
+{% include excalidraw.html file="smell-map" alt="Map of the monolith's seven deliberate smells, each pointing from its planted location to the extraction that cures it" caption="Figure 9.1: Seven smells, each mapped to its cure" %}
 
-## A seam is a line the system already wants to be cut along
+## Pattern: Seam
 
-Martin Fowler's definition of a seam (a place where behavior can change
-without editing the code at that spot) is the quiet idea underneath this
-whole chapter. Every smell below sits exactly on one of this monolith's
-seams: the place where a bounded context's own logic butts up against
-another context's, or against infrastructure it doesn't actually own. A
-seam doesn't announce itself as a seam while the system is young and small.
-It looks like the normal, unremarkable way anyone would write this code.
-Naming it is what turns "normal code" into "a smell with an address": a
-location `grep` can find, mapped to the exact chapter that resolves it.
+Martin Fowler defines a seam as a place where behavior can change without editing the code at that spot. Every smell below sits on one: where a context's logic butts against another context's, or against infrastructure it doesn't own. A seam doesn't announce itself while the system is small. It looks like the normal way to write the code. Tagging it turns it into a smell with an address that `grep` can find and a named cure.
 
 ## Smell 1: the god checkout service
 
 **Where:** `order/services.py::place_order()`
-**Cured in:** ch.26 (order extraction), the last and hardest, by design
+**Cure:** the order extraction, last and hardest by design
 
-`place_order()` is the single orchestration point for checkout. It reaches
-directly into inventory's, payment's, shipping's, and notification's
-services and models, instead of treating those contexts as independently
-deployable collaborators reached over a stable contract:
+`place_order()` is the single orchestration point for checkout. It reaches directly into the services and models of inventory, payment, shipping and notification instead of calling independently deployable collaborators over a stable contract:
 
 ```python
 # SMELL[ch.26]: reaching directly into inventory's services/model
@@ -69,30 +49,16 @@ for line in items:
     ...
 ```
 
-Order is the *last* context this book extracts, by design, not the first,
-because every other context's extraction removes one of this function's
-direct dependencies before order's own turn comes. By the time ch.26 gets
-to it, inventory, payment, shipping, and notification are already gone:
-order is the only thing left reaching into empty air.
+Order goes last because each earlier extraction removes one of this function's direct dependencies. When order's turn comes, inventory, payment, shipping and notification are gone and it is the only thing left reaching into empty air.
 
-Notice what the fix can't be, too. It isn't "write cleaner code inside
-`place_order()`": the function is already short, already readable, already
-doing exactly what it says. The smell isn't in the code's style; it's in
-how this one function's correctness depends on four other contexts'
-internals being reachable in the same call stack. A code review of
-`place_order()` in isolation, with no knowledge of the other five contexts,
-would find nothing wrong with it at all, which is exactly why this kind of
-coupling survives so many code reviews in real systems.
+The cure isn't cleaner code inside `place_order()`. The function is short, readable and does what it says. The smell is that its correctness depends on four other contexts' internals being reachable in the same call stack. A review of the function in isolation finds nothing wrong, which is why this coupling survives so many reviews.
 
-## Smell 2: one ACID transaction spanning six contexts
+## Smell 2: one ACID transaction across six contexts
 
-**Where:** `order/services.py::place_order` (the `transaction.atomic()` block)
-**Cured in:** ch.22 (ACID → ACD), ch.23/24 (choreographed/orchestrated sagas)
+**Where:** the `transaction.atomic()` block in `order/services.py::place_order`
+**Cure:** moving from ACID to ACD, then choreographed and orchestrated sagas
 
-The entire checkout body (order persistence, inventory reservation,
-payment capture, shipment dispatch, and the outbox write) runs inside one
-`transaction.atomic()` block. A failure anywhere unwinds everything written
-so far, in every context, automatically:
+The whole checkout body runs inside one block, and a failure anywhere unwinds every write in every context:
 
 ```python
 with transaction.atomic():
@@ -103,90 +69,35 @@ with transaction.atomic():
     _write_order_placed_outbox_event(...)
 ```
 
-That automatic rollback is a gift of sharing one Postgres instance across
-six contexts. The moment any one of them gets its own database, the
-rollback stops happening on its own; it has to be rebuilt by hand as a
-saga, with explicit
-compensating actions for everything that already committed. `tests/
-test_checkout.py` proves this rollback is real, not theoretical, with two
-deterministic failure sentinels:
+That rollback is a gift of one shared Postgres instance. When any context gets its own database, it stops happening, and has to be rebuilt as a saga with compensating actions for everything already committed. Two deterministic sentinels show the rollback is real:
 
-- A `paymentMethod` of `CARD-DECLINE` → `402 PAYMENT_DECLINED`, and the
-  inventory reservation taken earlier in the same request is rolled back
-  (net-zero stock).
-- A `shippingAddress` containing `SHIP-FAIL` → `422 SHIPPING_FAILED`, and
-  the *entire* checkout unwinds: inventory reservation, order row, and
-  payment capture, all of it.
+- A `paymentMethod` of `CARD-DECLINE` returns `402 PAYMENT_DECLINED`, and the reservation made earlier in the request is rolled back, leaving stock net-zero.
+- A `shippingAddress` containing `SHIP-FAIL` returns `422 SHIPPING_FAILED`, and the whole checkout unwinds: reservation, order row and payment capture.
 
-## Smell 3: a shared single schema for all six apps
+## Smell 3: one shared schema for all six apps
 
-**Where:** `config/settings.py` (`INSTALLED_APPS`/`DATABASES`), every
-model's `db_table`
-**Cured in:** ch.18 (shared data → owned data)
+**Where:** `config/settings.py` (`INSTALLED_APPS`, `DATABASES`) and every model's `db_table`
+**Cure:** shared data to owned data
 
-One Postgres schema, one Django migration history, all six bounded
-contexts migrating and deploying together. A schema change to `inventory`
-and a schema change to `payment` land in the same `manage.py migrate` run
-whether or not the two contexts intended to ship at the same time:
-`config/settings.py` says so directly, right above `INSTALLED_APPS`:
-"all six bounded contexts ... are Django apps in ONE project, sharing ONE
-Postgres schema ... and migrating together."
+One Postgres schema and one Django migration history mean all six contexts migrate and deploy together. A change to `inventory` and a change to `payment` land in the same `manage.py migrate` whether or not the two meant to ship together. `config/settings.py` says so above `INSTALLED_APPS`: "all six bounded contexts ... are Django apps in ONE project, sharing ONE Postgres schema ... and migrating together."
 
-The cost of this smell is easy to underrate because nothing about it looks
-expensive on any single day. Adding a column to `reviews` is a one-line
-migration, same as it would be in six separate schemas. The expense shows
-up later, as a *rate limit* on how independently any one context can
-change: every migration against this one database is a migration every
-other context's deploy has to tolerate, whether or not that context's code
-changed at all. Ch.18 names the destination this smell is cured into
-(each context owning its own schema outright) and spends real time on why
-"owned" doesn't have to mean "a separate physical database" on day one of
-that cure.
+The cost is easy to underrate because no single day looks expensive. Adding a column to `reviews` is a one-line migration, same as in a separate schema. The expense is a rate limit on how independently any context can change: every migration against this database is one every other context's deploy has to tolerate, whether or not its code changed. The destination is each context owning its own schema outright, and "owned" doesn't have to mean a separate physical database on day one.
 
 ## Smell 4: cross-context foreign keys
 
-**Where:** every cross-app `ForeignKey` field (see each app's `models.py`)
-**Cured in:** ch.18 (shared data → owned data), ch.19 (CDC backfill + decommission)
+**Where:** every cross-app `ForeignKey` (see each app's `models.py`)
+**Cure:** shared data to owned data, then a change-data-capture backfill and decommission
 
-`order.Order.customer`, `order.OrderItem.inventory_item` (its original
-shape, before ch.19's snapshot cure), `payment.Payment.order`,
-`shipping.Shipment.order`, `notification.Notification.customer`/`.order`,
-and `review.Review.customer`/`.inventory_item` are all direct foreign keys
-crossing bounded-context boundaries inside the one shared schema. Each one
-is an ordinary, idiomatic Django relation, and each one is also a decision
-in waiting: an owned copy, a replicated field via CDC, or a soft reference
-carried in an event, once the tables on either end of that join no longer
-live in the same database.
+`order.Order.customer`, `order.OrderItem.inventory_item` (in its original shape), `payment.Payment.order`, `shipping.Shipment.order`, `notification.Notification.customer` and `.order`, and `review.Review.customer` and `.inventory_item` all cross context boundaries inside the shared schema. Each is an idiomatic Django relation and a decision in waiting: an owned copy, a field replicated through change data capture, or a soft reference carried in an event.
 
-`order.models.OrderItem` is the clearest worked example of what "in
-waiting" means, because this project has already cured it once. Its
-original shape held a live `ForeignKey` onto `inventory.InventoryItem`, so
-reading an order's line items meant joining into inventory's own table on
-every request. Ch.19's cure replaces that live join with a denormalized
-snapshot (`sku`, `item_name`, `unit_price_cents` captured once, at checkout
-time, onto `OrderItem` itself), so a later price change in inventory can
-never retroactively rewrite a historical order line. `tests/
-test_order_snapshot.py` is the regression test that proves this: it changes
-an `InventoryItem`'s price after an order already exists and asserts the
-existing order's line item is untouched. The other five foreign keys in
-this smell are still live joins at the state this chapter describes; ch.18
-and ch.19 walk the same snapshot-or-replicate decision for each of them in
-turn.
+`OrderItem` shows the cure once. It originally held a live `ForeignKey` onto `inventory.InventoryItem`, so reading an order's lines joined into inventory's table on every request. The inventory extraction replaced the join with a denormalized snapshot (`sku`, `item_name`, `unit_price_cents`) captured at checkout. A later price change in inventory can no longer rewrite a historical order line; the repo's regression test changes an item's price after an order exists and asserts the existing line is untouched. The other five keys are still live joins at the state described here.
 
-## Smell 5: synchronous notification inside the checkout transaction *(cured)*
+## Smell 5: synchronous notification inside the checkout transaction (cured)
 
-**Where:** `order/services.py::place_order` (now writes an `OutboxEvent` instead)
-**Cured in:** ch.17 (notification extraction: transactional outbox + async consumer)
-**Status:** cured
+**Where:** `order/services.py::place_order`, which now writes an `OutboxEvent`
+**Cure:** the notification extraction, with a transactional outbox and an async consumer
 
-This smell's original shape called `notification/services.py::
-send_order_confirmation()` synchronously, from inside the same
-`transaction.atomic()` as the rest of checkout: checkout latency coupled
-to however long "sending" a notification took, and a failure there would
-have rolled back the whole order. That call is gone. `place_order()` now
-writes an `order.placed` `OutboxEvent` row in the same transaction and
-returns; nothing notification-shaped runs synchronously in the checkout
-path anymore:
+The original `place_order()` called `notification/services.py::send_order_confirmation()` inside the same `transaction.atomic()` as the rest of checkout. Checkout latency was coupled to however long "sending" took, and a failure there rolled back the order. That call is gone. `place_order()` writes an `order.placed` row in the same transaction and returns:
 
 ```python
 OutboxEvent.objects.create(
@@ -197,38 +108,21 @@ OutboxEvent.objects.create(
 )
 ```
 
-## Smell 6: the dual-write hazard *(cured)*
+## Smell 6: the dual-write hazard (cured)
 
-**Where:** `notification/services.py::record_order_placed` (replaces the old
-`send_order_confirmation`/`_dispatch_via_external_provider`)
-**Cured in:** ch.17 (the transactional outbox)
-**Status:** cured
+**Where:** `notification/services.py::record_order_placed`, replacing `send_order_confirmation` and `_dispatch_via_external_provider`
+**Cure:** the transactional outbox
 
-The old `send_order_confirmation()` made two independent writes to two
-independent systems with no shared transaction: a `Notification` row
-(atomic with checkout) and a call to a stand-in external provider. A crash
-between the two would have lost the notification silently; a naive retry
-could have duplicated it: the textbook dual-write problem. The cure makes
-the outbox write the *only* thing inside the local transaction. A separate
-process, `common.management.commands.outbox_relay`, is the only thing that
-reads the outbox and publishes to Kafka at-least-once, stamping
-`published_at` after a successful send. `notification.management.commands.
-order_placed_consumer` consumes that topic and calls
-`notification.services.record_order_placed()`, which is idempotent: a
-check-then-create backstopped by a partial unique constraint on `order`,
-so a redelivered event creates exactly one `Notification`, never two.
+The old `send_order_confirmation()` made two writes to two systems with no shared transaction: a `Notification` row, atomic with checkout, and a call to a stand-in external provider. A crash between them loses the notification silently, and a naive retry can duplicate it. The cure makes the outbox write the only thing inside the local transaction. A separate process, `common.management.commands.outbox_relay`, reads the outbox and publishes to Kafka at least once, stamping `published_at` after a successful send. `notification.management.commands.order_placed_consumer` consumes that topic and calls `record_order_placed()`, which is idempotent: a check-then-create backed by a partial unique constraint on `order`, so a redelivered event creates one `Notification`, never two.
 
-## Smell 7: review tangled into shared security despite being independent
+Because the outbox write is inside the same transaction, it rides along with the free rollback. The happy path leaves one `order.placed` row, and a `DECLINE` or `SHIP-FAIL` checkout leaves none.
+
+## Smell 7: review tangled into shared security
 
 **Where:** `review/views.py::ReviewListCreateView`
-**Cured in:** ch.15 (review extraction, the first context pulled out)
+**Cure:** the review extraction, the first context pulled out
 
-`review/models.py` says outright that review has no runtime dependency on
-order, inventory, payment, shipping, or notification: it's REST-only, with
-no synchronous collaborator. And yet `POST /api/reviews` is gated by Basic
-auth against this monolith's own shared `django.contrib.auth` table, the
-same shared-security surface every other context would reach for if it
-needed auth:
+`review/models.py` states that review has no runtime dependency on order, inventory, payment, shipping or notification. Yet `POST /api/reviews` is gated by Basic auth against the monolith's own `django.contrib.auth` `auth_user` table, the shared-security surface any other context would reach for:
 
 ```python
 # SMELL[ch.15]: POST is gated by HTTP Basic auth against THIS module's
@@ -238,103 +132,61 @@ needed auth:
 authentication_classes = [BasicAuthentication]
 ```
 
-`GET /api/reviews` and `GET /api/reviews/{id}` stay open; only the write
-is gated, per-view. That contract (401 unauthenticated, 201 authenticated)
-is exactly what `tests/test_review_auth.py` asserts. Review gets its own,
-independent auth configuration once it's extracted in ch.15, no longer
-borrowing this module's `auth_user` table at all.
+`GET /api/reviews` and `GET /api/reviews/{id}` stay open, and only the write is gated, per view. The contract is `401` unauthenticated and `201` authenticated. After extraction, review has its own auth configuration and no longer touches this table.
 
-## Deterministic failure injection: proving smells 1 and 2 are real
-
-A smell that only exists in prose is easy to dismiss as theoretical. This
-one doesn't stay in prose. Four checkout behaviors, triggered by
-deterministic sentinels in the request body, prove smells 1 and 2 are real
-mechanisms with observable consequences, not just an architectural
-observation:
-
-- The happy path → `201 Created`, `Location: /api/orders/{id}`,
-  `status: CONFIRMED`.
-- A checkout line that exceeds `quantityOnHand` → `409 Conflict`,
-  `error: OUT_OF_STOCK`, raised *before* any writes happen at all.
-- A `paymentMethod` containing `DECLINE` (case-insensitive) → `402 Payment
-  Required`, `error: PAYMENT_DECLINED`, and the inventory reservation made
-  earlier in the same transaction is rolled back: net-zero stock.
-- A `shippingAddress` containing `SHIP-FAIL` (case-insensitive) → `422
-  Unprocessable Entity`, `error: SHIPPING_FAILED`, and the entire checkout
-  rolls back: inventory reservation, order row, and payment capture, all
-  of it, also net-zero stock. This is smell 2's whole point, made
-  concrete: today, this rollback is free.
-
-Since smells 5 and 6 were cured, the `OutboxEvent` write rides along with
-that same free rollback: the happy path leaves exactly one `order.placed`
-row behind; a `DECLINE` or `SHIP-FAIL` checkout leaves zero. `tests/
-test_checkout.py` and `tests/test_outbox.py` assert every one of these
-outcomes directly, and the same four scenarios are what `tooling/newman/
-mea.postman_collection.json`'s Scenario 1–4 folders assert from outside the
-process (ch.10 covers that collection in full). Neither suite is testing
-"the smell." Both are testing the ordinary checkout contract; the smell
-is just the reason that contract is so cheap to get right today, and
-exactly what gets expensive to keep once any one of these contexts gets
-its own database.
-
-## The proof this method works: review, already cured
-
-Naming a smell and tagging it to a curing chapter is only useful if the
-cure actually lands. By the time this book reaches Part 5, it does: ch.15
-pulls review out of this monolith first, precisely *because* `review/
-models.py` already says, in its own docstring, that review has no runtime
-dependency on any other context. That's not a coincidence this chapter is
-pointing out after the fact; it's the same reasoning in reverse. Smell 7 is
-cheap to cure exactly because review was always the least-coupled context
-in the schema: no synchronous collaborator to disentangle, no saga to
-build, just an auth gate to re-home onto a service that owns its own user
-store. Ch.15 records the result: `uv run pytest` passing 11/11 against a
-real, throwaway Postgres container for the extracted service, and the same
-unedited Newman collection this chapter described staying green re-pointed
-at the new service's own address. Smell 7, planted here, cured there, with
-nothing in between but the chapters that build the extraction mechanism
-itself (ch.14's strangler proxy, which every extraction after review reuses
-too).
+This is the existence proof that "tag it, name the cure, extract it" survives a real codebase. Review is cheap to cure because it was always the least-coupled context: no synchronous collaborator to disentangle, no saga to build, only an auth gate to re-home onto a service with its own user store. The extracted service's `uv run pytest` passes 11/11 against a throwaway Postgres container, and the same unedited Newman collection stays green re-pointed at the new service's address.
 
 ## The smell table
 
-| # | Smell | Curing chapter | Status |
+| # | Smell | Cure | Status |
 |---|---|---|---|
-| 1 | God checkout service | ch.26 | open |
-| 2 | One ACID transaction across six contexts | ch.22, ch.23/24 | open |
-| 3 | Shared single schema | ch.18 | open |
-| 4 | Cross-context foreign keys | ch.18, ch.19 | open |
-| 5 | Synchronous notification in checkout | ch.17 | **cured** |
-| 6 | Dual-write hazard | ch.17 | **cured** |
-| 7 | Review/shared-auth coupling | ch.15 | open |
+| 1 | God checkout service | Order extraction | open |
+| 2 | One ACID transaction across six contexts | ACID to ACD, sagas | open |
+| 3 | Shared single schema | Shared data to owned data | open |
+| 4 | Cross-context foreign keys | Owned data, CDC backfill | open |
+| 5 | Synchronous notification in checkout | Outbox, notification extraction | **cured** |
+| 6 | Dual-write hazard | Transactional outbox | **cured** |
+| 7 | Review and shared-auth coupling | Review extraction | open |
 
-Five of the seven are still open at the state this chapter describes:
-"open" here means *not yet cured*, not *undiscovered*; every one of them is
-already named, tagged, and pointed at its curing chapter. Two are already
-cured, and their cure is already live in this same codebase: smells 5 and 6
-prove the method works before Part 5 even starts, because the fix for both
-of them (a transactional outbox plus an idempotent consumer) was built
-directly into this still-whole monolith, without extracting notification
-into its own service first. That is the chapter-9 argument in miniature:
-curing a smell and extracting a context are two different moves, and
-sometimes the first one can happen before the second one does.
+"Open" means not yet cured, not undiscovered: every smell is named, tagged and pointed at its cure. Smells 5 and 6 were cured inside the still-whole monolith, by building the outbox and an idempotent consumer before notification became a service. Curing a smell and extracting a context are different moves, and the first can happen before the second.
 
 ## Why "deliberate" matters
 
-Nothing above is bad code. `place_order()` reaching into four other
-contexts' services directly is the single most natural way to write a
-checkout function inside one process: there is no network between
-`order` and `inventory` to make a contract feel necessary, so nobody writes
-one. A single `transaction.atomic()` spanning five contexts is the single
-most natural way to get correctness without writing any of it by hand,
-because Postgres already gives it away. A shared schema is the single most
-natural way to model a domain with this many cross-references, because the
-ORM makes every one of those joins a one-line `ForeignKey`. None of these
-smells required a careless engineer. They required exactly one condition:
-everything living in the same process, talking to the same database. Part 5
-removes that condition, context by context, and every removal forces
-exactly one of these smells into the open and cures it, by design.
+None of this is bad code. `place_order()` calling four contexts directly is the most natural checkout in one process: no network separates `order` from `inventory`, so nobody writes a contract. One `transaction.atomic()` over five contexts is the natural way to get correctness, because Postgres gives it away. A shared schema is the natural way to model a domain with this many cross-references, because the ORM makes each join a one-line `ForeignKey`. The smells need no careless engineer, only one condition: everything in one process, talking to one database. Each extraction removes that condition for one context and forces exactly one smell into the open.
 
-Next: ch.10 looks at how this same monolith is tested, and why the test
-suite built for it today is the thing that will later prove every
-extraction behaves identically to what it replaced.
+> **Decision**
+>
+> Tag a smell when the code is correct only because everything shares one process and one database. Cure it by changing the condition (extract the context, give it its own data), never by cleaning up the code at the tag.
+
+> **🤖 Explore with your agent**
+>
+> "Run `grep -rn 'SMELL\[ch\.' examples/00-monolith` and group the hits by smell number. For smell 4, list every cross-app `ForeignKey` in `examples/00-monolith/*/models.py` and propose, for each one, whether it should become an owned copy, a CDC-replicated field or an event-carried reference, with a one-line reason."
+>
+> Check: the reply lists seven cross-context keys, the `SMELLS.md` smell 4 list minus `OrderItem.inventory_item`, and names `OrderItem` as the one already cured with a snapshot.
+
+## Build, run, observe
+
+Find the tags, then run the checkout behaviors:
+
+```sh
+grep -rn 'SMELL\[ch\.' examples/00-monolith
+cd examples/00-monolith && uv run pytest
+```
+
+Four checkout behaviors, triggered by sentinels in the request body, make smells 1 and 2 observable. The same four are exercised from outside the process by the Scenario 1 to 4 folders of `tooling/newman/mea.postman_collection.json`.
+
+| Request | Response | Side effects |
+|---|---|---|
+| Happy path | `201 Created`, `Location: /api/orders/{id}`, `status: CONFIRMED` | one `order.placed` outbox row |
+| Line exceeds `quantityOnHand` | `409 Conflict`, `OUT_OF_STOCK` | raised before any write |
+| `paymentMethod` containing `DECLINE` (case-insensitive) | `402 Payment Required`, `PAYMENT_DECLINED` | reservation rolled back, stock net-zero, no outbox row |
+| `shippingAddress` containing `SHIP-FAIL` (case-insensitive) | `422 Unprocessable Entity`, `SHIPPING_FAILED` | reservation, order row and payment all rolled back, no outbox row |
+
+The rollback in the last two rows is free today and is what gets expensive once a context has its own database. Experiments:
+
+- Send an over-ordered line: no order row and no outbox row exist afterward.
+- Send a `DECLINE` checkout and query stock for the SKU: it matches its value before the request.
+
+## For deeper coverage
+
+`examples/00-monolith/SMELLS.md` has the full table with each smell's recorded status, and `tooling/newman/GOLDEN-BASELINE.md` has the baseline runs that later extractions were held to.

@@ -2,7 +2,7 @@
 title: "Contracts & the Service Registry"
 order: 28
 part: "Communication & Contracts"
-description: "Schema/API/shared-data-type registry use cases and enterprise requirements; Apicurio with Avro, demonstrated additively alongside the live JSON event flows."
+description: "A schema registry replaces hand-copied Pydantic contracts with one governed schema and a compatibility rule that rejects breaking changes at registration. Apicurio with Avro, demonstrated alongside the live JSON flows."
 duration: 35 minutes
 ---
 
@@ -10,28 +10,16 @@ duration: 35 minutes
 
 By the end of this chapter you can:
 
-- Explain what problem a schema registry solves that a hand-maintained Pydantic contract cannot (centralized governance and compatibility enforcement with teeth) and why `payment_method` silently drifted out of notification-service's copy of `OrderPlacedEvent`.
-- Author an Avro `.avsc` schema that is a field-for-field mirror of an existing Pydantic model, including a logical type (`timestamp-millis`) that documents a field's meaning the Pydantic model only carried in a comment.
-- Build a pure-Python Avro producer/consumer path with `fastavro` and `aiokafka` against Apicurio's v3 REST API directly, with no Confluent or Apicurio SDK serde to lean on, and explain why that path exists.
-- Trace the register/serialize/deserialize flow: idempotent registration on first publish via `register_or_resolve`, a global schema id packed into a hand-rolled wire envelope, and a consumer-side lookup of that id against the registry.
-- Configure an Apicurio compatibility rule (BACKWARD, FORWARD, FULL) and predict whether a given schema evolution (a new optional field with a default versus a retyped existing field) will be accepted or rejected at registration time.
-- Justify why this chapter proves the registry as an isolated, parallel demonstrator (`examples/09-schema-registry-demo`) rather than retrofitting the live `order.placed` topic, and name what a real cutover would additionally require.
+- Explain what a schema registry enforces that a hand-maintained Pydantic contract cannot, and why `paymentMethod` is missing from notification-service's copy of `OrderPlacedEvent`.
+- Write an Avro `.avsc` that mirrors a Pydantic model field for field, including the `timestamp-millis` logical type.
+- Register, serialize and deserialize with `fastavro`, `aiokafka` and Apicurio's v3 REST API, with no vendor serde.
+- Frame each message with a magic byte and a global schema id, and resolve the writer schema from that id on the consumer side.
+- Configure a BACKWARD rule and predict whether a schema evolution is accepted or rejected.
+- Say why the registry runs beside the live `order.placed` topic instead of replacing it, and what a real cutover would need.
 
 ## Why this matters
 
-Chapter 17 introduced `order.placed` as a JSON Kafka event and, in the same
-breath, introduced a cost this book has been carrying ever since: there is
-no shared package between any two of this project's eight independently
-deployable services, so a wire contract three of them need to agree on gets
-authored three separate times, by hand, in three separate `app/schemas.py`
-files. `examples/07-order-service/EVENTS.md`'s own "Produces: `order.placed`"
-section names the frozen shape: `orderId`, `customerId`, `customerEmail`,
-`totalCents`, `confirmationMessage`, `placedAt`, `paymentMethod`: seven
-fields. `examples/05-payment-service/app/schemas.py::OrderPlacedEvent` has
-all seven, `payment_method` included, because the choreographed decline rule
-needs it to decide CAPTURE versus DECLINE. `examples/03-notification-service/
-app/schemas.py::OrderPlacedEvent`, read it and count, has six. There is no
-`payment_method` field at all:
+`order.placed` is a JSON event, and the eight services share no package. A contract that three of them must agree on is written three times, by hand, in three `app/schemas.py` files. The frozen shape in `examples/07-order-service/EVENTS.md` has seven fields: `orderId`, `customerId`, `customerEmail`, `totalCents`, `confirmationMessage`, `placedAt`, `paymentMethod`. payment-service's `OrderPlacedEvent` has all seven, because the decline rule needs `paymentMethod` to choose CAPTURE or DECLINE. notification-service's copy has six:
 
 ```python
 # examples/03-notification-service/app/schemas.py
@@ -47,135 +35,27 @@ class OrderPlacedEvent(BaseModel):
     # no payment_method field at all
 ```
 
-Nothing in the build catches this, and in this particular case nothing is
-actually broken: notification-service never reads `paymentMethod`, so its
-model simply doesn't declare it, and Pydantic happily ignores the extra key
-on the wire. That is exactly what makes the drift matter rather than
-something to dismiss: it is invisible by design. If a future consumer *did* need
-`paymentMethod` and an author copied notification's six-field model instead
-of payment's seven-field one, an easy mistake, since both are called
-`OrderPlacedEvent` and live in a file called `app/schemas.py` in services
-that look alike from the outside, nothing would fail at startup, at
-deserialization, or in CI. The field would simply never arrive, silently,
-in a service whose own docstring claims to be "this service's own copy of
-the frozen `order.placed` JSON payload." Both services' own schema modules
-say the same thing about why this duplication exists at all: there is no
-shared module between the monolith and either service. Each is an
-independently deployable project, so the duplication above is the real
-cost of a hand-maintained JSON wire contract, carried with no schema
-registry until this chapter.
+Nothing is broken today. notification-service never reads `paymentMethod`, and Pydantic ignores the extra key on the wire. That is the problem: the drift is invisible by design. A future consumer that copies the six-field model would start, deserialize and pass CI, and the field would never arrive.
 
-That reasoning has been sitting in two services' docstrings since they were
-extracted, each with a forward reference to a chapter that didn't exist yet. This
-chapter is where that reference resolves, not by making the hand-authored
-duplication disappear (it doesn't; both schemas above are exactly the code
-they were before this chapter), but by building, against live
-infrastructure, the mechanism that would have made the gap between those two
-schemas a build-time rejection instead of a silent absence.
+{% include excalidraw.html file="hand-duplicated-vs-registry-schema" alt="Two side-by-side panels. Left: payment-service's seven-field OrderPlacedEvent with paymentMethod and notification-service's six-field copy without it, two hand-authored understandings of the same frozen contract. Right: one order-placed-v1.avsc registered once with Apicurio, resolved by global id from a producer and a consumer, with a BACKWARD compatibility rule between any future version and the registry." caption="Figure 28.1: Two hand-duplicated Pydantic copies of one contract, one drifted silently, versus one registry-governed schema" %}
 
-{% include excalidraw.html file="hand-duplicated-vs-registry-schema" alt="Two side-by-side panels. Left, today: payment-service's seven-field OrderPlacedEvent with paymentMethod and notification-service's six-field copy without it, two independent hand-authored understandings of the same frozen contract. Right, ch.28's demonstrator: one order-placed-v1.avsc registered once with Apicurio, resolved by global id from both a producer and a consumer, with a BACKWARD compatibility rule standing between any future version and the registry." caption="Figure 28.1: Two hand-duplicated Pydantic copies of the same contract, one drifted silently, versus one registry-governed schema demonstrated in parallel" %}
-
-It is worth being precise, up front, about what this chapter does and does
-not do about that drift, because the real answer is narrower than "adopt a
-schema registry." The live flows stay JSON. `examples/00-monolith`
-through `examples/07-order-service`, and every real consumer of
-`order.placed` (payment, notification) are untouched by anything below.
-What changes is additive: a new, isolated module,
-`examples/09-schema-registry-demo`, publishes a field-for-field Avro mirror
-of `order.placed` to its own topic, fronted by a real Apicurio registry, so
-the two things a registry actually buys, a central contract of record, and
-compatibility enforcement strong enough to reject a breaking change before
-it ships, can be demonstrated against live infrastructure without touching
-a system that currently works. Why this stays a demonstrator rather than a
-cutover is explained in full once you've seen what the registry does; for
-now, hold both facts side by side: the drift above is real, and the fix this
-chapter ships is a parallel, provable mechanism, not a migration.
+The live flows stay JSON. A new module, `examples/09-schema-registry-demo`, publishes an Avro mirror of `order.placed` to its own topic behind a real Apicurio registry. The drift is real, and the fix is a parallel mechanism, not a migration.
 
 ## What a schema registry is for
 
-Strip away the specific product and a schema registry answers one question
-a JSON-over-Kafka system like this one's live flows has no good answer for:
-when a producer and a consumer in two different deployables both need to
-agree on the shape of a message, where does that agreement live, and who
-enforces it?
+When a producer and a consumer in two deployables must agree on a message shape, the agreement has to live somewhere and something has to enforce it. In the JSON flows it lives in each author's reading of the event and nothing enforces it. A registry makes it explicit: a schema is registered once under an artifact id, and the registry is the record of the contract. It buys three things:
 
-In this project's live flows today, the answer is "nowhere, and no one."
-The agreement exists only as three separate authors' understanding of what
-the order service's `order.placed` event looks like, captured once in each
-model's own docstring, with no mechanism checking that the understandings
-stay in sync over time. A registry turns that implicit, distributed
-agreement into an explicit, centralized one: a schema is registered once,
-under an artifact id every interested service can reference, and from that
-point on the registry, not a docstring, not a convention, not a reviewer's
-memory, is the thing that knows what the contract is.
+- **Governance.** One place answers "what does `order.placed` look like today, and two versions ago", instead of diffing three `app/schemas.py` files in three repositories.
+- **Compatibility enforcement.** A rule (BACKWARD, FORWARD, FULL, each with a transitive variant) makes the registry refuse a new version that violates it, at registration, before any message ships under the broken shape. A Pydantic model can't do this: nothing stops a developer retyping a field, and the first signal is a `ValidationError` in a consumer's logs.
+- **Decoupled deploys.** Adding an optional field needs no simultaneous consumer release when the rule and the defaults make it provably safe. "Is it safe to deploy the producer first" becomes a registration result instead of a read through several repositories.
 
-That central record of truth buys two things in practice, and they are
-different things even though they're often sold together. The first is
-**governance**: a human or a CI job can go to one place and ask "what does
-the `order.placed` contract actually look like today, and what did it look
-like two versions ago?" rather than diffing three `app/schemas.py` files
-across three repositories by hand, the way confirming this chapter's own
-opening claim required. The second, sharper benefit is **compatibility
-enforcement**: a registry can be configured with a rule (BACKWARD,
-FORWARD, FULL, and transitive variants of each) and then it *refuses* a
-new schema version that would violate that rule, at registration time,
-before a single message is published under the broken shape. That second
-property is the one a hand-maintained Pydantic model can never give you, no
-matter how careful the team: nothing stops a developer from retyping a
-field in `app/schemas.py`, and nothing tells them they just broke every
-consumer still running the old model until a `ValidationError` shows up in
-a service's logs, in production, after the fact.
+Apicurio governs Avro, Protobuf and JSON Schema as data formats, and OpenAPI and AsyncAPI as API descriptions, under one artifact, version and rule model. The demonstrator uses Avro for one Kafka topic, because that is where the `order.placed` drift lives.
 
-The practical payoff downstream of both properties is **decoupled
-producer/consumer deploys**. A producer that wants to add an optional field
-doesn't need to coordinate a simultaneous consumer release if the
-registry's rule and the schema's defaults make that addition provably
-safe; a consumer can upgrade on its own schedule and trust that whatever it
-reads will either match what it expects or has already been rejected before
-it could ever be written. Without a registry, "is it safe to deploy the
-producer first" is a question a team answers by reading code across
-repositories and hoping. With one, it's a question the registry already
-answered, mechanically, at registration time, the same way every time,
-which is exactly the question notification-service's own missing field
-should have triggered and didn't.
+## The pure-Python choice: fastavro and aiokafka
 
-Apicurio, the registry this project adopts, is format-agnostic by design:
-it governs Avro, Protobuf, and JSON Schema as data formats, and OpenAPI and
-AsyncAPI as API-description formats, all under the same artifact/version/
-rule model. This chapter scopes itself to one corner of that menu, Avro,
-for one Kafka topic, because that is the corner `order.placed`'s own drift
-lives in, and because proving the mechanism once, concretely, against real
-infrastructure, teaches more than surveying every format shallowly. The
-registry itself doesn't care which format it's governing; the same artifact/
-version/rule model would apply to a Protobuf gRPC contract or an OpenAPI
-spec with no change to the underlying engine.
+Every other service reaches Kafka through `aiokafka`, which is pure Python and matches the asyncio loop FastAPI already runs. The usual Avro-plus-registry tool is `confluent-kafka[avro]`, which wraps `librdkafka` and ships a ready serializer. This project rejected it so there stays one Kafka client idiom; `examples/09-schema-registry-demo/AGENTS.md` records the decision as "No confluent-kafka, no Java/Quarkus Avro serde".
 
-## The pure-Python choice: fastavro + aiokafka, not confluent-kafka
-
-Every other service in this project reaches Kafka through `aiokafka`,
-pure-Python, no native extension, matching the asyncio event loop every
-FastAPI service already runs on. The obvious tool for "Avro plus a schema
-registry" in most Kafka tutorials is `confluent-kafka[avro]`, which wraps
-`librdkafka` (a C library) and ships a ready-made Avro serializer that
-talks to Confluent Schema Registry's wire format out of the box. This project
-rejected that path explicitly, and the reason is the same
-consistency argument this book has made before about picking one idiom and
-holding it: pulling in a second Kafka client, with its own native
-dependency and its own serialization conventions, for exactly one
-demonstrator module would mean this project no longer has one Kafka story:
-it would have `aiokafka` everywhere except the one place a registry got
-involved. `examples/09-schema-registry-demo`'s own `AGENTS.md` records the
-decision as directly as the code enforces it: "**No confluent-kafka, no
-Java/Quarkus Avro serde** — the project's decision."
-
-Staying pure-Python has a real cost, and this chapter doesn't minimize it:
-there is no Confluent or Apicurio Python serde to lean on, no drop-in
-`AvroSerializer`/`AvroDeserializer` pair that already knows how to stamp a
-schema id onto the wire. `examples/09-schema-registry-demo` builds the
-whole stack itself from three pieces that each do one job: `fastavro` for
-Avro encode/decode, `aiokafka` for the same broker client every sibling
-service uses, and a plain `httpx`-based REST client (`app/registry_client.py`)
-against Apicurio's own v3 API, with no SDK in between:
+The cost is real: no drop-in `AvroSerializer` that stamps a schema id onto the wire. The module builds it from three pieces, each doing one job: `fastavro` for Avro encode and decode, `aiokafka` as the broker client, and an `httpx` client (`app/registry_client.py`) against Apicurio's v3 REST API. The producer registers idempotently on every `start()`:
 
 {% include codetabs.html langs="pyproject.toml: the three runtime dependencies this module depends on|app/registry_client.py: register_or_resolve" %}
 
@@ -215,28 +95,11 @@ async def register_or_resolve(self, artifact_id: str, schema_json: str) -> Regis
     )
 ```
 
-`register_or_resolve` is the Python-native analogue of Apicurio's
-`auto-register=true`: a producer can call it on every
-`start()` without worrying about double-registering, because
-`ifExists=FIND_OR_CREATE_VERSION` returns the existing version, with
-`200`, if the content already matches byte-for-byte. `RegistryClient`'s own
-module docstring is explicit about where every one of these shapes came
-from: "Every request/response shape below was verified BY HAND against a
-live `quay.io/apicurio/apicurio-registry:3.3.3` container... not guessed
-from documentation." That caution is not boilerplate: Apicurio's v3 REST
-API is young enough, and has changed its error-response shape across minor
-versions recently enough (see the 400-versus-409 history two sections
-below), that assuming a shape from memory would have been a real risk in a
-module whose entire teaching point is "trust the registry, not your
-assumption about the registry."
+With `ifExists=FIND_OR_CREATE_VERSION` the registry returns the existing version with `200` when the content matches byte for byte, so double registration is harmless. Every request and response shape in the client was verified by hand against a live `quay.io/apicurio/apicurio-registry:3.3.3` container, not taken from documentation. The v3 API is young and has already changed its rejection status across minor versions (see below).
 
 ## The contract as an `.avsc`
 
-The schema this demonstrator registers is `schemas/order-placed-v1.avsc`, a
-field-for-field Avro mirror of the real JSON event: same field names, same
-meanings, same source of truth (`examples/07-order-service/EVENTS.md`'s
-"Produces: `order.placed`" section), authored once and kept in sync by hand
-rather than generated from either side:
+`schemas/order-placed-v1.avsc` mirrors the JSON event field for field, authored once from `EVENTS.md` and kept in sync by hand:
 
 ```json
 {
@@ -255,49 +118,13 @@ rather than generated from either side:
 }
 ```
 
-Two choices in that schema need naming, because they're easy to misread as
-oversights rather than the teaching decisions the schema's own `doc` fields
-record. First, `placedAt` is a `long` with Avro's
-`timestamp-millis` **logical type**, not a bare integer and not a string.
-Avro's logical types attach a documented interpretation to a primitive
-representation (here, "this long is milliseconds since the Unix epoch"),
-so `fastavro` can encode a Python `datetime` directly and decode it back to
-one, without either side hand-rolling an ISO-8601 string parser the way a
-plain-JSON contract has to. The trade-off `tests/test_roundtrip.py`
-documents directly: the wire format truncates to millisecond precision, so
-a round-trip comparison has to truncate both sides to the same resolution
-before asserting equality, or a sub-millisecond difference introduced
-before serialization produces a false failure.
+Two choices are deliberate. `placedAt` is a `long` with the `timestamp-millis` **logical type**, which documents the meaning (milliseconds since the epoch), so `fastavro` encodes a `datetime` and decodes it back without an ISO-8601 parser on either side. The trade-off is precision: the wire format truncates to milliseconds, so a round-trip comparison must truncate both sides.
 
-Second, `paymentMethod` is modeled as a **union with `null`, defaulting to
-`null`** (`["null", "string"]`), even though the real JSON event always
-sets it. That's a chosen deviation from the real event's always-present
-field, made so this schema demonstrates Avro's optional-field-with-default
-idiom starting from v1, rather than waiting until the v2 evolution fixture
-to show it for the first time. It is the same idiom
-`examples/05-payment-service`'s own hand-maintained `OrderPlacedEvent`
-already uses for the identical field
-(`payment_method: str | None = Field(default=None, ...)`). The Avro schema
-and the Pydantic model independently arrived at the same shape for the
-same reason, because an optional field with a safe default is the only way
-a consumer schema can evolve without breaking.
+`paymentMethod` is a **union with `null` and a `null` default**, although the real event always sets it. That shows the optional-with-default idiom from v1. payment-service's Pydantic model uses the same shape for the same field (`payment_method: str | None = Field(default=None, ...)`), because an optional field with a safe default is the only way a consumer schema can evolve without breaking.
 
-## The wire envelope: why a global id travels with every message
+## The wire envelope
 
-A schema registered with Apicurio is identified by a numeric **global id**.
-A consumer reading an Avro-encoded Kafka record needs to know which schema
-wrote it before it can decode a single byte. Avro's binary format carries
-no field names or type tags inline, unlike JSON, so decoding with the wrong
-schema doesn't throw a clear error, it silently produces garbage. The
-standard solution, the one Confluent's own serializers and Apicurio's own
-Java/Quarkus serde both implement, is to stamp that identifier onto the
-front of every record's bytes: a tiny header the consumer reads first,
-before touching the Avro payload at all.
-
-Because this project's pure-Python lane has no Confluent or Apicurio serde
-to supply that header format, `examples/09-schema-registry-demo` defines
-its own, in exactly one place so the producer and consumer can never drift
-on the framing:
+A consumer needs to know which schema wrote a record before it can decode it. Avro's binary format carries no field names or type tags, so decoding with the wrong schema yields garbage instead of an error. Confluent's serializers and Apicurio's Java serde both solve this by prefixing every record with a small header. With no serde available, the module defines its own in one place, so producer and consumer can't drift on the framing:
 
 ```python
 # examples/09-schema-registry-demo/app/envelope.py
@@ -314,26 +141,11 @@ def decode_envelope(data: bytes) -> tuple[int, bytes]:
     return global_id, data[_HEADER.size:]
 ```
 
-The shape, a magic byte, then a schema identifier, then the payload, is
-in the same spirit as Confluent's own wire format (which uses
-a magic byte followed by a **4-byte** big-endian schema id). This module's
-own docstring is careful not to overclaim: it "is NOT the Confluent/Apicurio
-serde wire format — it is this demo's own, documented format," not a
-byte-compatible drop-in. The practical difference that matters is the id
-width: Confluent's format reserves four bytes because Confluent Schema
-Registry's own schema ids are 32-bit; Apicurio's v3 global ids are 64-bit
-(a Java `long`) in principle, so this envelope reserves eight bytes rather
-than silently truncating an id that happens to fit today but might not
-always. A reader pointed at the wrong topic, one that isn't carrying this
-envelope at all, gets a clean, immediate `ValueError` from the magic-byte
-check rather than a confusing `fastavro` decode failure three calls deeper.
+The shape follows Confluent's (magic byte, schema id, payload) but is not byte-compatible with it: the module's docstring says it is "NOT the Confluent/Apicurio serde wire format". The id is 8 bytes, where Confluent uses 4, because Apicurio v3 global ids are 64-bit. A reader pointed at a topic without the envelope gets an immediate `ValueError` from the magic-byte check instead of a `fastavro` failure three calls deeper.
 
-{% include excalidraw.html file="avro-wire-envelope-registry-flow" alt="Top band: the wire envelope byte layout, a 1-byte magic value, an 8-byte big-endian Apicurio global schema id, and the raw schemaless Avro bytes, contrasted with Confluent's 4-byte-id format. Bottom band: the full produce/consume flow against a live Apicurio registry -- register_or_resolve, encode and publish, consume, fetch the writer schema by global id, decode with that exact schema." caption="Figure 28.2: The hand-rolled wire envelope and the register/resolve round trip against Apicurio's v3 REST API" %}
+{% include excalidraw.html file="avro-wire-envelope-registry-flow" alt="Top band: the wire envelope byte layout, a 1-byte magic value, an 8-byte big-endian Apicurio global schema id, and the schemaless Avro bytes, contrasted with Confluent's 4-byte-id format. Bottom band: the produce and consume flow against Apicurio: register_or_resolve, encode and publish, consume, fetch the writer schema by global id, decode with that schema." caption="Figure 28.2: The hand-rolled wire envelope and the register and resolve round trip against Apicurio's v3 REST API" %}
 
-`app/producer.py::OrderAvroProducer.start()` calls `register_or_resolve`
-exactly once per producer lifetime, caches the returned global id, and
-stamps that same id onto every subsequent `send()`: registration happens
-once, not per message:
+`OrderAvroProducer.start()` registers once per producer lifetime, caches the global id and stamps it on every `send()`:
 
 ```python
 # examples/09-schema-registry-demo/app/producer.py
@@ -349,15 +161,7 @@ async def send(self, event: DemoOrderPlaced) -> int:
     return self._global_id
 ```
 
-`app/consumer.py::OrderAvroConsumer` does the inverse, and the discipline
-here is exactly what a registry is supposed to buy over a hand-maintained
-schema, stated directly in the module's own docstring: it "never assumes
-its own locally-parsed copy of
-`order-placed-v1.avsc` is what actually produced the bytes." Every consumed
-record unwraps the envelope, pulls out the global id, and fetches *that
-exact* writer schema from the registry, caching it by id so a steady
-stream of records from the same producer only pays the registry round trip
-once:
+`OrderAvroConsumer` never assumes its own parsed copy of `order-placed-v1.avsc` is what produced the bytes. It unwraps the envelope, fetches that exact writer schema by global id, and caches it per id so a steady stream pays one registry round trip:
 
 ```python
 # examples/09-schema-registry-demo/app/consumer.py
@@ -368,11 +172,7 @@ async def poll_one(self, timeout: float = 30.0) -> dict[str, Any]:
     return fastavro.schemaless_reader(io.BytesIO(avro_bytes), schema)
 ```
 
-`tests/test_roundtrip.py` proves this whole path end to end against a
-Testcontainers-managed Kafka and Apicurio: encode a `DemoOrderPlaced` event,
-register/resolve its schema, publish it, consume it back, and assert every
-field matches, field for field, including the millisecond-truncated
-timestamp comparison the logical type requires:
+A round trip against Testcontainers-managed Kafka and Apicurio compares every field, truncating the sent timestamp to milliseconds as the logical type requires:
 
 ```python
 # examples/09-schema-registry-demo/tests/test_roundtrip.py (abbreviated)
@@ -391,45 +191,23 @@ assert received["placedAt"] == expected_millis
 
 ## Schema evolution and compatibility rules
 
-Round-tripping one fixed schema proves serialization works. It does not
-prove the thing a registry is actually *for*: catching a breaking change
-before it ships. That proof needs at least two schema versions and a rule
-that can tell them apart, and `tests/test_compatibility.py` builds exactly that
-scenario against a live registry.
+Round-tripping one schema shows serialization works, not that the registry blocks a breaking change. That takes two versions and a rule. Apicurio supports the standard vocabulary:
 
-Apicurio supports the standard compatibility rule vocabulary: **BACKWARD**
-(a new schema can read data written by the previous one, the rule this
-demonstrator uses), **FORWARD** (the previous schema can read data written
-by the new one), and **FULL** (both directions hold at once), each with a
-transitive variant checking against every prior version rather than just
-the immediately preceding one. BACKWARD is the rule most teams reach for
-first because it matches the most common real deployment order: upgrade
-consumers before producers, so a consumer already running the new schema
-needs to be able to read messages a still-old producer is still writing.
+| Rule | A schema is accepted when |
+| --- | --- |
+| BACKWARD | the new schema can read data written by the previous one |
+| FORWARD | the previous schema can read data written by the new one |
+| FULL | both hold |
 
-The test registers `order-placed-v1.avsc` as a fresh artifact, attaches a
-BACKWARD `COMPATIBILITY` rule via `set_compatibility_rule`, and then
-exercises two differently-shaped evolutions against that same artifact. The
-first, `order-placed-v2-backward-compatible.avsc`, adds exactly one new
-field, with a default:
+Each has a transitive variant that checks every prior version, not only the last. BACKWARD is the usual first choice because it matches the common deployment order: upgrade consumers before producers, so a consumer on the new schema must read what a still-old producer writes.
+
+The demonstrator attaches a BACKWARD rule to an artifact holding v1, then registers two evolutions. v2 adds one field with a default:
 
 ```json
 { "name": "giftMessage", "type": ["null", "string"], "default": null }
 ```
 
-Because `giftMessage` carries a default, the same `["null", "string"]`
-union idiom `paymentMethod` already used in v1, a reader using the v2
-schema can still make sense of a message a v1 writer produced: the missing
-field is simply filled in with its default. That is precisely what BACKWARD
-compatibility requires, and Apicurio accepts it. The second evolution,
-`order-placed-v3-incompatible.avsc`, does something structurally different:
-it keeps the field name `totalCents` but retypes it from `long` to
-`string`. Avro's schema-resolution rules define a specific, narrow set of
-type promotions a reader schema is allowed to apply when resolving a writer
-schema that doesn't match exactly: `int` promotes to `long`, `float`, or
-`double`; `long` promotes to `float` or `double`; `long` to `string`
-is not among them. A v3 reader has no defined way to interpret bytes a v1
-writer laid down as a 64-bit integer as a string.
+A v2 reader fills the missing field from the default when it reads v1 data, which is what BACKWARD requires. v3 keeps the name `totalCents` but retypes it from `long` to `string`. The registry calls, and the rejected field:
 
 {% include codetabs.html langs="tests/test_compatibility.py: the full live assertion|order-placed-v3-incompatible.avsc: the rejected evolution" %}
 
@@ -456,30 +234,42 @@ assert v3_response.json()["name"] == "RuleViolationException"
 }
 ```
 
-The actual numbers this project observed, live, against the pinned
-`quay.io/apicurio/apicurio-registry:3.3.3` image: v2 registers at **HTTP
-200**, version `"2"` recorded; v3 is rejected at **HTTP 400**, with an RFC
-7807 problem body whose `"name"` field is `"RuleViolationException"`.
-That specific status code is not incidental trivia: `app/registry_client.py`'s
-own module docstring records that an **older, pre-3.3 registry answers
-`409`** for the identical rejected request, a 409-to-400 shift across the
-registry-version bump. `tests/test_compatibility.py` and `app/demo_cli.py`
-both assert the actual, live-observed `400` rather than a remembered or
-assumed status, exactly the discipline `RegistryClient.register_version`
-is built around: unlike every other method on that client, it returns the
-raw `httpx.Response` instead of raising on a non-2xx status, so a caller
-testing an expected rejection can assert on what the registry really said
-rather than catching an exception that would swallow the status code and
-body.
+Avro schema resolution allows a narrow set of promotions (`int` to `long`, `float` or `double`; `long` to `float` or `double`). `long` to `string` is not one, so a v3 reader has no defined way to read a 64-bit integer as a string.
 
-{% include excalidraw.html file="avro-compatibility-evolution" alt="Three schema versions in sequence: v1 registers cleanly, v2 adds an optional giftMessage field with a default and is ACCEPTED (200), v3 retypes totalCents from long to string and is REJECTED (400, RuleViolationException) -- the actual status observed against the pinned Apicurio 3.3.3 image, against a BACKWARD compatibility rule attached to the artifact." caption="Figure 28.3: Schema evolution against a live BACKWARD rule: an additive change passes, a retype is rejected before a single message ships" %}
+Against the pinned `3.3.3` image, v2 registers with HTTP **200** and version `"2"`. v3 is rejected with HTTP **400** and an RFC 7807 problem body whose `name` is `"RuleViolationException"`. An older, pre-3.3 registry answers **409** for the same request. `register_version` is the one client method that returns the raw `httpx.Response` instead of raising on a non-2xx status, so a caller expecting a rejection can assert on the status and body the registry actually sent.
 
-`demos/demo-schema-registry.sh` runs this identical progression,
-register/resolve v1, round-trip produce/consume, attach the BACKWARD rule,
-register v2, register v3, against a throwaway Kafka and Apicurio pair
-rather than Testcontainers, via `app/demo_cli.py`, and fails loudly (exit
-non-zero, under `set -euo pipefail`) if any step doesn't come out the way
-this chapter says it must:
+{% include excalidraw.html file="avro-compatibility-evolution" alt="Three schema versions in sequence: v1 registers cleanly, v2 adds an optional giftMessage field with a default and is accepted (200), v3 retypes totalCents from long to string and is rejected (400, RuleViolationException), observed against the pinned Apicurio 3.3.3 image with a BACKWARD rule on the artifact." caption="Figure 28.3: Schema evolution against a live BACKWARD rule: an additive change passes, a retype is rejected before a message ships" %}
+
+The rejection happens when someone tries to register the schema, not as a `ValidationError` in a consumer's logs days later. A rule on the contract would also have caught the missing `paymentMethod` the first time someone registered a schema without a field the reference version required.
+
+## Why this stays a demonstrator
+
+The natural next step looks like cutting `order.placed` over to Avro. The live flows stay JSON, for the same reason the original JSON decision held: infrastructure that works in isolation is not retrofitted into a system that already works. The monolith, `examples/07-order-service`'s outbox and both real consumers are unchanged, and neither `app/schemas.py` above has a line edited. The module publishes to its own topic, `order.events.avro.demo`, and registers its own artifact, `order-placed-value`. Nothing is cut over, so there is no flag to flip and nothing to reverse. `compose.yaml`'s `apicurio` entry states the blast radius: used only by the demonstrator, with no other service depending on it or reading from it.
+
+The parallel path buys two things. It proves the mechanism (registration, envelope, field-for-field fidelity, writer schema by global id) against real infrastructure. And it can show the rejected case, which the live topic can't: demonstrating a breaking publish on a contract three real services depend on would mean breaking it. `order.events.avro.demo` exists to be broken, repeatedly, at no risk.
+
+A real cutover is more than swapping the serializer:
+
+- Old JSON readers and new Avro writers can't share one topic without a bridge, so payment-service's decline path and notification-service's idempotent write need a coordinated upgrade window, or BACKWARD discipline has to govern the transition.
+- Nothing else in the stack talks to Apicurio today. A cutover also forces the first decision about which other hand-maintained contracts deserve a registry: the four saga-outcome topics order-service consumes, the gRPC inventory proto and the REST contracts behind the GraphQL gateway.
+
+> **ADLC in Action**
+>
+> The claim that notification-service's `OrderPlacedEvent` lacks `paymentMethod` could have been assumed from payment-service's copy, which has it. It was confirmed by reading `examples/03-notification-service/app/schemas.py` field by field, because three similar-looking services give no reason to assume symmetry. The same rule applied to the registry client: the shapes it encodes (`200` on `FIND_OR_CREATE_VERSION`, `204` on attaching a rule, `400` with `RuleViolationException` on a BACKWARD violation) were checked by hand against a live `3.3.3` container. A status code taken from documentation or memory, such as the `409` an older registry returns, would have shipped exactly the silent drift a registry exists to prevent.
+
+> **Decision**
+>
+> When two or more deployables share a wire contract, put the schema in a registry and attach a compatibility rule, BACKWARD by default. Add the registry beside a working flow, prove it on its own topic, and cut over only when a stated need justifies coordinating every consumer.
+
+> **🤖 Explore with your agent**
+>
+> "In examples/09-schema-registry-demo, add an optional `giftNote` field with a default to a new order-placed-v4 .avsc that keeps the BACKWARD rule satisfied, then write a second candidate that retypes `customerId` from `long` to `string` and show Apicurio rejects it under the BACKWARD rule. Do not touch examples/03-notification-service or examples/05-payment-service."
+>
+> Check: registering the additive version returns 200 and the retyped one returns 400 with `RuleViolationException`; `./demos/demo-schema-registry.sh` still ends with `ALL CHECKS PASSED.`
+
+## Build, run, observe
+
+`demos/demo-schema-registry.sh` starts a throwaway Kafka and Apicurio pair, runs `app/demo_cli.py` and tears both down on exit. It needs Docker or Podman and exits non-zero if any step fails:
 
 ```sh
 ./demos/demo-schema-registry.sh
@@ -494,128 +284,8 @@ step 5: v3 (totalCents long -> string) REJECTED as expected (400 RuleViolationEx
 ALL CHECKS PASSED.
 ```
 
-This is the rejection that never ships a bad message: the schema is
-refused at the moment someone tries to register it, not discovered as a
-`ValidationError` in a consumer's logs three services downstream, days or
-weeks later: exactly the failure mode notification-service's silently
-missing `paymentMethod` field illustrates in miniature, except a registry
-with a rule attached would have caught *that* drift too, the first time
-someone tried to register a schema missing a field the rule's reference
-version required.
+The module's own `uv run pytest` runs the same progression against Testcontainers-managed Kafka and Apicurio.
 
-## Why this stays a demonstrator
-
-It would be easy to read the sections above and conclude the natural next
-step is cutting `order.placed` over to Avro wholesale. This chapter does
-not do that, and the reason is the same scope discipline the original JSON
-decision already modeled once, back in Chapter 17: this project does not
-retrofit infrastructure into a system that currently works just because the
-infrastructure is now proven to work in isolation.
-
-The live flows stay JSON, permanently, as Chapter 17 already decided; this
-chapter does not revisit that call. `examples/00-monolith` through
-`examples/07-order-service`'s outbox, and every real consumer of
-`order.placed` (payment, notification) are exactly the code they were
-before this chapter, unedited; neither `app/schemas.py` shown at the top of
-this chapter has a single line changed. `examples/09-schema-registry-demo`
-publishes to its own topic, `order.events.avro.demo`, which no other
-service in this project reads or writes, and registers against its own
-Apicurio artifact, `order-placed-value`, which no other artifact in the
-registry depends on. There is no flag to flip here and no cutover to
-reverse, unlike Chapter 17's two-flag notification cutover, because
-nothing is being cut over. `compose.yaml`'s own `apicurio` service entry
-states the blast radius as directly as the code does: "used ONLY by
-`examples/09-schema-registry-demo` — a DEMONSTRATOR, additive to the live
-topology. No other service in this stack ... depends on it, reads from it,
-or has its JSON event flows touched by it in any way."
-
-What the parallel path buys that a hypothetical future cutover chapter
-could not have bought more cheaply is twofold. First, it proves the
-mechanism (auto-registration, the hand-rolled envelope, field-for-field
-fidelity across the wire, the writer-schema-by-global-id discipline) against
-real infrastructure rather than asserting it from Apicurio's documentation.
-Second, and this is the sharper point, it lets this chapter show the
-*rejected* case. This project's real `order.placed` topic cannot safely be
-used to demonstrate "here is what happens when someone tries to publish a
-breaking schema change": that would mean setting out to break a live
-contract three real services depend on, just to capture an error
-message for a book. The parallel topic's whole value is that
-`tests/test_compatibility.py`'s v3 case *can* run that experiment,
-repeatedly, on demand, with zero risk to anything that matters, because
-`order.events.avro.demo` is a topic this project invented specifically so
-it could be broken safely.
-
-That framing also sets a fair expectation for what a full cutover would
-actually require, if this project's own operational needs ever did justify
-one. It is not "swap the serializer." Every consumer of the current JSON
-topic (payment-service's choreographed decline path, notification-service's
-idempotent write) would need a coordinated upgrade window, or the
-BACKWARD-compatibility discipline this chapter demonstrates would need to
-govern the transition itself, because old JSON readers and new Avro writers
-cannot coexist on one topic without a bridging strategy. The harder piece,
-named here only so a reader doesn't assume the rest of the migration is a
-smaller lift than it is: nothing elsewhere in this project's stack is wired
-to Apicurio today. A real cutover would also mean deciding, for the very
-first time, which of this project's other hand-maintained JSON contracts
-(the four saga-outcome topics `order-service` consumes, the gRPC inventory
-proto, the REST contracts the GraphQL gateway fans out across) are worth
-the same treatment, and that decision is exactly the kind of speculative
-infrastructure this book has declined to build ahead of a stated need
-before.
-
-> **ADLC in Action**: This chapter's opening claim, that notification-
-> service's `OrderPlacedEvent` is missing `paymentMethod`, could have been
-> taken on faith from the pattern established by payment-service's copy,
-> which does carry it. Confirming it required reading
-> `examples/03-notification-service/app/schemas.py` directly, field by
-> field, rather than assuming symmetry across three services that otherwise
-> look alike. The same discipline applied to the registry side: rather than
-> writing `app/registry_client.py` against Apicurio's v3 API documentation
-> alone, the request/response shapes it encodes (`200` on
-> `ifExists=FIND_OR_CREATE_VERSION`, `204` on attaching a rule, and
-> critically, **`400`** with `RuleViolationException` on a BACKWARD
-> violation against the pinned `3.3.3` image, not the `409` an older
-> registry version answers for the identical request) were each verified
-> by hand against a live container before being encoded into the client or
-> asserted in a test. An agent drafting this chapter's compatibility claim
-> from a remembered or documented status code, rather than the actual
-> response a live `3.3.3` instance returns, would have shipped exactly the
-> kind of silent, unverified drift this chapter's own subject matter exists
-> to prevent.
-
-## What you learned
-
-- **A schema registry is a central contract of record with teeth**: it
-  doesn't just document a shape, the way a docstring on a hand-authored
-  Pydantic model does; it *refuses* a new version that would break a stated
-  compatibility rule, at registration time, before a single message ships
-  under the broken shape.
-- **The drift this chapter opens on is real, not hypothetical**:
-  `payment-service`'s `OrderPlacedEvent` carries `paymentMethod`;
-  `notification-service`'s does not; nothing in the build, in CI, or at
-  runtime currently checks that the two independently-authored copies of
-  the same frozen contract still agree.
-- **Pure-Python means hand-rolling what a serde would otherwise supply**:
-  this project rejected `confluent-kafka` to keep one Kafka client idiom
-  throughout; the cost is that the wire envelope (`[magic][global
-  id][Avro bytes]`) and the registry REST client are this project's own,
-  verified by hand against a live `3.3.3` Apicurio image rather than
-  inherited from an existing serde.
-- **BACKWARD compatibility has a precise, checkable boundary**: adding an
-  optional field with a default (`giftMessage`) is a valid evolution a v2
-  reader can apply to v1 data; retyping an existing field (`totalCents`
-  long → string) has no defined Avro promotion path and is rejected, live,
-  with the actual `400 RuleViolationException` this project observed
-  against its pinned registry version, not a remembered `409`.
-- **The fix stays additive, by the same scope discipline that deferred it
-  in the first place**: the live JSON flows, including the two schemas
-  this chapter opened on, are unedited; `examples/09-schema-registry-demo`
-  proves the registry mechanism, including the case a live production topic
-  could never safely demonstrate, on a topic invented specifically so it
-  could be broken without risk.
-
-Chapter 29 turns from the contract a message carries to the shape a
-deployment takes: packaging, promoting, and rolling out eight independently
-versioned services (plus, now, one Apicurio-governed Avro artifact) across
-environments, without the registry this chapter just built becoming one more
-thing a deploy has to coordinate by hand.
+- **Retype a field in a new candidate schema:** registration returns `400` with `RuleViolationException`, the v3 outcome.
+- **Add an optional field with a default:** registration returns `200` and the new version number, the v2 outcome.
+- **Read the topic without the envelope:** the magic-byte check raises `ValueError` before any Avro decoding runs.

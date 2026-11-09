@@ -1,0 +1,3 @@
+{"ops":[
+{"op":"replace","scope":"slide","sldIds":[281],"find":"# r07 re-point: order-service's own order_view","repl":"# re-pointed: order-service's own order_view","expect":1,"cat":"standalone"},
+{"op":"replace","scope":"slide","sldIds":[282],"find":"enrich_client.py -- the one retry","repl":"enrich_client.py: the one retry","expect":1,"cat":"voice"}]}

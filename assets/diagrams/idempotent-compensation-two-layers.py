@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.23 figure: idempotent-compensation-two-layers -- closing DRQ-043. A
+"""ch.23 figure: idempotent-compensation-two-layers, closing DRQ-043. A
 compensating Release has to survive being redelivered at BOTH layers it
 could be redelivered at: the Kafka event that triggers it (the saga's own
 at-least-once consumer), and the RPC itself (retried for any other reason,
@@ -25,9 +25,9 @@ g.OUT = os.path.dirname(__file__)
 W, H = 1320, 700
 
 band_top = {"x": 20, "y": 50, "w": 1280, "h": 260,
-            "label": "Layer 1 -- saga-level: status-transition guard (defense-in-depth, client side)", "fill": "#fafafa"}
+            "label": "Layer 1 (saga-level): status-transition guard (defense-in-depth, client side)", "fill": "#fafafa"}
 band_bot = {"x": 20, "y": 50 + 260 + 36, "w": 1280, "h": 280,
-            "label": "Layer 2 -- ledger-level: inventory.compensations (the actual arbiter, server side)", "fill": "#f1f5f9"}
+            "label": "Layer 2 (ledger-level): inventory.compensations (the actual arbiter, server side)", "fill": "#f1f5f9"}
 
 t1 = node(60, 130, 260, 110, ["payment.declined", "redelivered (same orderId)"], style="box")
 t2 = node(360, 130, 280, 110, ["_is_pending(order)", "status already PAYMENT_DECLINED", "-> logged no-op, RETURN"], style="accent")
@@ -54,7 +54,7 @@ notes = [
      "anchor": "middle", "bold": True, "size": 16},
     {"x": 40, "y": H - 46, "text": "Proven live: on_hand_qty held at 94 across a hand-redelivered payment.declined event AND two direct,",
      "anchor": "start", "size": 11, "color": "#555555"},
-    {"x": 40, "y": H - 28, "text": "identical-key gRPC Release calls that bypassed the saga guard entirely -- the ledger is the real backstop.",
+    {"x": 40, "y": H - 28, "text": "identical-key gRPC Release calls that bypassed the saga guard entirely, the ledger is the real backstop.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

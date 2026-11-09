@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.17 figure: idempotent-consumer-dedupe -- what actually happens when the
+"""ch.17 figure: idempotent-consumer-dedupe, what actually happens when the
 at-least-once outbox relay redelivers the SAME order.placed event twice, and
 why exactly one Notification row survives either way: application-level
 check-then-insert is the fast path, a database-level partial unique index on
@@ -23,7 +23,7 @@ g.OUT = os.path.dirname(__file__)
 W, H = 1280, 560
 
 relay = node(30, 60, 220, 100, ["outbox_relay", "publish succeeds,", "CRASH before stamping", "published_at"], style="ghost")
-redeliver_note = node(290, 60, 220, 100, ["Next poll: row still", "unpublished -- the", "SAME event is", "republished"], style="sub")
+redeliver_note = node(290, 60, 220, 100, ["Next poll: row still", "unpublished: the", "SAME event is", "republished"], style="sub")
 
 delivery1 = node(560, 30, 260, 90, ["Delivery #1", "order.placed, orderId=555"], style="box")
 delivery2 = node(560, 160, 260, 90, ["Delivery #2 (redelivery)", "order.placed, orderId=555"], style="box")

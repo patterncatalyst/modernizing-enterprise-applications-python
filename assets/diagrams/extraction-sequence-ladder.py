@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.00 figure: extraction-sequence-ladder -- the six extractions in the
+"""ch.00 figure: extraction-sequence-ladder, the six extractions in the
 order this book actually executes them, each rung tagged with its chapter
 and the one new mechanism it forces, rising in difficulty left to right.
 
@@ -67,7 +67,7 @@ notes = [
      "text": "highest coupling (the god order flow)", "anchor": "middle", "size": 10, "color": "#555555"},
 
     {"x": 40, "y": H - 16,
-     "text": "Sourced from _plans/build-plan.md (section J) and _docs/00-introduction.md.",
+     "text": "Sourced from the project build plan and the introduction.",
      "anchor": "start", "size": 10.5, "color": "#555555"},
 ]
 

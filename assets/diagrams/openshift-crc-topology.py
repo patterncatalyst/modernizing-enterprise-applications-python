@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""ch.33 figure: openshift-crc-topology -- the `mea` project (namespace) once
+"""ch.33 figure: openshift-crc-topology, the `mea` project (namespace) once
 `openshift/deploy.sh` has rolled out the Helm release on OpenShift Local
 (CRC). All 8 app Deployments run under the default ServiceAccount with no
 `runAsUser` set, admitted by the default `restricted-v2` SCC (the UBI10
-`python-314-minimal` images already run as USER 1001:0 -- an arbitrary
+`python-314-minimal` images already run as USER 1001:0, an arbitrary
 assigned UID with group 0, exactly what restricted-v2 expects, DRQ-107).
 postgres and kafka run under the dedicated `mea-infra` ServiceAccount bound
 to `nonroot-v2` (their upstream images hardcode UID 70 / 1000,
 helm/mea/templates/serviceaccount-infra.yaml). otel-lgtm (platform tier,
 install-observability.sh) is the one exception, under `anyuid` with only
-`runAsUser: 0` set -- no seccompProfile, or admission flips back to
+`runAsUser: 0` set, no seccompProfile, or admission flips back to
 restricted-v2 and its root-owned writes fail again. strangler-proxy and
 graphql-gateway are the only two Routes (DRQ-106); every other Service is
 ClusterIP-only.
@@ -29,7 +29,7 @@ g.OUT = os.path.dirname(__file__)
 W, H = 1540, 820
 
 band = {"x": 230, "y": 40, "w": 1280, "h": 660, "fill": "#fafafa",
-        "label": "project: mea -- OpenShift Local (CRC), default restricted-v2 SCC"}
+        "label": "project: mea, OpenShift Local (CRC), default restricted-v2 SCC"}
 
 client = node(30, 330, 170, 80, ["Client", "https://<route-host>.apps-crc.testing"], style="box")
 
@@ -85,7 +85,7 @@ notes = [
      "text": "restricted-v2 (8 app Deployments, no runAsUser) / nonroot-v2 (postgres, kafka via SA mea-infra) / anyuid+runAsUser:0 (otel-lgtm only).",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 240, "y": H - 38,
-     "text": "strangler-proxy and graphql-gateway are the only externally reachable workloads -- every other Service stays ClusterIP-only.",
+     "text": "strangler-proxy and graphql-gateway are the only externally reachable workloads, every other Service stays ClusterIP-only.",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 240, "y": H - 20,
      "text": "Images are pulled in-cluster from the integrated registry (Figure 33.2); when mesh.enabled, Route traffic needs the PERMISSIVE carve-out (Figure 33.3).",

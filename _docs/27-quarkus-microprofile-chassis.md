@@ -2,7 +2,7 @@
 title: "The FastAPI Chassis"
 order: 27
 part: "Communication & Contracts"
-description: "A used/partial/deferred scorecard for the cross-cutting platform the 8 FastAPI/Starlette services already share: config, logging, health, errors, and resilience as convention, not a framework feature, plus what is named but not yet built."
+description: "A used, partial and deferred scorecard for the cross-cutting platform the eight FastAPI and Starlette services share: config, logging, health, errors and resilience as convention, plus what is named but not built."
 duration: 30 minutes
 ---
 
@@ -10,81 +10,42 @@ duration: 30 minutes
 
 By the end of this chapter you can:
 
-- Audit which chassis capabilities (configuration, logging, health, error handling, resilience) a FastAPI service actually wires into its own code versus which ones a `pyproject.toml` dependency merely makes available.
-- Explain the frozen-dataclass `Settings.from_env()` pattern and why this project chose it over `pydantic-settings`' `BaseSettings`, without changing which environment variable or default a service reads.
-- Identify why this project uses a `tenacity` retry wrapper in exactly one call site (`shipping-service`'s `enrich_client.py`) instead of a pybreaker-based circuit breaker, and what adding one would require once traffic justified it.
-- Explain the `GET /health` convention present in 6 of 8 services and why `strangler-proxy` and `graphql-gateway` leave it out by a stated choice rather than ship a decorative route.
-- Recognize why there is no single shared chassis package across the eight services, only a convention copied by hand into each `app/config.py`, `app/errors.py`, and `_configure_logging()`, and what a real shared library would cost to build.
-- Distinguish a capability present in a Containerfile or `pyproject.toml` from one proven by a wired-in code path and a passing test.
-- Read a capability-by-capability chassis scorecard that separates used, partial, and deferred, and explain why deferred is a stated choice rather than an oversight.
+- Audit which chassis capabilities (configuration, logging, health, errors, resilience) a FastAPI service wires into its code versus which a `pyproject.toml` dependency merely makes available.
+- Explain the frozen-dataclass `Settings.from_env()` pattern and why it was chosen over `pydantic-settings`' `BaseSettings`.
+- Say why `tenacity` retries exactly one call site (`shipping-service`'s `enrich_client.py`) instead of a `pybreaker` circuit breaker, and what adding one would take.
+- Explain the `GET /health` convention on 6 of 8 services and why `strangler-proxy` and `graphql-gateway` omit it.
+- Weigh a shared chassis package against a convention copied by hand into each `app/config.py`, `app/errors.py` and `_configure_logging()`.
+- Tell a capability present in a Containerfile or `pyproject.toml` from one proven by a wired-in code path and a passing test.
 
 ## Why this matters
 
-Chapter 26 turned off the monolith for good: six independently deployable
-services plus a data-less GraphQL gateway, reached through one flagless
-edge router with nothing left to fall back to. What hasn't been asked yet,
-across twelve chapters of extractions, is a question that only makes sense
-once every service exists side by side: strip away what each one does
-differently, review's reviews, payment's captures, order's saga, and
-what's left that every single one does the *same* way? That shared-but-
-unlabeled layer is a chassis: the configuration, logging, health, error-
-handling, and resilience plumbing a service needs before it can do its
-actual job, present in every service whether or not anyone ever points at
-it and names it. This chapter does exactly that pointing. It introduces no
-new extraction and no new runnable example: it audits eight already-
-running codebases (`examples/01-strangler-proxy` through
-`examples/08-graphql-gateway`) capability by capability, against this
-front matter's own menu, and reports which parts of that chassis a service
-actually wired in versus which parts stayed a name in a build-plan
-paragraph. The discipline to hold onto from here to the scorecard at the
-end: a pattern copied into one service's `app/main.py` is a capability
-*used*. A capability named in the build plan and never written
-is a capability *deferred*, and naming the gap in plain terms beats
-carrying it forward unexamined.
+With six services, a gateway and a proxy running side by side, one question only makes sense: what does every service do the same way, apart from what it does differently (review's reviews, payment's captures, order's saga)? That shared layer is the chassis: the configuration, logging, health, error-handling and resilience plumbing a service needs before it can do its job. It exists whether or not anyone names it.
 
-{% include excalidraw.html file="fastapi-chassis-anatomy" alt="A band labeled 'Inside one FastAPI service, startup to request' containing: config.py's frozen dataclass Settings.from_env() and stdlib RotatingFileHandler logging feeding from the uvicorn ASGI entry point; the lifespan() context manager wiring db engine, Kafka consumer, and outbox relay; errors.py's uniform error body and the GET /health route as request-time concerns present on 6 of 8 services; a box for the Containerfile present on all 8; tenacity retry as the one resilience wrapper, used only in shipping-service's enrich_client.py; and a dashed ghost box naming OpenTelemetry/Prometheus, pybreaker/bulkhead, and a shared chassis library named as not yet built." caption="Figure 27.1: The chassis inside one FastAPI service: what every service does identically, what's opt-in, and what's named but not built" %}
+The audit covers eight running codebases, `examples/01-strangler-proxy` through `examples/08-graphql-gateway`, capability by capability. A pattern copied into a service's code is **used**. A capability named in a plan and never written is **deferred**, and naming the gap beats carrying it forward unexamined.
 
-## What "chassis" means when there is no framework BOM
+{% include excalidraw.html file="fastapi-chassis-anatomy" alt="One FastAPI service from startup to request: config.py's frozen dataclass Settings.from_env() and stdlib RotatingFileHandler logging, the lifespan() context manager wiring the db engine, Kafka consumer and outbox relay, errors.py's uniform error body and the GET /health route on 6 of 8 services, a Containerfile on all 8, tenacity retry in shipping-service only, and a dashed box for OpenTelemetry, Prometheus, pybreaker, bulkhead and a shared chassis library as not yet built" caption="Figure 27.1: The chassis inside one FastAPI service: what every service does identically, what is opt-in and what is named but not built" %}
 
-A framework built around a shared BOM can answer "what's in the chassis" by
-grepping eight build files for that BOM and a short list
-of extensions: Config, Health, Fault Tolerance, Metrics,
-OpenAPI, REST Client, Security each arrive as a dependency line, and
-turning one on is a one-line diff. FastAPI has no equivalent catalog.
-Starlette gives a service an ASGI application, a routing table, and a
-`lifespan` context manager; FastAPI layers typed request/response
-validation via Pydantic v2 on top of that; `uv` resolves and pins
-dependencies per service into its own `pyproject.toml`/`uv.lock` pair. None
-of that ships a health endpoint, a uniform error body, a retry policy, or a
-metrics exporter: every one of those is either a third-party package a
-service's `pyproject.toml` chooses to add, or plain application code
-someone writes once and copies into the next service. That's the real
-difference this chapter has to keep surfacing: with a framework BOM, "is
-Health used" is a dependency-presence question; here, it's a
-code-presence question, because there is no framework switch to flip. A
-chassis capability here becomes real the moment someone writes the file
-that provides it, not when a BOM happens to include it.
+## What "chassis" means without a framework BOM
 
-That also means this project has no single shared chassis package that all
-eight services import from. `app/config.py`, `app/errors.py`, and the
-`_configure_logging()` function inside `app/main.py` are each written once
-per service and then copied, by hand, into the next one: the same
-convention, repeated eight times, not eight imports of one library. Whether
-that absence is a gap or a considered choice is this chapter's last section;
-first, the scorecard itself, row by row, cited against the real code.
+A framework built around a shared BOM answers "what's in the chassis" by grepping build files: Config, Health, Fault Tolerance, Metrics, OpenAPI, REST Client and Security each arrive as a dependency line, and turning one on is a one-line diff. FastAPI has no such catalog. Starlette gives a service an ASGI app, routing and a `lifespan` context manager. FastAPI adds typed validation through Pydantic v2. `uv` pins dependencies per service in its own `pyproject.toml` and `uv.lock`. None of that ships a health endpoint, a uniform error body, a retry policy or a metrics exporter. Each is a third-party package a service chooses, or application code written once and copied.
+
+So "is Health used" is a code-presence question, not a dependency-presence one. And no shared chassis package exists: `app/config.py`, `app/errors.py` and `_configure_logging()` in `app/main.py` are written per service and copied by hand.
+
+| Capability | Status | Count |
+|---|---|---|
+| Configuration, frozen dataclass | Used | 7 of 8 |
+| Logging, stdlib `RotatingFileHandler` | Used | 8 of 8 |
+| Containerfile | Used | 8 of 8 |
+| `GET /health` | Partial | 6 of 8 |
+| `errors.py` uniform mapping | Partial | 6 of 8 |
+| `tenacity` retry | Partial | 1 of 8 |
+| Metrics, OpenTelemetry | Deferred | 0 |
+| `pybreaker`, bulkhead | Deferred | 0 |
+| Shared chassis library | Deferred by choice | 0 |
 
 ## Configuration: a frozen dataclass, not pydantic-settings
 
-**Status: USED, 7 of 8.** The original build-plan line for this chapter,
-the one that read "FastAPI + pydantic-settings", was aspirational,
-written before any service existed.
-What actually shipped, starting with `03-notification-service` and
-repeated unchanged through `08-graphql-gateway`, is a plain, frozen
-`@dataclass` with a `from_env()` classmethod that reads `os.environ` at
-call time, not `pydantic-settings`' `BaseSettings` with its `.env`-file
-loading and field-level validators. `examples/07-order-service/app/
-config.py` is the clearest instance: twelve fields, one `from_env()`
-method, each field defaulted and read with a plain `os.environ.get`:
+The original plan said "FastAPI + pydantic-settings". What shipped, starting with `03-notification-service` and repeated through `08-graphql-gateway`, is a plain frozen `@dataclass` with a `from_env()` classmethod that reads `os.environ` at call time. `examples/07-order-service/app/config.py` has twelve fields, each defaulted and read with `os.environ.get`:
 
 ```python
 # examples/07-order-service/app/config.py
@@ -105,35 +66,11 @@ class Settings:
         )
 ```
 
-`frozen=True` is doing real work, not decoration: once a `Settings`
-instance exists, nothing in the service can mutate a config value
-mid-request, which rules out an entire class of bugs where one request path
-accidentally changes a timeout or a topic name that every other in-flight
-request is also reading. Calling `from_env()` fresh inside `lifespan()`
-rather than once at import time is the second considered choice the
-docstring calls out directly: a test can set an environment variable
-immediately before constructing the app and `Settings.from_env()` picks it
-up, instead of inheriting whatever was in `os.environ` the first time the
-module happened to be imported.
+`frozen=True` rules out a class of bugs where one request path changes a timeout or topic name that every other in-flight request reads. Calling `from_env()` inside `lifespan()` instead of at import time lets a test set an environment variable just before building the app and have it picked up, instead of inheriting whatever `os.environ` held at first import.
 
-`01-strangler-proxy` carries the same `@dataclass(frozen=True, slots=True)`
-shape, `slots=True` on top, since the proxy's `Settings` has no ORM or
-Pydantic layer touching it and the memory saving costs nothing, but with
-one real inconsistency, named here rather than smoothed over: its module
-constructs `settings = Settings.from_env()` once at import time and the
-rest of `app/main.py` falls back to that singleton (`default_settings`)
-whenever a caller doesn't supply its own, rather than re-resolving the
-environment inside the request/response path the way the other six
-services resolve it inside their own `lifespan()`. It's a smaller
-difference in practice than it sounds: the proxy has no per-request state
-that depends on config, but it's a second config idiom living in the same
-codebase, not the uniform one.
+`01-strangler-proxy` uses `@dataclass(frozen=True, slots=True)`, since nothing ORM or Pydantic touches its `Settings`. It has one inconsistency: its module builds `settings = Settings.from_env()` once at import and `app/main.py` falls back to that singleton (`default_settings`) when a caller supplies none, instead of resolving the environment in `lifespan()` like the other six. The proxy has no per-request state that depends on config, so this is harmless, but it is a second idiom in the codebase.
 
-The real exception is `02-review-service`, and it's an absence, not a
-variant: there is no `app/config.py` in that service at all.
-`examples/02-review-service/app/db.py` reads `DATABASE_URL` directly with a
-bare `os.environ.get` call, no dataclass, no `from_env()`, no central place
-listing every tunable the service has:
+The real exception is `02-review-service`, which has no `app/config.py` at all. `app/db.py` reads `DATABASE_URL` with a bare `os.environ.get`, with no dataclass, no `from_env()` and no single list of tunables:
 
 {% include codetabs.html langs="02-review-service: app/db.py, no config.py at all|07-order-service: app/config.py, the settled convention" %}
 
@@ -162,34 +99,13 @@ class Settings:
         return cls(database_url=os.environ.get("DATABASE_URL", _DEFAULT_DATABASE_URL), ...)
 ```
 
-This isn't a defect to fix retroactively; it's the fossil record of
-when the convention solidified. `review-service` is this book's first
-extraction (Chapter 15), written before `notification-service` established
-the dataclass-and-`from_env()` shape every later service copied. Review's
-Phase B was frozen once it passed its equivalence suite, and nothing in the
-six extractions since has forced a reason to go back and retrofit a
-`config.py` onto a service nobody has touched. Seven of eight services
-share one config idiom; the eighth is older than the idiom.
+Review is the first extraction, written before `notification-service` set the dataclass shape every later service copied. Review's Phase B was frozen once it passed its equivalence suite, and nothing since has forced a retrofit. Seven of eight share one idiom; the eighth predates it.
 
-One more point to name precisely here, because the stub this chapter
-replaces conflated it with settings: Pydantic v2 **is** used everywhere in
-this project, just not for configuration. Every service's `app/
-schemas.py` defines its wire-contract request/response models as
-`pydantic.BaseModel` subclasses: `examples/07-order-service/app/
-schemas.py`'s `OrderCreate`/`OrderRead`/the four consumed event shapes, and
-the same pattern in every sibling. That's real, used, and worth crediting;
-it's simply a different capability than `pydantic-settings`, and the two
-shouldn't be read as one checkbox.
+Pydantic v2 is used everywhere, just not for configuration. Every service's `app/schemas.py` defines request and response models as `pydantic.BaseModel` subclasses (`OrderCreate`, `OrderRead` and the four consumed event shapes in order-service). That is a different capability from `pydantic-settings`.
 
-## Logging and the Containerfile: the two universal rows
+## Logging and the Containerfile
 
-**Status: USED, 8 of 8, both rows.** Every one of the eight services,
-including the Starlette-only `01-strangler-proxy`, configures stdlib
-`logging` identically: a `RotatingFileHandler` writing to
-`logs/<service>.log` (10 MB per file, five backups) alongside a
-`StreamHandler` on the console, both attached to the root logger before
-anything else in the process can log a line. `examples/07-order-service/
-app/main.py`'s `_configure_logging()` is representative of all eight:
+Every service, including the Starlette-only proxy, configures stdlib `logging` identically: a `RotatingFileHandler` writing `logs/<service>.log` (10 MB per file, five backups) plus a console `StreamHandler`, both attached to the root logger before anything else can log.
 
 ```python
 # examples/07-order-service/app/main.py
@@ -209,34 +125,11 @@ def _configure_logging() -> None:
     root.addHandler(console_handler)
 ```
 
-This is `structlog`-free by choice, not oversight: nothing in this project
-emits structured JSON log lines, and no service correlates a log line back
-to a request or a saga step via a trace or correlation ID in the log
-format itself: the `%(message)s` body is whatever string the call site
-built by hand. What the convention does buy, stated directly in
-`02-review-service`'s own docstring, is simpler and still real: "console
-output alone scrolls away and can't be grep'd after a crash or a failed
-test run." A file under `logs/` that survives the process exiting is the
-actual requirement this project has had so far; a structured, queryable
-log pipeline is a different, larger capability nothing here has asked for
-yet.
+There is no `structlog`: no service emits structured JSON lines or carries a trace or correlation ID in the log format, and `%(message)s` is whatever string the call site built. What the file buys is stated in `02-review-service`'s docstring: console output alone scrolls away and cannot be grepped after a crash or a failed test run. A queryable log pipeline is a larger capability nothing has asked for. All eight example directories also ship a Containerfile, the one row with no asterisk.
 
-The Containerfile row needs no hedge at all: all eight example directories,
-`01-strangler-proxy` through `08-graphql-gateway`, ship one. Every
-service this project extracted is independently buildable into a
-container image, the one row in this scorecard with zero asterisk.
+## Health: six of eight, liveness only
 
-## Health: six of eight, liveness only, no consumer
-
-**Status: PARTIAL, 6 of 8.** `GET /health` exists in
-`03-notification-service`, `04-inventory-service`, `05-payment-service`,
-`06-shipping-service`, `07-order-service`, and `08-graphql-gateway`. It is
-absent from `01-strangler-proxy` and `02-review-service`, the same two
-outliers the config scorecard already named, for related reasons: the
-proxy is a thin router with no owned dependency to report on, and
-review-service is old enough to predate the convention. `08-graphql-
-gateway`'s own docstring states the design choice behind every one of the
-six implementations as directly as any source in this project does:
+`GET /health` exists in `03-notification-service`, `04-inventory-service`, `05-payment-service`, `06-shipping-service`, `07-order-service` and `08-graphql-gateway`. It is absent from `01-strangler-proxy`, a thin router with no owned dependency to report, and `02-review-service`, which predates the convention. The gateway's module docstring states the design:
 
 ```python
 # examples/08-graphql-gateway/app/main.py (module docstring)
@@ -245,37 +138,13 @@ six implementations as directly as any source in this project does:
 #                    downstreams)
 ```
 
-Every one of the six is liveness-only, "this process is up and able to
-answer HTTP", never readiness in the MicroProfile sense of "and every
-downstream I depend on is also reachable." That's a real, stated design
-decision this project has made: coupling a service's
-own health signal to a downstream's availability means one slow
-dependency can cascade into marking an otherwise-healthy process as down,
-which is the opposite of what a liveness probe is for. `07-order-
-service`'s own `/health` goes one step further than "process is up" without
-crossing into readiness: it reports the saga consumer's Kafka partition
-assignment, specifically so this project's own CI readiness wait can poll
-it before firing requests, without that poll ever gating traffic on
-payment's or shipping's availability.
+All six are liveness only: the process is up and answers HTTP. Coupling a service's health to a downstream's availability lets one slow dependency mark a healthy process as down, the opposite of what a liveness probe is for. order-service's `/health` goes one step further without becoming readiness: it reports the saga consumer's Kafka partition assignment, so CI can wait on it before firing requests, without gating traffic on payment's or shipping's availability.
 
-What none of the six endpoints has yet is a consumer that acts on the
-answer. Nothing in this repository's compose definitions or CI points a
-platform's liveness or readiness probe at any of these routes to gate
-restarts or traffic: that wiring is a Kubernetes-appendix concern, not
-something a standalone FastAPI service can do to itself. The six endpoints
-exist, respond correctly, and currently answer nobody.
+No consumer acts on the answer. Nothing in the compose definitions or CI points a liveness or readiness probe at these routes; that wiring belongs to a Kubernetes deployment, not to a standalone service.
 
-## Errors: `errors.py`'s uniform mapping, six of eight
+## Errors: a uniform mapping, six of eight
 
-**Status: PARTIAL, 6 of 8.** `app/errors.py` exists in `02-review-service`
-through `07-order-service`, six consecutive services, each defining the
-same shape: an `ApiError` base exception carrying a `status_code` and an
-`error_code`, a small set of subclasses for that service's own domain
-failures, and an `install_exception_handlers()` function registered on the
-FastAPI app that maps every one of them, plus FastAPI's own
-`RequestValidationError` and Starlette's `HTTPException`, onto one uniform
-JSON body: `{"error": <CODE>, "message": ..., "timestamp": ...}`.
-`examples/07-order-service/app/errors.py` is representative:
+`app/errors.py` exists in `02-review-service` through `07-order-service`. Each defines an `ApiError` base carrying `status_code` and `error_code`, a few subclasses for the service's domain failures, and an `install_exception_handlers()` that maps them, plus FastAPI's `RequestValidationError` and Starlette's `HTTPException`, onto one body: `{"error": <CODE>, "message": ..., "timestamp": ...}`.
 
 ```python
 # examples/07-order-service/app/errors.py
@@ -314,19 +183,9 @@ def install_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(status_code=400, content=_error_body("VALIDATION_FAILED", exc.errors()))
 ```
 
-`InsufficientStock` (409) and `InventoryServiceUnavailable` (503) are a
-small but telling design decision: a logical "not enough
-stock" and a transport-level "couldn't reach inventory-service" are
-two distinct error codes, never folded into one generic 5xx,
-because a caller needs to react to them differently: one means try a
-smaller quantity, the other means retry later.
+`InsufficientStock` (409) and `InventoryServiceUnavailable` (503) are separate codes because the caller reacts differently: one means try a smaller quantity, the other means retry later.
 
-The two absences are structural, not accidental. `01-strangler-proxy`
-has no `errors.py` because it has no domain errors of its own to map: its
-entire error-handling story is "bridge the upstream's real status code
-through unchanged, and turn an unreachable upstream into a real 502,"
-which is exactly what `app/main.py`'s own `except httpx.HTTPError` clause
-does, with no uniform JSON body involved at all:
+The two absences are structural. `01-strangler-proxy` has no domain errors; its error story is to bridge the upstream's status code unchanged and turn an unreachable upstream into a `502`, with no uniform JSON body:
 
 {% include codetabs.html langs="01-strangler-proxy: no errors.py, raw bridge semantics|07-order-service: errors.py, uniform JSON body" %}
 
@@ -353,21 +212,11 @@ async def _handle_api_error(request: Request, exc: ApiError) -> JSONResponse:
                          content=_error_body(exc.error_code, exc.message))
 ```
 
-`08-graphql-gateway` is the second absence, and for a different reason:
-GraphQL has its own error convention: a failed resolver surfaces inside
-the response envelope's `errors` array, next to whatever `data` the other
-resolvers still produced, rather than as an HTTP-status-coded body. A REST
-`errors.py` style uniform JSON error wouldn't fit a protocol where a
-single response can be a partial success and a partial failure at once.
+`08-graphql-gateway` is the second absence. A failed resolver surfaces in the response's `errors` array beside whatever `data` the other resolvers produced, and a REST-style uniform body does not fit a response that can be a partial success and a partial failure at once.
 
-## Resilience: `tenacity`, one service, one call site
+## Resilience: `tenacity`, one call site
 
-**Status: PARTIAL, narrowly.** Grep this project's `examples/` tree for
-`tenacity` and the only hit outside documentation is
-`examples/06-shipping-service/app/enrich_client.py`: one `@retry`
-decorator, wrapping the one outbound synchronous HTTP call this entire
-system's choreographed services make (every other saga reaction reacts to
-a Kafka event; nothing else here calls out over HTTP mid-saga):
+A grep of `examples/` for `tenacity` finds one hit outside documentation: `examples/06-shipping-service/app/enrich_client.py`, one `@retry` decorator on the only outbound synchronous HTTP call the services make mid-saga. Every other saga reaction reacts to a Kafka event.
 
 ```python
 # examples/06-shipping-service/app/enrich_client.py
@@ -383,122 +232,28 @@ async def fetch_shipping_address(order_id: int) -> str:
     ...
 ```
 
-The scope of what gets retried is as considered as the choice to retry
-anything at all: only `httpx.TransportError`/`httpx.TimeoutException`,
-connection refused, DNS failure, a request that blew its own per-call
-timeout, ever triggers a retry. A non-2xx response, or a 2xx response
-simply missing the field the saga needs, is raised immediately as an
-`EnrichmentError` and never retried, because that's a contract violation,
-not a transient blip, and retrying a wrong answer three times just gets
-the same wrong answer three times slower. No other service in this project
-wraps an outbound call this way, because no other service makes the kind
-of synchronous, mid-saga outbound call that needs it: `tenacity` sits in
-`06-shipping-service`'s `pyproject.toml` and nowhere else's.
+Only `httpx.TransportError` and `httpx.TimeoutException` (refused, DNS failure, a blown per-call timeout) trigger a retry. A non-2xx response, or a 2xx missing the field the saga needs, raises `EnrichmentError` immediately: that is a contract violation, and retrying a wrong answer returns the same wrong answer slower. `tenacity` sits in `06-shipping-service`'s `pyproject.toml` and nowhere else's.
 
-## Metrics, OpenTelemetry, and fault tolerance: named, not built
+## Deferred: metrics, OpenTelemetry, breakers and a shared library
 
-**Status: DEFERRED, both.** There is nothing to hedge here because there
-is nothing in the tree: no `opentelemetry-*` or `prometheus-client`
-package in any service's dependency lock file is actually imported by any
-`app/*.py` file, no `/metrics` endpoint anywhere, no span or trace emitted
-by anything this project runs today. The plan line that scoped this very
-chapter states the gap directly rather than
-letting a reader infer it from absence: "no OTel/metrics anywhere." Chapter
-30 is where this gets built, additively, onto three of the eight services,
-and building it now, with no dashboard or alert waiting to consume it,
-would be the same speculative-infrastructure trap this project has
-declined before: a capability added because a catalog says a service
-should have it, not because an operational need has asked for it.
+No `opentelemetry-*` or `prometheus-client` package in any lock file is imported by any `app/*.py`, there is no `/metrics` endpoint, and nothing emits a span. A later addition builds this onto three of the eight services; building it now, with no dashboard or alert to consume it, would add infrastructure because a catalog says a service should have it.
 
-`pybreaker` (a circuit breaker) and an `asyncio.Semaphore`-based bulkhead
-are the same story, one level further from built: named in the build plan
-and the decision log's prose, zero lines of code
-anywhere in `examples/`. What a circuit breaker buys that `tenacity`'s
-bounded retry doesn't, a state machine that stops hammering a
-known-down dependency entirely, rather than retrying it three times per
-call forever, is real, and it's exactly what this project's own
-resilience chapter already scoped and declined to build for the same
-reason this chapter inherits rather than re-argues: no measured, sustained
-failure rate in this project's own traffic has yet justified the added
-complexity. The day it does, it's a decorator added to one call site, not
-a redesign.
+`pybreaker` and an `asyncio.Semaphore` bulkhead are one step further from built: zero lines in `examples/`. A breaker buys what bounded retry cannot, a state machine that stops hammering a known-down dependency instead of retrying it three times per call forever. No measured sustained failure rate has justified it. When one does, it is a decorator on one call site, not a redesign.
 
-## What a true shared chassis library would cost, and why this project hasn't built one
+A shared chassis package, one installable library shipping a `Settings` base, one `install_exception_handlers()` and one `_configure_logging()`, would collapse eight near-identical files into one. The cost is a second dependency every service must bump, test and roll out on its own schedule, when the services have so far evolved and redeployed independently without a coordinated release. Eight copies of a fifteen-line `_configure_logging()` are cheap to keep in sync by hand. The trigger is the same as for a breaker: drift across the copies causing real bugs.
 
-**Status: DEFERRED, by choice.** Every row above is a convention copied
-eight times, not a dependency imported once. A `pattern-catalyst-chassis`
-package, one `pip`-installable library every service depends on, shipping
-one `Settings` base class, one `install_exception_handlers()`, one
-`_configure_logging()`, would collapse eight near-identical files into
-one, and it is exactly the kind of refactor this chapter's own brief
-explicitly rules out: synthesizing the real state of eight services, not
-retrofitting a ninth artifact underneath them. The reason that refactor
-stays unbuilt is more than "out of scope for one chapter," though: it's a
-real trade-off to name. A shared library versioned independently of
-the eight services means every service now has a second dependency to
-bump, test, and roll out on its own schedule, and the one thing this
-project's services have proven so far is that they can each evolve, break,
-and redeploy independently of one another without coordinating a release.
-Eight copies of a fifteen-line `_configure_logging()` function are cheap to
-keep in sync by hand; eight services sharing one versioned internal package
-is a coordination cost that should wait for the same trigger a circuit
-breaker waits for: when drift across the eight copies starts causing real
-bugs, not before.
+> **ADLC in Action**
+>
+> The brief for this audit arrived with a plausible claim already attached: configuration runs on `pydantic-settings`, carried from the build plan, which was written before any service existed. Confirming it meant grepping `examples/*/app/config.py` for the import, finding a plain `dataclasses.dataclass` in every one, and finding no `pydantic_settings` import anywhere. The same pass caught a second drift: `02-review-service` has no `config.py`, which no earlier prose had stated outright. An agent drafting from the plan's wording alone would have shipped a scorecard wrong in the two ways a reader is most likely to re-check with one `grep`.
 
-> **ADLC in Action**: This chapter's own research phase is a small case
-> study in the discipline the scorecard above tries to model. The chapter
-> prompt that commissioned it arrived with a plausible-sounding claim
-> already attached, that configuration in this project runs on
-> `pydantic-settings`, carried forward from the build plan,
-> written before a single service existed. Confirming it
-> meant grepping `examples/*/app/config.py` for the actual import, finding
-> a plain `dataclasses.dataclass` in every one of them, and finding no
-> `pydantic_settings` import anywhere in the tree at all. The same
-> verification pass caught a second, smaller drift: `02-review-service`
-> has no `config.py`, which no prior chapter's prose had stated outright
-> (it reads naturally as "the first extraction, so naturally it's simpler,"
-> until the actual file listing makes the absence concrete). An agent
-> drafting this chapter from the build-plan's wording alone, without
-> re-reading the eight `app/config.py` files directly, would have shipped
-> a scorecard that was wrong in exactly the way a chassis chapter cannot
-> afford to be wrong: the two mismatches a reader is most likely to
-> re-check with a single `grep` of their own.
+{% include excalidraw.html file="chassis-scorecard" alt="Three stacked bands. USED, every service: config via a frozen dataclass and from_env() (7 of 8, review-service is the exception), stdlib RotatingFileHandler logging to logs/ (8 of 8), a Containerfile (8 of 8). PARTIAL, with a named reason for each gap: GET /health (6 of 8, absent in the proxy and review-service), errors.py (6 of 8, absent in the proxy and the GraphQL gateway), tenacity retry (1 of 8, shipping-service's one outbound HTTP call). DEFERRED, zero footprint today: metrics and OpenTelemetry, pybreaker and bulkhead, and a shared chassis library" caption="Figure 27.2: The chassis scorecard: used, partial and deferred across all 8 services" %}
 
-{% include excalidraw.html file="chassis-scorecard" alt="Three stacked bands. USED, every service: config via a frozen dataclass and from_env() (7 of 8, review-service is the exception), stdlib RotatingFileHandler logging to logs/ (8 of 8), and a Containerfile (8 of 8). PARTIAL, a real count with a named reason for each gap: GET /health (6 of 8, absent in the proxy and review-service), errors.py's uniform error mapping (6 of 8, absent in the proxy and the GraphQL gateway, each for a structural reason), and tenacity retry (1 of 8, shipping-service's one outbound HTTP call site). DEFERRED, zero footprint today: metrics/OpenTelemetry (ch.30 adds it to three services), pybreaker/bulkhead (named in planning prose, no code), and a true shared chassis library (each file is copied and adapted per service, never imported from one shared package)." caption="Figure 27.2: The chassis scorecard: used, partial, and deferred, across all 8 services" %}
+> **Decision**
+>
+> Count a capability as used only when a code path wires it in and a test exercises it. Defer a platform capability, such as metrics, a breaker or a shared library, until a consumer, a measured failure or real drift asks for it.
 
-## What you learned
-
-- **A FastAPI chassis is a code-presence question, not a dependency-
-  presence one**: there is no BOM or extension catalog to grep; a
-  capability here becomes real the moment the file that implements it is
-  written, and this project writes that file eight times rather than
-  importing it once.
-- **Config and logging are the floor every service shares identically**:
-  a frozen dataclass with `from_env()` (7 of 8; `review-service` predates
-  the convention) and stdlib `RotatingFileHandler` logging to `logs/<service>.log`
-  (8 of 8), plus a Containerfile on all eight, the three rows in this
-  scorecard that needed no hedge.
-- **"Partial" means a real, re-checkable count, not a euphemism**:
-  `/health` on 6 of 8, `errors.py` on 6 of 8, `tenacity` on 1 of 8, and
-  every absence traces to a stated, structural reason (the proxy routes
-  rather than owns a domain, the gateway's GraphQL envelope has its own
-  error convention, review-service predates a convention that solidified
-  after it shipped) rather than an unexplained gap.
-- **Deferred is a decision, re-checkable by grep, not a silent gap**:
-  metrics/OpenTelemetry, `pybreaker`/bulkhead, and a shared chassis
-  library all have zero footprint in this tree today, each for a stated
-  reason: no consumer waiting on a dashboard, no measured failure rate
-  that justifies a circuit breaker, and a coordination cost that a
-  codebase of eight independently-deployable services hasn't yet earned
-  paying.
-- **Pydantic v2 is real and used, for wire contracts, not settings**:
-  every service's `app/schemas.py` is a `BaseModel` hierarchy; correcting
-  the build-plan's "pydantic-settings" framing doesn't erase Pydantic from
-  this project, it just puts it in its actual place.
-
-Chapter 28 turns from the chassis a service runs on to the question of
-what a service promises the services calling it: contracts, versioning,
-and the service registry a system this size eventually needs once
-"whichever base URL is in `config.py` today" stops being a sufficient
-answer for who's allowed to
-call whom, and with what guarantee the shape won't change underneath them.
+> **🤖 Explore with your agent**
+>
+> "Audit examples/01-strangler-proxy through examples/08-graphql-gateway for the chassis scorecard: for config, logging, /health, errors.py and tenacity, report which services wire each one into app code and which only list it in pyproject.toml, and flag any service that disagrees with the 7 of 8, 8 of 8, 6 of 8, 6 of 8 and 1 of 8 counts."
+>
+> Check: `grep -rl "^from tenacity" examples/*/app` returns only `examples/06-shipping-service/app/enrich_client.py`, and `ls examples/*/app/config.py` lists seven files.

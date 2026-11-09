@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""ch.14 figure: strangler-four-moves -- Fowler's strangler fig pattern as
+"""ch.14 figure: strangler-four-moves, Fowler's strangler fig pattern as
 four ordered engineering moves (intercept, route, incrementally replace,
 retire). The point is the ordering: the window in which a cutover is still
 reversible spans moves 1-3 and closes the instant "retire" happens.
 Retiring the monolith's code before that window is supposed to close --
-before a real behavioral check, not just a green test suite -- is how an
+before a real behavioral check, not just a green test suite, is how an
 "incremental" migration quietly turns into a big-bang rewrite with extra
 ceremony.
 
@@ -32,7 +32,7 @@ W, H = 1400, 700
 
 band_reversible = {
     "x": 40, "y": 170, "w": 960, "h": 220,
-    "label": "reversible -- STRANGLER_REVIEW_ENABLED can flip either direction (config + restart, not code)",
+    "label": "reversible: STRANGLER_REVIEW_ENABLED can flip either direction (config + restart, not code)",
     "fill": "#fafafa",
 }
 band_irreversible = {
@@ -51,7 +51,7 @@ box3 = node(700, 220, 280, 110,
             ["3. Incrementally replace", "review-service goes live,", "cutover proven by Newman first"],
             style="accent")
 box4 = node(1020, 220, 280, 110,
-            ["4. Retire -- later iteration", "the monolith's Review app", "removed last, not first"],
+            ["4. Retire: later iteration", "the monolith's Review app", "removed last, not first"],
             style="ink")
 
 nodes = [box1, box2, box3, box4]
@@ -65,7 +65,7 @@ edges = [
 
 ghost = node(460, 480, 560, 110,
              ["Retire before that check passes?",
-              "the fallback backend is gone --",
+              "the fallback backend is gone:",
               "\"incremental\" becomes a big-bang rewrite"],
              style="ghost")
 nodes.append(ghost)
@@ -81,7 +81,7 @@ notes = [
      "anchor": "middle", "size": 12, "color": "#555555"},
 
     {"x": 60, "y": 375,
-     "text": "both backends still exist here -- the flag can flip either way, no redeploy required",
+     "text": "both backends still exist here, the flag can flip either way, no redeploy required",
      "anchor": "start", "size": 10.5, "color": "#555555"},
 
     {"x": 1020, "y": 352,

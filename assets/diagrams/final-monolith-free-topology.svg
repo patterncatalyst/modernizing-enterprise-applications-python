@@ -11,7 +11,7 @@
 <text x="410.0" y="438.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">graphql-gateway :8090</text>
 <text x="410.0" y="455.0" font-size="11.5" fill="#555555" text-anchor="middle">its own front door</text>
 <rect x="950" y="230" width="340" height="140" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
-<text x="1120.0" y="283.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">00-monolith -- FROZEN</text>
+<text x="1120.0" y="283.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">00-monolith: FROZEN</text>
 <text x="1120.0" y="300.0" font-size="11.5" fill="#555555" text-anchor="middle">no live traffic, unwired,</text>
 <text x="1120.0" y="315.0" font-size="11.5" fill="#555555" text-anchor="middle">shell builds + 404-only smoke test,</text>
 <text x="1120.0" y="330.0" font-size="11.5" fill="#555555" text-anchor="middle">kept as golden-baseline referent</text>
@@ -45,8 +45,8 @@
 <path d="M530.0,428.9836065573771 L620.0,420.72131147540983" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <path d="M474.8936170212766,400.0 L663.0851063829787,284.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <path d="M530.0,300.0 L950.0,300.0" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
-<text x="746.0" y="294.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">no route left -- break-glass only</text>
-<text x="746.0" y="294.0" font-size="11" fill="#555" text-anchor="middle">no route left -- break-glass only</text>
+<text x="746.0" y="294.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">no route left: break-glass only</text>
+<text x="746.0" y="294.0" font-size="11" fill="#555" text-anchor="middle">no route left: break-glass only</text>
 <text x="700.0" y="28" font-size="15" fill="#1d1d1d" text-anchor="middle" font-weight="700">the final topology: six services + a GraphQL gateway behind one flagless router, the monolith frozen and unwired</text>
-<text x="40" y="616" font-size="11" fill="#555555" text-anchor="start">Contract suite green against exactly this mesh -- 50 requests / 133 assertions, 0 failed, repeated 4x -- with no monolith process running at all.</text>
+<text x="40" y="616" font-size="11" fill="#555555" text-anchor="start">Contract suite green against exactly this mesh, 50 requests / 133 assertions, 0 failed, repeated 4x, with no monolith process running at all.</text>
 </svg>

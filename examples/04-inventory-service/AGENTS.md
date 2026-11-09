@@ -1,4 +1,4 @@
-# AGENTS.md -- 04-inventory-service
+# AGENTS.md: 04-inventory-service
 
 Context for an AI agent (or a human) picking this module up.
 
@@ -8,11 +8,11 @@ The r04 extraction of the `inventory` bounded context off `../00-monolith`
 onto a standalone FastAPI service, `:8084` (ch.19, DRQ-039/DRQ-041/DRQ-042/
 DRQ-044). Two surfaces:
 
-- `GET /api/inventory` / `GET /api/inventory/{sku}` -- the lifted read
+- `GET /api/inventory` / `GET /api/inventory/{sku}`: the lifted read
   surface, matching the monolith's `inventory/views.py` contract
   byte-for-byte.
 - A **net-new gRPC server** on `:9004` (`CheckStock`/`Reserve`/`Release`/
-  `GetStock`) -- the synchronous order<->inventory anti-corruption-layer
+  `GetStock`): the synchronous order<->inventory anti-corruption-layer
   contract. There is no Django original to lift here: the monolith's
   `reserve` concern lived in-process against a pessimistic-lock derived
   query, a fundamentally different mechanism from a server-side atomic
@@ -20,13 +20,13 @@ DRQ-044). Two surfaces:
 
 This is the Python sibling of
 `~/Dev/modernizing-enterprise-applications/examples/04-inventory-service`
-(Java/Quarkus) -- same role in the book, same chapter -- but it is its own
+(Java/Quarkus) (same role in the book, same chapter) but it is its own
 independent implementation (grpc.aio instead of Quarkus/Mutiny gRPC, aiokafka
 instead of SmallRye Reactive Messaging for the transition-only CDC consumer).
 
 The `.proto` contract (`proto/dev/patterncatalyst/inventory/v1/inventory.proto`)
 and its generated stubs (`app/grpc_gen/`) were authored and committed by a
-separate PROTO lane -- **this lane only imports them**
+separate PROTO lane: **this lane only imports them**
 (`from app.grpc_gen import inventory_pb2, inventory_pb2_grpc`); never edit
 `proto/` or `app/grpc_gen/` from here.
 
@@ -61,68 +61,68 @@ normalized onto the asyncpg driver scheme by `app/db.py::resolve_database_url`.
 `HTTP_PORT` (8084) and `GRPC_PORT` (9004) are independently overridable.
 `INVENTORY_CDC_ENABLED` (default `false`), `KAFKA_BOOTSTRAP_SERVERS`,
 `INVENTORY_CDC_TOPIC`, `INVENTORY_CDC_GROUP` configure the transition-only CDC
-consumer (`app/cdc_consumer.py`) -- see `../CUTOVER.md`. All read via
+consumer (`app/cdc_consumer.py`): see `../CUTOVER.md`. All read via
 `app/config.py::Settings.from_env()`.
 
 ## Structure
 
-- `app/main.py` -- FastAPI app factory + lifespan. Builds the async engine/
+- `app/main.py`: FastAPI app factory + lifespan. Builds the async engine/
   session factory, starts a `grpc.aio.server()` on `GRPC_PORT` sharing the
   SAME session factory as an asyncio task on the same event loop, and
-  (only if `INVENTORY_CDC_ENABLED`) starts the CDC consumer -- all stopped
+  (only if `INVENTORY_CDC_ENABLED`) starts the CDC consumer, all stopped
   cleanly on shutdown. `/health` reports `grpcServerListening` once the gRPC
   server has bound its port (a CI readiness signal).
-- `app/routes.py` -- the two `/api/inventory*` HTTP endpoints.
-- `app/service.py` -- read-path business logic (`list_all`/`get_by_sku`,
+- `app/routes.py`: the two `/api/inventory*` HTTP endpoints.
+- `app/service.py`: read-path business logic (`list_all`/`get_by_sku`,
   raising `ResourceNotFound` for an unknown sku). The mutating
-  `reserve`/`release` concern deliberately is NOT here -- it stays
+  `reserve`/`release` concern deliberately is NOT here, it stays
   server-side on the gRPC path.
-- `app/grpc_server.py` -- `InventoryGrpcServiceServicer`, implementing the
+- `app/grpc_server.py`: `InventoryGrpcServiceServicer`, implementing the
   generated `inventory_pb2_grpc.InventoryGrpcServiceServicer` interface.
   Each RPC opens its OWN async session (no FastAPI request scope to hook
   into for a gRPC call).
-- `app/repository.py` -- async SQLAlchemy queries against the owned schema,
+- `app/repository.py`: async SQLAlchemy queries against the owned schema,
   including `reserve`/`release`'s single conditional/unconditional `UPDATE`
-  statements (the concurrency-safety mechanism -- see its docstring).
-- `app/schemas.py` -- Pydantic v2 `StockOut` (camelCase via `Field(alias=...)`).
-- `app/models.py` -- SQLAlchemy declarative mapping for
+  statements (the concurrency-safety mechanism, see its docstring).
+- `app/schemas.py`: Pydantic v2 `StockOut` (camelCase via `Field(alias=...)`).
+- `app/models.py`: SQLAlchemy declarative mapping for
   `inventory.inventory_items`.
-- `app/db.py` -- async engine/session factory; sets
+- `app/db.py`: async engine/session factory; sets
   `search_path=inventory,public` on every connection.
-- `app/config.py` -- `Settings.from_env()`, read at call time.
-- `app/errors.py` -- the uniform `{"error","message","timestamp"}` body,
+- `app/config.py`: `Settings.from_env()`, read at call time.
+- `app/errors.py`: the uniform `{"error","message","timestamp"}` body,
   ported from `02-review-service`/`03-notification-service`'s `app/errors.py`.
-- `app/cdc_consumer.py` -- TRANSITION-ONLY, flag-gated OFF by default. See
+- `app/cdc_consumer.py`: TRANSITION-ONLY, flag-gated OFF by default. See
   its module docstring and `../CUTOVER.md`.
-- `app/grpc_gen/`, `proto/` -- generated gRPC stubs + the `.proto` contract.
-  **Owned by the PROTO lane, not this one** -- import only, never edit.
-- `migrations/` -- Alembic, async (`Connection.run_sync`),
+- `app/grpc_gen/`, `proto/`: generated gRPC stubs + the `.proto` contract.
+  **Owned by the PROTO lane, not this one**, import only, never edit.
+- `migrations/`: Alembic, async (`Connection.run_sync`),
   `version_table_schema="inventory"`. `versions/0001_...py` creates the
   schema + table + unique index on sku; `versions/0002_...py` seeds the 3
   demo skus (idempotent `ON CONFLICT (sku) DO NOTHING`).
-- `tests/` -- REST contract tests (`test_inventory_rest.py`), gRPC servicer
+- `tests/`: REST contract tests (`test_inventory_rest.py`), gRPC servicer
   tests incl. the concurrency race proof (`test_inventory_grpc.py`), against
   a real, already-migrated-and-seeded Postgres. An autouse fixture
   (`conftest.py::reset_inventory_quantities`) restores the seed baseline
   after every test so order never matters.
 
-## Contract notes (don't "fix" these -- they match the monolith/proto on purpose)
+## Contract notes (don't "fix" these, they match the monolith/proto on purpose)
 
 - REST JSON is **camelCase**, no trailing slash, same uniform error body as
-  `00-monolith`'s `common/exceptions.py` -- see `README.md`'s endpoint table.
+  `00-monolith`'s `common/exceptions.py`: see `README.md`'s endpoint table.
 - The gRPC wire vocabulary (`stock_keeping_unit`/`display_name`/
   `unit_price_cents`/`on_hand_qty`) is DELIBERATELY DISTINCT from the REST/
-  internal vocabulary (`sku`/`name`/`priceCents`/`quantityOnHand`) -- this IS
+  internal vocabulary (`sku`/`name`/`priceCents`/`quantityOnHand`): this IS
   the anti-corruption layer, not an inconsistency to reconcile.
 - `Reserve`/`Release` are single atomic SQL statements, NOT
-  read-then-write -- see `app/repository.py`'s docstrings for why that
+  read-then-write: see `app/repository.py`'s docstrings for why that
   matters under concurrency. Don't "simplify" them into a `SELECT` followed
   by an `UPDATE`; that reintroduces the race the current design prevents.
 - `Release` is intentionally unconditional and non-idempotent (an honest,
-  documented limitation, not a bug) -- see `app/grpc_server.py`'s `Release`
+  documented limitation, not a bug), see `app/grpc_server.py`'s `Release`
   docstring and `../CUTOVER.md`.
 - `app/cdc_consumer.py` is NOT used by CI and NOT part of this service's
-  end-state -- don't wire it into the default test/dev path.
+  end-state: don't wire it into the default test/dev path.
 
 ## Testing
 
@@ -137,6 +137,6 @@ uv run alembic upgrade head
 uv run pytest
 ```
 
-No Kafka broker is required for any test in this suite -- the CDC consumer
+No Kafka broker is required for any test in this suite, the CDC consumer
 is flag-gated off, and the gRPC tests call `InventoryGrpcServiceServicer`'s
 coroutine methods directly rather than through a live network listener.

@@ -26,7 +26,7 @@ client="$(istioctl version --remote=false 2>/dev/null | awk '{print $NF}')"
 client_minor="${client%.*}"
 pin_minor="${ISTIO_VERSION%.*}"
 [[ "$client_minor" == "$pin_minor" ]] \
-  || fail "istioctl is ${client:-unknown}; this chapter pins ${ISTIO_VERSION} (major.minor ${pin_minor} required)"
+  || fail "istioctl is ${client:-unknown}; the project pins ${ISTIO_VERSION} (major.minor ${pin_minor} required)"
 
 step "istioctl install (Istio ${client}, context ${PROFILE})"
 istioctl install -y --context "$PROFILE" -f "$REPO_ROOT/deploy/k8s/istio/istio-install.yaml"

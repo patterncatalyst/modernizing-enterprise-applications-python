@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/stack-up.sh — bring up the r01 local infra/observability stack.
+# scripts/stack-up.sh: bring up the local infra/observability stack.
 #
 # Docker-primary, podman-compatible: tries `docker compose` first, falls back
 # to `podman compose` if docker isn't installed. Never the legacy hyphenated
@@ -11,7 +11,7 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 if [ ! -f .env ]; then
-  echo "No .env found — copying .env.example (edit it if you need different pins/ports)." >&2
+  echo "No .env found; copying .env.example (edit it if you need different pins/ports)." >&2
   cp .env.example .env
 fi
 
@@ -40,6 +40,6 @@ done
 "${COMPOSE[@]}" ps
 echo
 echo "Postgres:   localhost:${POSTGRES_PORT:-5432} (see .env for db/user/password)"
-echo "Kafka:      localhost:${KAFKA_HOST_PORT:-9092} (host) / kafka:9094 (compose network) — not used by r01 yet"
-echo "Grafana:    http://localhost:3000 — not used by r01 yet"
-echo "Prometheus: http://localhost:${PROMETHEUS_HOST_PORT:-19090} (host 19090; Cockpit owns 9090) — not used by r01 yet"
+echo "Kafka:      localhost:${KAFKA_HOST_PORT:-9092} (host) / kafka:9094 (compose network) (not used by the monolith yet)"
+echo "Grafana:    http://localhost:3000 (not used by the monolith yet)"
+echo "Prometheus: http://localhost:${PROMETHEUS_HOST_PORT:-19090} (host 19090; Cockpit owns 9090) (not used by the monolith yet)"

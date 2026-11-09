@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.16 figure: notification-content-based-routing -- the strangler proxy's
+"""ch.16 figure: notification-content-based-routing, the strangler proxy's
 routing decision generalized past a single URL-path predicate, using the
 SECOND flag (STRANGLER_NOTIFICATION_ENABLED) ch.17 adds alongside ch.14's
 STRANGLER_REVIEW_ENABLED.
@@ -34,7 +34,7 @@ proxy = node(320, 240, 280, 130, [
 
 monolith = node(720, 40, 300, 100, [
     "Django monolith :8000",
-    "default -- everything not matched",
+    "default: everything not matched",
     "below (incl. checkout, inventory, ...)",
 ], style="box")
 
@@ -68,9 +68,9 @@ notes = [
      "anchor": "start", "size": 12, "color": "#1d1d1d"},
     {"x": 60, "y": 470, "text": "The same _select_backend() shape generalizes to:",
      "anchor": "start", "size": 12, "color": "#1d1d1d"},
-    {"x": 76, "y": 495, "text": "- HEADER match -- e.g. route by X-Tenant-Id to a tenant-specific backend",
+    {"x": 76, "y": 495, "text": "- HEADER match: e.g. route by X-Tenant-Id to a tenant-specific backend",
      "anchor": "start", "size": 12, "color": "#64748b"},
-    {"x": 76, "y": 515, "text": "- PAYLOAD/content match -- e.g. route by order total or customer segment",
+    {"x": 76, "y": 515, "text": "- PAYLOAD/content match: e.g. route by order total or customer segment",
      "anchor": "start", "size": 12, "color": "#64748b"},
     {"x": 60, "y": 545, "text": "The constraint that doesn't generalize away: the predicate's INPUTS stay",
      "anchor": "start", "size": 12, "color": "#1d1d1d"},

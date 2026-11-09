@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""ch.26 figure: final-monolith-free-topology -- the end state. A client
+"""ch.26 figure: final-monolith-free-topology, the end state. A client
 reaches six independently deployable services plus the GraphQL gateway
 through one flagless edge router (the former strangler proxy, now an
 unconditional per-context forwarder with no monolith fallback left). The
-monolith is frozen in-repo -- greyed out, unwired, no live traffic -- kept
+monolith is frozen in-repo, greyed out, unwired, no live traffic, kept
 as the golden-baseline referent and a break-glass fallback, not deleted.
 
 Sourced from examples/01-strangler-proxy/app/config.py +
@@ -38,7 +38,7 @@ order = node(620, 460, 190, 64, ["order-service", ":8088"], style="box")
 services = [review, notif, inv, pay, ship, order]
 
 monolith = node(950, 230, 340, 140,
-                ["00-monolith -- FROZEN", "no live traffic, unwired,",
+                ["00-monolith: FROZEN", "no live traffic, unwired,",
                  "shell builds + 404-only smoke test,",
                  "kept as golden-baseline referent"], style="ghost")
 
@@ -46,12 +46,12 @@ nodes = [client, proxy, gql, monolith] + services
 edges = [connect(client, proxy)]
 edges += [connect(proxy, s) for s in services]
 edges += [connect(gql, order), connect(gql, pay), connect(gql, ship), connect(gql, inv)]
-edges.append(connect(proxy, monolith, dashed=True, label="no route left -- break-glass only"))
+edges.append(connect(proxy, monolith, dashed=True, label="no route left: break-glass only"))
 
 notes = [
     {"x": W / 2, "y": 28, "text": "the final topology: six services + a GraphQL gateway behind one flagless router, the monolith frozen and unwired",
      "anchor": "middle", "bold": True, "size": 15},
-    {"x": 40, "y": H - 24, "text": "Contract suite green against exactly this mesh -- 50 requests / 133 assertions, 0 failed, repeated 4x -- with no monolith process running at all.",
+    {"x": 40, "y": H - 24, "text": "Contract suite green against exactly this mesh, 50 requests / 133 assertions, 0 failed, repeated 4x, with no monolith process running at all.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

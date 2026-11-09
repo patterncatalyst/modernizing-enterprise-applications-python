@@ -2,7 +2,7 @@
 title: "Extraction 2: Notification Service (Going Event-Driven)"
 order: 17
 part: "The Strangler Fig in Practice"
-description: "The transactional outbox cures the dual-write hazard; an idempotent aiokafka consumer and an owned schema give notification its first fully event-driven extraction, proven live against a real Kafka broker in both proxy flag states."
+description: "The transactional outbox cures the dual-write hazard, an idempotent aiokafka consumer and an owned schema make notification the first event-driven extraction, and a bounded-wait poll proves the cutover against a real Kafka broker."
 duration: 50 minutes
 ---
 
@@ -10,85 +10,33 @@ duration: 50 minutes
 
 By the end of this chapter you can:
 
-- Explain why SMELL #5/#6's synchronous, in-transaction notification call couples checkout's latency and failure domain to Kafka, and why curing it means changing *when* the work happens, not just where it runs.
-- Write an `OutboxEvent` row inside the same `@transaction.atomic()` as `place_order()`'s other writes, and state precisely where that atomicity guarantee stops: the separate, at-least-once hop `outbox_relay.py` makes from table to Kafka.
-- Build `OrderPlacedConsumer` as an `aiokafka` consumer and give `record_order_placed` two independent layers of idempotency: an application-level check-then-insert and a database partial unique index (`uq_notifications_order_id`) as the backstop for a race.
-- Justify why notification-service's owned schema must stay free of foreign keys into the monolith's tables, using the two-independent-writers/split-brain argument, and contrast it with review-service's defensible shared-table reads.
-- Design a bounded-wait eventual-consistency poll assertion (20 x 750ms) for `GET /api/notifications` that passes unedited whether the monolith's own consumer or notification-service's consumer currently answers.
-- Construct a negative check (kill notification-service to force the proxy's real 502 through the full poll budget, restart it to return to green) that proves the async assertion is testing the real pipeline rather than agreeing with whichever backend answers first.
-- Publish the same `order.placed` payload twice through a Testcontainers-managed Kafka broker and the real `OrderPlacedConsumer`, and assert exactly one `Notification` row survives, before trusting the idempotency claim made in prose.
+- Explain why a synchronous, in-transaction notification call couples checkout's latency and failure domain to the notification path, and why curing it changes when the work happens, not just where it runs.
+- Write an `OutboxEvent` row inside the same `@transaction.atomic()` as `place_order()`'s other writes, and say where that atomicity stops: the at-least-once hop from table to Kafka.
+- Build an `aiokafka` consumer with two layers of idempotency: a check-then-insert and a partial unique index as the backstop for a race.
+- Justify an owned schema with no foreign keys into the monolith's tables, and contrast it with review-service's shared-table reads.
+- Write a bounded-wait poll for an eventually consistent read that passes unchanged whichever backend answers, and fails loudly when the backend is down.
 
 ## Why this matters
 
-ch.16 named two ideas: content-based routing generalized past a URL path,
-and the anti-corruption layer as a contract rather than a request, without
-yet building the extraction that needed both. This chapter is that
-extraction: `notification` leaves the monolith, not onto another
-synchronous REST leaf like ch.15's Review, but onto a service whose entire
-reason to exist is consuming an event the monolith publishes. Doing that
-safely requires curing a dual-write hazard this book planted as a named
-smell back in ch.09, teaching a consumer to survive a delivery guarantee
-weaker than "exactly once," and proving, against a real Kafka broker with
-no stand-in, that an asynchronous cutover can be just as reversible and
-just as provably equivalent as ch.15's synchronous one.
+Review moved a process. Notification moves a consistency model. Before this extraction, `order/services.py::place_order()` called notification code synchronously, in-process, inside the same transaction as the rest of checkout. A committed checkout was guaranteed to have attempted a send, at the cost recorded in `examples/00-monolith/SMELLS.md` as smells #5 and #6:
 
-The code is in `examples/03-notification-service/` (the new FastAPI
-service) and `examples/00-monolith/` (the outbox model, the relay, and the
-monolith's own `order.placed` consumer). The run script there sets up and
-runs the service; its `README.md` and `MIGRATION.md` cover what it does,
-how to drive it, and the measured before/after numbers cited below.
+> **Synchronous in-process notification send inside the checkout transaction**: checkout latency was coupled to however long "sending" a notification took, and a failure there would have rolled back the whole order.
 
-{% include excalidraw.html file="outbox-write-in-transaction" alt="Before and after inside place_order()'s single transaction: the before panel ends with a synchronous out-of-process notification send, the dual-write hazard; the after panel ends with one ordinary OutboxEvent row, atomic with everything else automatically" caption="Figure 17.1: The outbox cure changes the last write inside checkout's transaction, not the transaction itself" %}
+> **Dual-write hazard**: the `Notification` DB row (atomic with checkout) and the call to `_dispatch_via_external_provider()` were two independent writes to two independent systems with no shared transaction. A crash between the DB commit and the provider call would have lost the notification silently; a naive retry could have duplicated it.
 
-## Why notification leaves second, and why it's harder than it looks
+Moving that code to a new service unchanged would turn an in-process dual write into a network dual write, which is worse. The outbox has to exist before the extraction is safe, and it lives in the monolith.
 
-Extraction order in this book is a planned ladder, not an arbitrary
-list, and `review/models.py`'s own comment named the first rung directly:
-Review has no synchronous collaborator, so ch.15 could prove the extraction
-*mechanism*, capture the contract, stand up the service, flip the flag,
-without also solving a distributed-systems problem in the same chapter.
-`notification` is the second rung, and it is harder along an axis Review
-never touched: **Review's extraction moved a process; notification's
-extraction moves a consistency model.**
+The code is in `examples/03-notification-service/` (the FastAPI service) and `examples/00-monolith/` (the outbox model, the relay and the monolith's own `order.placed` consumer). The service's `README.md` and `MIGRATION.md` cover how to drive it and the measured numbers cited below.
 
-Before this chapter, `order/services.py::place_order()` called notification
-code *synchronously*, *in-process*, inside the same `@transaction.atomic()`
-as everything else in checkout. That bought something real: a checkout
-that commits is guaranteed to have at least attempted a notification send,
-automatically, by Postgres's own rollback semantics, at a real cost
-documented in `examples/00-monolith/SMELLS.md` as smells #5 and #6:
+{% include excalidraw.html file="outbox-write-in-transaction" alt="Before and after inside place_order()'s single transaction: the before panel ends with a synchronous out-of-process notification send, the dual-write hazard; the after panel ends with one ordinary OutboxEvent row, atomic with everything else" caption="Figure 17.1: The outbox cure changes the last write inside checkout's transaction, not the transaction itself" %}
 
-> **Synchronous in-process notification send inside the checkout
-> transaction**: checkout latency was coupled to however long "sending" a
-> notification took, and a failure there would have rolled back the whole
-> order.
+## Pattern: Transactional Outbox
 
-> **Dual-write hazard**: the `Notification` DB row (atomic with checkout)
-> and the call to `_dispatch_via_external_provider()` were two independent
-> writes to two independent systems with no shared transaction. A crash
-> between the DB commit and the provider call would have lost the
-> notification silently; a naive retry could have duplicated it.
-
-Extracting `notification` onto its own service doesn't just move that
-code somewhere else: if it moved unchanged, it would turn an in-process
-dual write into a *network* dual write, which is strictly worse, because
-now the two systems that can't agree on "did this actually happen" are
-separated by a network partition, not just a process boundary. That's why
-this chapter leads with the outbox, not the new service: the outbox is
-what has to exist *before* an extraction like this one is even safe to
-build, and it lives in the monolith, not in
-`examples/03-notification-service` at all.
-
-## The transactional outbox: atomicity now, delivery later
-
-The cure for a dual-write hazard is to stop writing twice. `common/models.py::OutboxEvent`
-is a Django model like any other in this schema, which is exactly the
-point; the outbox's entire value comes from being an *ordinary row*,
-subject to the same transaction the rest of checkout already runs inside:
+The cure for a dual write is to stop writing twice. `common/models.py::OutboxEvent` is an ordinary Django model, and that is its value: it is subject to the transaction checkout already runs in.
 
 ```python
 class OutboxEvent(models.Model):
-    """The transactional outbox (ch.17 cure for SMELL #5/#6, see SMELLS.md):
+    """The transactional outbox (the cure for SMELL #5/#6, see SMELLS.md):
     the ONLY notification-related side effect written inside
     `order.services.place_order()`'s `@transaction.atomic()`. A separate
     process (`common.management.commands.outbox_relay`) polls the
@@ -116,31 +64,11 @@ class OutboxEvent(models.Model):
         ]
 ```
 
-Six columns, each earning its place. `aggregate_type`/`aggregate_id`
-identify *what* this event is about (`"order"`, the order's id) without the
-outbox table needing a foreign key into every context that might ever
-publish through it: a generic envelope, not an order-specific one, so the
-same table can later carry payment's or shipping's events too.
-`event_type` (`"order.placed"`) is the topic name this row will become.
-`payload` is a `JSONField`, not a structured set of columns, because the
-outbox's job is to carry an already-serialized event, not to re-model it;
-the shape of `payload` is owned by whoever writes the row, not by this
-table. `created_at`/`published_at` are the whole state machine: a row with
-`published_at IS NULL` is waiting; a row with it set is done. That two-value
-state machine stays this simple by design: there's no `PUBLISHING`,
-`FAILED`, or retry-count column, because the relay below treats "still
-null" as the entire signal it needs to try again.
+`aggregate_type` and `aggregate_id` identify what the event is about without a foreign key into every context that might publish through the table, so payment's or shipping's events can use it later. `event_type` (`"order.placed"`) becomes the topic name. `payload` is a `JSONField` because the outbox carries an already-serialized event; its shape belongs to whoever writes the row. `published_at` is the whole state machine: null means waiting, set means done. There is no `PUBLISHING`, `FAILED` or retry-count column, because the relay treats "still null" as the entire signal to try again.
 
-The partial index is not decoration. `idx_outbox_unpublished` only indexes
-rows where `published_at IS NULL`, which, in steady state, is a tiny
-sliver of a table that otherwise grows forever as an append-only event log.
-Without the `condition=Q(...)` filter, this index would have to track every
-row the table has ever held; with it, the relay's "give me the unpublished
-rows, oldest first" query stays cheap at the table's hundredth row and at
-its ten-millionth.
+The partial index tracks only unpublished rows, a tiny sliver of a table that otherwise grows forever. The relay's "oldest unpublished first" query stays cheap at the hundredth row and at the ten-millionth.
 
-`order/services.py::place_order()`'s side of the cure is a replacement, not
-an addition: the old synchronous call is *gone*, not wrapped:
+On the checkout side the change is a replacement. The old synchronous call is gone:
 
 ```python
 confirmation_message = f"Order #{order.id} confirmed, total ${order.total_cents / 100:.2f}"
@@ -161,21 +89,9 @@ OutboxEvent.objects.create(
 return order
 ```
 
-This runs at the very end of the same `@transaction.atomic()` that reserves
-inventory, creates the order row, and charges payment, so a `DECLINE`
-payment method or a `SHIP-FAIL` address still rolls this row back right
-along with everything else, the identical net-zero guarantee ch.09's smell
-tests already assert. What changed is *what the last write is*: before,
-it was a call that left this transaction's process entirely; now, it's an
-`INSERT` into a table in the same database, inside the same transaction,
-subject to the same all-or-nothing guarantee as the order row it describes.
-Checkout's HTTP contract doesn't move either: `POST /api/orders` still
-returns a synchronous `201 CONFIRMED` in the same round-trip, not a `202
-Accepted`; only the notification *side effect* moved off that path.
+This is the last write in the same `@transaction.atomic()` that reserves inventory, creates the order and charges payment. A `DECLINE` payment method or a `SHIP-FAIL` address still rolls the row back with everything else. What changed is that the last write is now an `INSERT` into the same database instead of a call that leaves the process. Checkout's HTTP contract is unchanged: `POST /api/orders` still returns a synchronous `201 CONFIRMED`, not a `202 Accepted`.
 
-Writing the row is half the cure. Something still has to get it to Kafka,
-and `common/management/commands/outbox_relay.py` is a plain polling loop,
-named as such rather than dressed up as something more sophisticated:
+Something still has to get the row to Kafka. `common/management/commands/outbox_relay.py` is a plain polling loop:
 
 ```python
 async def _publish_one(producer: AIOKafkaProducer, topic: str, event: OutboxEvent) -> None:
@@ -188,38 +104,17 @@ async def _publish_one(producer: AIOKafkaProducer, topic: str, event: OutboxEven
     await _mark_published(event.id)
 ```
 
-Three decisions here each matter. First, the Kafka message key is
-`aggregate_id`, the order id as a string, not some relay-internal id;
-every event about the same order lands on the same partition, in
-publish order, which matters the moment a second event type about the same
-aggregate exists. Second, `send_and_wait()` is called *before*
-`_mark_published()`, not after some buffered batch: publish, confirm,
-*then* mark. That ordering is precisely what makes this **at-least-once**,
-named in the docstring rather than left implicit: a crash between those two
-lines republishes an already-sent event on the relay's next poll, because
-the row still shows `published_at IS NULL`. The alternative ordering
-(mark first, publish second) would be at-most-once instead: a crash there
-loses the event's only remaining copy of "still needs sending," silently.
-At-least-once with a cheap, correct consumer-side dedupe (below) is the
-right trade; silent loss never is. Third, this is a **simple polling
-relay, not Debezium/CDC**: the module docstring says so explicitly,
-because the more sophisticated alternative (tailing Postgres's write-ahead
-log instead of polling a table) is deferred by design. A one-second poll against a
-condition-indexed table is a perfectly adequate relay for this book's
-traffic; CDC becomes worth its complexity once polling latency or database load
-from polling itself becomes the bottleneck, neither of which is the case
-here.
+Three decisions matter:
 
-## Consuming it: aiokafka and the idempotency it demands
+- **The message key is `aggregate_id`**, the order id as a string. Every event about one order lands on the same partition in publish order, which matters once a second event type exists for the same aggregate.
+- **Publish, confirm, then mark.** A crash between the last two lines republishes an already-sent event, because the row still shows `published_at IS NULL`. That is at-least-once. Marking first would be at-most-once: a crash would lose the only record that the event still needs sending. At-least-once with a cheap consumer-side dedupe is the right trade, and silent loss never is.
+- **A polling relay, not Debezium.** A one-second poll against a condition-indexed table is adequate here. Tailing Postgres's write-ahead log (CDC) pays for itself when polling latency or the database load from polling becomes the bottleneck, which it is not at this traffic.
+
+## The idempotent consumer
 
 {% include excalidraw.html file="event-driven-notification-topology" alt="End-to-end pipeline: checkout writes an outbox row, the relay publishes it to Kafka at-least-once, and two independent consumer groups (monolith-notification and notification-service) each consume the same topic into their own read model, with the strangler proxy flag choosing which one answers GET /api/notifications" caption="Figure 17.2: One outbox row, two independent consumer groups, one flag choosing who answers the read" %}
 
-At-least-once delivery is a promise about the *producer* side; it says
-nothing about what a consumer does when the same event arrives twice. That
-obligation falls entirely on `examples/03-notification-service/app/consumer.py::OrderPlacedConsumer`,
-and its lifecycle is worth reading in full because every call in it is
-answering a specific question a naive `while True: consume()` loop would
-get wrong:
+At-least-once is a promise about the producer. What a consumer does with a duplicate is its own obligation, met in `examples/03-notification-service/app/consumer.py::OrderPlacedConsumer`:
 
 ```python
 async def start(self) -> None:
@@ -235,29 +130,14 @@ async def start(self) -> None:
     self._task = asyncio.create_task(self._consume_loop(), name="order-placed-consumer")
 ```
 
-`group_id=self._settings.consumer_group` (`"notification-service"`) is
-what makes this a *consumer group member*, not a free-floating reader:
-Kafka guarantees that within one group, exactly one member sees any given
-partition's records, so if this service ever runs more than one replica,
-they divide the topic's partitions between them rather than each
-duplicating every record. `auto_offset_reset="earliest"` means a brand-new
-deployment, with no committed offset yet for this group, starts from the
-*beginning* of the topic rather than only seeing events published after it
-happened to join: the right default for a service whose whole job is
-"don't miss anything," at the cost of reprocessing history on a true cold
-start (which the idempotency below makes safe). `enable_auto_commit=True`
-is the simplest correct starting point for a demo consumer, committing
-offsets periodically in the background rather than requiring this code to
-manage commit timing itself; the trade is that a crash between processing
-a record and the next auto-commit can redeliver that record on restart,
-which is exactly the at-least-once case the idempotency layer below exists
-to absorb, not a defect introduced by this choice. The background task
-(`asyncio.create_task`, not an inline blocking loop in the request path) is
-what keeps the read side (`app/routes.py`) and the write side (this
-consumer) fully decoupled: one can be slow, or briefly down, without the
-other noticing.
+| Setting | Effect | Cost |
+| --- | --- | --- |
+| `group_id="notification-service"` | Within a group, one member reads each partition, so replicas divide the topic instead of duplicating it | None |
+| `auto_offset_reset="earliest"` | A new deployment with no committed offset starts at the beginning of the topic and misses nothing | Reprocesses history on a true cold start, which idempotency makes safe |
+| `enable_auto_commit=True` | Offsets commit in the background | A crash before the next commit redelivers a record, the at-least-once case the idempotency layer absorbs |
+| `asyncio.create_task` | The consumer runs in the background, decoupled from the read routes in `app/routes.py` | One side can be slow or briefly down without the other noticing |
 
-The loop itself treats a single bad record as a reason to log, not to die:
+One bad record is logged, not fatal:
 
 ```python
 async def _consume_loop(self) -> None:
@@ -274,17 +154,9 @@ async def _consume_loop(self) -> None:
             )
 ```
 
-`OrderPlacedEvent.model_validate(record.value)` is ch.16's ACL doing its
-job at the one place it actually runs: a malformed or unexpected payload
-raises a `ValidationError` here, caught by the broad `except Exception`
-below it, logged with the offset for diagnosis, and the loop moves on to
-the *next* record rather than stopping delivery for every order placed
-afterward. `asyncio.CancelledError` is re-raised rather than swallowed,
-because that exception means "the service is shutting down," not "this
-record failed"; catching it here would turn a clean shutdown into a hang.
+A malformed payload raises a `ValidationError` at the ACL, gets logged with its offset, and the loop moves on instead of halting delivery for every later order. `asyncio.CancelledError` is re-raised because it means the service is shutting down, and swallowing it would turn a clean shutdown into a hang.
 
-Idempotency itself lives one layer down, in `app/service.py::record_order_placed`,
-and it's a two-layer guarantee, not one:
+Idempotency lives in `app/service.py::record_order_placed`:
 
 ```python
 async def record_order_placed(
@@ -319,60 +191,22 @@ async def record_order_placed(
 
 {% include excalidraw.html file="idempotent-consumer-dedupe" alt="What happens on a redelivered order.placed event: application-level check-then-insert handles the common case, and a database-level partial unique index on order_id backstops the narrow window where two redeliveries race the check itself, so exactly one Notification row survives either way" caption="Figure 17.3: At-least-once delivery, exactly-once effect" %}
 
-**Layer one** is `get_by_order_id(session, event.order_id)`, a plain
-lookup, checked *before* any write is attempted. This is the fast,
-common-case path: the relay republished an event this consumer already
-processed, the lookup finds the row, and the function returns without
-touching the database again. **Layer two** is the `IntegrityError` catch
-around the insert itself, the backstop for the one window layer one
-can't close on its own: two deliveries of the same event, processed
-concurrently (a second consumer replica, say), can both run the
-`get_by_order_id` check, both see nothing, and both proceed to insert. The
-database, not this function's own logic, is what breaks that tie: a
-partial unique index on `order_id` (`migrations/versions/0001_create_notification_schema.py`'s
-`uq_notifications_order_id`, `UNIQUE (order_id) WHERE order_id IS NOT NULL`)
-rejects the second `INSERT` outright, and this function catches that
-specific exception, rolls back the half-finished transaction, logs it as a
-discarded duplicate, and returns, not an error, because by definition a
-notification for that order already exists the moment this exception
-fires. Each layer alone would leave a gap: application-level checking alone
-races under concurrency; a database constraint alone, with no
-check-then-insert, would mean every redelivery hits the database with a
-doomed `INSERT` instead of skipping cleanly. Together, the common case is
-cheap and the rare race is still correct.
+Two layers, because each alone leaves a gap:
 
-The monolith's own copy of this same idempotency guarantee,
-`notification/services.py::record_order_placed`, is structurally
-identical: check-then-create, `IntegrityError` as the race backstop, a
-detail returned to below, in the Django-relay-versus-FastAPI-consumer
-comparison.
+- **Check-then-insert** handles the common case: a republished event finds its row and returns without another write.
+- **The partial unique index** closes the race. Two deliveries processed concurrently (a second replica, say) can both pass the check and both insert. The index `uq_notifications_order_id` (`UNIQUE (order_id) WHERE order_id IS NOT NULL`, in `migrations/versions/0001_create_notification_schema.py`) rejects the second insert, and the `IntegrityError` handler rolls back and discards the duplicate. By then a notification for that order already exists, so it isn't an error.
 
-## Own-schema ownership: the contrast with Review
+A database constraint alone would send every redelivery to the database as a doomed `INSERT`. Together the common case is cheap and the rare race is still correct. The monolith's `notification/services.py::record_order_placed` has the same structure.
 
-`examples/02-review-service` reads and writes the monolith's own shared
-Postgres tables; `examples/03-notification-service` does not touch them at
-all. `app/models.py`'s docstring states the reason as a design decision,
-not a missing feature:
+## Own the schema
 
-> `customer_id` / `order_id` are plain `BIGINT` columns, NOT foreign keys
-> into the monolith's `customers`/`orders` tables: this service's schema
-> must not reach across into tables it does not own.
+`examples/02-review-service` reads and writes the monolith's shared tables. `examples/03-notification-service` touches none of them, and `app/models.py` states why:
 
-The reasoning traces straight back to ch.16's dividing line. Review stays
-synchronously consistent with the monolith by construction: every request
-is a live round-trip against the same tables, so there's no window where
-the two could disagree. Notification is asynchronous by its very nature: a
-second writer to the monolith's `notifications` table (this service's own
-consumer) racing against the monolith's own writer, with no shared
-transaction and no request/response relationship tying them together,
-*is* a split-brain, not a hypothetical one. Owning the table from the
-start, with exactly one writer (this service's own consumer), removes the
-question of reconciling two writers by making sure there's never more than
-one.
+> `customer_id` / `order_id` are plain `BIGINT` columns, NOT foreign keys into the monolith's `customers`/`orders` tables: this service's schema must not reach across into tables it does not own.
 
-`app/db.py`'s engine sets the schema at the connection level, and
-`app/models.py` sets it again at the mapping level, a chosen redundancy,
-not an oversight:
+Review stays synchronously consistent by construction: every request is a live round trip against the same tables. Notification is asynchronous, and a second writer to the monolith's `notifications` table racing the monolith's own writer, with no shared transaction, is a split-brain. Owning the table with exactly one writer removes the reconciliation problem.
+
+The schema is set at two levels:
 
 ```python
 def create_engine(database_url: str | None = None) -> AsyncEngine:
@@ -396,19 +230,9 @@ class Notification(Base):
     )
 ```
 
-`search_path=notification,public` is a convenience: it means an ad hoc
-`psql` session against this database also defaults to this schema without
-typing `notification.notifications` by hand. It is not the correctness
-guarantee: `{"schema": "notification"}` in `__table_args__` means every
-query SQLAlchemy generates is fully schema-qualified regardless of
-whatever search path the connection happens to have, so a misconfigured
-`search_path` could never silently redirect this service's writes into
-`public.notifications` (the monolith's own table, in the same Postgres
-instance) by accident.
+`search_path=notification,public` is a convenience for ad hoc `psql` sessions. The correctness guarantee is `{"schema": "notification"}`: every query SQLAlchemy generates is schema-qualified, so a misconfigured search path can't redirect writes into `public.notifications`, the monolith's table in the same Postgres instance.
 
-Creating that schema is this project's **first** Alembic migration, a
-clear contrast with review-service, which has no migration tooling at
-all because it never changes the schema it reads:
+Creating the schema is this project's first Alembic migration. Review has none because it never changes the schema it reads.
 
 ```python
 def upgrade() -> None:
@@ -431,14 +255,9 @@ def upgrade() -> None:
     )
 ```
 
-`order_id` stays nullable here, matching the monolith's own
-`Notification.order` being `null=True`: not every notification this
-service might ever send needs to originate from an order, even though
-every row the current consumer writes has one. Leaving that door open now
-costs nothing and avoids a migration later if a non-order notification type
-ever needs this same table.
+`order_id` stays nullable to match the monolith's `Notification.order` (`null=True`), so a future non-order notification needs no migration.
 
-## The Django relay vs the FastAPI consumer, side by side
+## The relay and the consumer, side by side
 
 {% include codetabs.html langs="Monolith: Django outbox_relay (producer)|notification-service: aiokafka consumer" %}
 
@@ -483,36 +302,11 @@ class OrderPlacedConsumer:
             await service.record_order_placed(self._session_factory, event)
 ```
 
-Both sides are `aiokafka` end to end, this project's single Kafka client
-on both the producer and the consumer side, Django management command or
-not, a fact that matters because it means the Django/FastAPI split
-in this book is purely about *which web framework answers HTTP requests*,
-not about which async Kafka library each side reaches for. The relay polls
-a table and pushes to Kafka; the consumer subscribes to Kafka and pushes to
-a table: mirror images of the same at-least-once contract, one on each
-side of the topic. The monolith's self-consumer
-(`notification/management/commands/order_placed_consumer.py`, group
-`monolith-notification`) is the third leg of this same shape, consuming
-the identical topic into the identical kind of idempotent write, just
-against the monolith's own shared schema instead of an owned one, proof
-that "consumer of `order.placed`" is a role any number of independent
-subscribers can hold at once, which is precisely the decorating-collaborator
-point ch.16 introduced.
+Both sides use `aiokafka`, so the Django and FastAPI split is only about which framework answers HTTP. The relay polls a table and pushes to Kafka; the consumer subscribes to Kafka and pushes to a table. They are mirror images of one at-least-once contract. The monolith's self-consumer (`notification/management/commands/order_placed_consumer.py`, group `monolith-notification`) is a third party to the same topic, writing the same kind of idempotent row into the monolith's shared schema.
 
-## The measured cost of Phase B, not a regression
+## The measured cost of Phase B
 
-Following the same two-phase discipline ch.15 established (document Phase
-A, ship only Phase B), `examples/03-notification-service/MIGRATION.md`
-measures what a Django-ORM-lifted Phase A would have cost, by the same
-faithful-proxy method ch.15 used: the real combined weight of
-`django.setup()` against the monolith's actual `config.settings` plus
-`import fastapi, uvicorn`, since no Phase A server was ever built here
-either. Notification's MIGRATION.md adds a third problem Review's never
-had, stated directly rather than glossed over: Review's Phase A had something to lift (the
-monolith's existing REST view); **notification's write path has no
-monolith original at all**: the monolith never consumed its own
-`order.placed` event, so a faithful Phase A can only ever cover the *read*
-surface, and the consumer is net-new in either phase.
+The same two-phase discipline applies as for Review: document Phase A, ship only Phase B. `examples/03-notification-service/MIGRATION.md` measures what a Django-ORM-lifted Phase A would have cost. No Phase A server was built, so its numbers are a proxy: `django.setup()` against the monolith's real settings plus `import fastapi, uvicorn`. Notification adds a problem Review didn't have. Review's Phase A had a monolith REST view to lift; notification's write path has no monolith original, because the monolith never consumed its own `order.placed` event. A faithful Phase A can only cover the read surface, and the consumer is net-new in either phase.
 
 | Metric | Phase A (proxy measurement) | Phase B (shipped) |
 |---|---|---|
@@ -521,92 +315,30 @@ surface, and the consumer is net-new in either phase.
 | Import-only RSS | ~74.5 MB | ~77.3 MB |
 | Running server RSS (after 20 requests) | not measured (no server built) | ~90.0 MB |
 
-Taken at face value rather than massaged into a cleaner story: import-time and
-import-RSS are close between the two phases, same finding as Review's own
-comparison: FastAPI/Pydantic v2's import graph dominates both columns, and
-`aiokafka`'s added cost on top of that (Phase B only) is a modest ~3 MB and
-~0.03 s. What's different from Review's near-wash result is the *running*
-row: ~90 MB of RSS that Phase A's proxy measurement structurally cannot
-capture at all, because it reflects something Phase A never had: a live
-`aiokafka` consumer holding an open broker connection, consumer-group
-membership, and its own buffers, running continuously in the background.
-That gap is **real runtime capability, not a regression to be optimized
-away**: it's the cost of a background subscriber that is actually
-subscribed, doing actual work, for as long as the process runs. Reading a
-bigger running-RSS number as "notification-service got heavier" would miss
-what it's actually measuring: the real price of the thing this chapter
-set out to build.
+Import time and import RSS are close, as they were for Review: the FastAPI and Pydantic import graph dominates both, and `aiokafka` adds about 3 MB and 0.03 s in Phase B. The running-RSS row is the real difference, and Phase A's proxy can't capture it. About 90 MB reflects a live consumer holding a broker connection, group membership and buffers. That is the price of a subscriber that is actually subscribed, not a regression.
 
-## The cutover: two flags, flipped together
+## The cutover: one flag
 
-Cutting `notification` over involves two independent switches, not one,
-and it's worth being precise about what each one controls. The **outbox
-path** (`OutboxEvent` + `outbox_relay` + the monolith's own
-`order_placed_consumer`) is not gated by a feature flag at all: once
-shipped, checkout always writes the outbox row, and the relay always
-publishes it; this is the "going event-driven" change itself, and it
-applies identically regardless of which backend eventually answers a read.
-The **proxy flag**, `STRANGLER_NOTIFICATION_ENABLED`
-(`examples/01-strangler-proxy`, ch.16's generalized `_select_backend()`),
-is the only switch an operator actually flips: it decides whether
-`GET /api/notifications*` is answered by the monolith's own consumer or by
-`examples/03-notification-service`'s. Because both consumer groups
-(`monolith-notification` and `notification-service`) run continuously
-throughout the strangle window (the decorating-collaborator point again),
-flipping that one flag back and forth costs nothing but a proxy restart,
-exactly like ch.15's `STRANGLER_REVIEW_ENABLED`. Reversibility here is a
-real property of what still exists, not a one-way migration disguised
-as a toggle: the monolith's read model keeps getting fed by its own
-consumer whether or not the flag currently points at it.
+Two independent switches are involved, and only one is an operator's decision. The outbox path (`OutboxEvent`, `outbox_relay`, the monolith's `order_placed_consumer`) has no feature flag. Once shipped, checkout always writes the row and the relay always publishes it.
 
-## The async false-equivalence trap, defeated with bounded-wait
+The proxy flag `STRANGLER_NOTIFICATION_ENABLED` decides whether `GET /api/notifications*` is answered by the monolith's consumer or by notification-service. Both consumer groups (`monolith-notification` and `notification-service`) run for the whole strangle window, so flipping the flag back and forth costs a proxy restart. It is reversible because the monolith's read model keeps getting fed whether or not the flag points at it.
 
-Every prior equivalence check in this book, Smoke, the four checkout
-scenarios, Review's R1-R5, could assert correctness with a single,
-immediate check right after the triggering request completed, because
-every one of those paths was synchronously consistent: the HTTP response
-itself was proof the effect had already happened. Notification breaks that
-assumption for the first time in this project. `POST /api/orders` still
-returns `201 CONFIRMED` synchronously (checkout's own contract hasn't
-moved), but the notification that order produces reaches `GET
-/api/notifications` only after outbox, relay, Kafka, consumer have all
-run: a real, unbounded amount of wall-clock time after the order response
-already came back. A test suite that asserted `GET /api/notifications`
-immediately after `POST /api/orders` would be exposed to a **false
-equivalence**: a correct, working system failing the check purely because
-the check ran too early, indistinguishable in the suite's output from the
-system actually being broken.
+## The false-equivalence trap
 
-`tooling/newman/mea.postman_collection.json`'s Notification Context
-Contract folder defeats that trap with a bounded-wait poll, not a fixed
-sleep: N1 fires a plain synchronous checkout and captures the resulting
-order's id; N2 polls `GET /api/notifications?customerId=` on a fixed
-retry budget, `notificationPollMaxAttempts × notificationPollDelayMs` =
-20 × 750ms, a ~15-second ceiling, delaying only on a *retry* (attempt 0
-runs immediately), until a notification whose `orderId` matches N1's
-appears, then asserts its full shape strictly. Getting the two failure
-modes right is the entire point of a bounded-wait helper: it must resolve
-quickly when the system is healthy, and it must fail **loudly and
-promptly** when it isn't, not hang forever, and not soft-pass by treating
-an empty result as "not yet, keep waiting" indefinitely.
+Every earlier equivalence check could assert immediately after the triggering request, because every path was synchronously consistent. Notification breaks that. `POST /api/orders` returns `201 CONFIRMED` at once, but the notification reaches `GET /api/notifications` only after the outbox, relay, Kafka and consumer have all run, an unbounded amount of wall-clock time later. An immediate check would fail a correct system for running too early, with output indistinguishable from a broken one.
 
-Proven against the real stack, both ways. Healthy:
+`tooling/newman/mea.postman_collection.json` solves this with a bounded-wait poll, not a fixed sleep. After a plain synchronous checkout it polls `GET /api/notifications?customerId=` for a notification whose `orderId` matches, on a budget of 20 attempts at 750 ms (about 15 seconds). It delays only on a retry, so the first attempt is immediate. The helper resolves quickly when the system is healthy and fails promptly when it isn't. It does not hang, and it does not treat an empty result as "keep waiting" forever.
+
+The collection, run against the real stack in both flag states:
 
 | Run | Flag | Served by | Result |
 |---|---|---|---|
-| A | `false` | monolith's own consumer | **66/66 assertions green**, 0 failed |
-| B | `true` | notification-service | **66/66 assertions green**, 0 failed, byte-identical shape to A |
+| A | `false` | monolith's own consumer | 66/66 assertions green |
+| B | `true` | notification-service | 66/66 assertions green, same shape as A |
 
-Both runs resolved on **attempt 2/20 (~750ms)**, one retry past the
-immediate first check, comfortably inside the ~15s budget, and essentially
-identical latency whichever backend actually served the read. That
-byte-identical outcome across two structurally different backends (a
-Django management command's read model versus a FastAPI service's owned
-schema) is the cutover proof this chapter needed: the unedited collection,
-re-pointed at nothing but a flag, cannot tell the two apart.
+Both resolved on attempt 2 of 20 (about 750 ms) with essentially the same latency, whichever backend served the read. The unedited collection can't tell the two apart.
 
-A broken run, staged by killing the service, `examples/03-notification-service` down, flag
-`true`:
+The negative run kills `examples/03-notification-service` with the flag at `true`:
 
 ```
 21. AssertionError  Order-confirmation notification for orderId=19 is observable
@@ -615,36 +347,19 @@ A broken run, staged by killing the service, `examples/03-notification-service` 
                     expected undefined not to be undefined
 ```
 
-**21/23 assertions failed, newman exit code 1.** The poll ran its full
-20-attempt budget (~14.7 seconds observed, matching the ~15s design
-figure), every attempt returned the proxy's real `502` while the service
-was down, and the final assertion failed cleanly on its own terms once the
-budget was exhausted: it never hung, and it never quietly reported
-success. Restarting the service and re-running the same folder returned to
-**9/9 green**, resolving on attempt 3/20 this time (the restarted consumer
-needed a moment to rejoin its consumer group and complete a partition
-rebalance before it could see the already-published event), still
-comfortably inside budget. An equivalence gate that cannot go red when the
-thing it is gating is actually broken isn't an equivalence gate; proving
-this one fails loudly, on a downstream that is truly unreachable, is what
-makes every green run above it trustworthy.
+21 of 23 assertions failed and newman exited 1. The poll used its full 20 attempts (about 14.7 seconds observed against the 15 second design figure), every attempt got the proxy's real `502`, and the final assertion failed on its own terms. After restarting the service, the same folder went back to 9/9 green, resolving on attempt 3 because the restarted consumer needed a moment to rejoin its group and rebalance. A check that can't go red when the target is broken proves nothing, so this run is what makes the green ones trustworthy.
 
-## At-least-once and the decorating collaborator, recapped
+At-least-once delivery and the decorating collaborator fit together here. At-least-once is the relay's named guarantee, made safe by idempotent consumers on both ends, each backstopped by a unique constraint. Two consumer groups on one topic is the permanent shape of this seam for the whole strangle window, until the monolith's notification module is decommissioned.
 
-Two threads run through this entire chapter, and both deserve naming
-together now that both are built. **At-least-once** is not a compromise;
-it's the named delivery guarantee the outbox relay provides, made safe by
-idempotent consumers on both ends (the monolith's own `record_order_placed`
-and notification-service's), each backstopped by a database-level unique
-constraint for the case where application logic alone can't close a race.
-**The decorating collaborator** is what made that guarantee necessary in a
-way ch.15's extraction never required: once the monolith became a peer
-subscriber to its own event rather than keeping a privileged synchronous
-path, two independent consumer groups reading the same topic is the
-normal, permanent shape of this seam for the entire strangle window, not a
-transitional inconvenience to be cleaned up once notification-service
-ships, but the actual architecture this project runs on until
-Notification's monolith module is eventually decommissioned.
+> **Decision**
+>
+> When a seam is asynchronous, write one outbox row inside the local transaction and publish it from a separate relay at-least-once. Make every consumer idempotent with a check plus a unique constraint, give the new service its own schema, and prove the cutover with a bounded-wait poll that can go red.
+
+> **🤖 Explore with your agent**
+>
+> "In `examples/00-monolith`, add an `order.shipped` outbox event written in the same transaction as the shipment, and extend `examples/03-notification-service` with an idempotent consumer for it: a check-then-insert plus a partial unique index in a new Alembic migration."
+>
+> Check: redeliver the same event twice and run `cd examples/03-notification-service && uv run pytest -m "not integration"` and `uv run ruff check .`; exactly one row should exist for that order.
 
 ## Build, run, observe
 
@@ -670,12 +385,7 @@ curl "http://localhost:8002/api/notifications?customerId=777456"
 curl -i "http://localhost:8002/api/notifications"   # 400, missing customerId
 ```
 
-Place an order against the monolith (`POST /api/orders`) and watch it
-appear on both read models: the monolith's `GET /api/notifications`
-(through its own consumer) and this service's `GET /api/notifications` on
-`:8002`, independently, without either depending on the other.
-
-## Cross-check
+Place an order with `POST /api/orders` against the monolith. The notification appears on both read models independently: the monolith's `GET /api/notifications` through its own consumer, and the service's on `:8002`.
 
 ```bash
 cd examples/03-notification-service
@@ -684,40 +394,7 @@ uv run pytest -m integration          # Testcontainers: real Kafka, redelivery p
 uv run ruff check .
 ```
 
-The integration layer is the cross-check most worth trusting: it publishes
-the identical `order.placed` payload twice through an actual Kafka broker
-(Testcontainers-managed) and the real `OrderPlacedConsumer`,
-then asserts exactly one `Notification` row exists afterward, the same
-claim this chapter's idempotency section makes in prose, proven against
-the real client library and a real broker rather than taken on faith.
+The integration run uses a Testcontainers-managed Kafka broker and the real `OrderPlacedConsumer`: the same `order.placed` payload published twice leaves exactly one `Notification` row.
 
-## What you learned
-
-- A dual-write hazard is cured by making sure there is only ever **one**
-  write inside the local transaction, the outbox row, and moving
-  everything that has to reach a second system onto a separate,
-  independently-retriable process (the relay) that publishes
-  at-least-once.
-- At-least-once delivery pushes idempotency onto the consumer by
-  construction. Two layers, not one, make it correct under concurrency:
-  check-then-insert for the common case, a database partial unique index
-  as the backstop for a real race between two redeliveries.
-- Owning a schema from day one (Alembic, this project's first migration)
-  is the right call specifically when a seam is asynchronous: a second,
-  uncoordinated writer to a shared table is a split-brain, not a
-  simplification, which is why Review's shared-schema posture doesn't
-  generalize to Notification.
-- A bounded-wait poll (fixed retry budget, delay only on retry, strict
-  failure on timeout) is what an equivalence suite needs the moment a
-  write and the read that observes its effect are connected only by an
-  eventually-consistent path; an immediate single check would be a false
-  equivalence waiting to misfire.
-- The decorating-collaborator pattern makes "two independent consumer
-  groups on one topic" the permanent shape of an event-driven strangler
-  seam, not a transitional state: both the monolith's own consumer and
-  the new service's consumer run for the entire window, and the proxy flag
-  only chooses which one answers a read.
-
-Next: Part 6 turns from *how a service gets extracted* to *who owns the
-data once it's extracted*: ch.18 starts dismantling the shared schema this
-chapter's notification-service was the first to opt entirely out of.
+- Stop `examples/03-notification-service` with the proxy flag at `true`: the poll uses all 20 attempts and fails, and `/api/notifications*` returns the proxy's `502`.
+- Stop the relay: `POST /api/orders` still returns `201 CONFIRMED`, and the outbox row stays unpublished until the relay returns.

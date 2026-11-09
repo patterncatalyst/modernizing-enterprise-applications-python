@@ -28,14 +28,13 @@ class NotificationOut(BaseModel):
 
 
 class OrderPlacedEvent(BaseModel):
-    """This service's own copy of the frozen `order.placed` JSON payload
-    (STEP 0 contract): topic `order.placed`, key = `orderId` (string).
+    """This service's own copy of the frozen `order.placed` JSON payload:
+    topic `order.placed`, key = `orderId` (string).
     Field names and types match the producer side byte-for-byte so Pydantic
     round-trips the JSON value without any custom deserializer. There is no
     shared module between the monolith and this service (each is an
     independently deployable project) -- this duplication is the honest cost
-    of a hand-maintained JSON wire contract with no schema registry until
-    ch.28/Apicurio."""
+    of a hand-maintained JSON wire contract until a schema registry replaces it."""
 
     model_config = ConfigDict(populate_by_name=True)
 

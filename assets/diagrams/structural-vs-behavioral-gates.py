@@ -1,27 +1,27 @@
 #!/usr/bin/env python3
-"""ch.06 figure: structural-vs-behavioral-gates -- two gate kinds, and which
+"""ch.06 figure: structural-vs-behavioral-gates, two gate kinds, and which
 class of mistake each one actually catches, re-grounded for a stack with no
 Camel-MCP/Quarkus-Agent-MCP equivalent (DRQ-020).
 
-TOP -- the STRUCTURAL gate, here necessarily weaker and more manual than
+TOP, the STRUCTURAL gate, here necessarily weaker and more manual than
 the Java sibling's live `camel_validate_route` MCP tool: `ruff check` plus
 Python's own import-time wiring (a Starlette/FastAPI app that fails to
-construct raises immediately -- an `ImportError`/`AttributeError`/route-
+construct raises immediately, an `ImportError`/`AttributeError`/route-
 registration `TypeError`, not a live route-graph validator), run during
 Generate, before a server ever starts. It catches a malformed route
-registration, an unresolved import, a typo'd dependency signature -- the
+registration, an unresolved import, a typo'd dependency signature, the
 class of defect that would otherwise surface as a confusing traceback. It
 has no opinion about whether a routing predicate matches the right
-requests once real traffic flows through it -- that gap is named here
+requests once real traffic flows through it, that gap is named here
 explicitly, because this project has no MCP-driven structural
 validator to close it the way the Java sibling does.
 
-BOTTOM -- the BEHAVIORAL gate: the Newman behavior-equivalence suite and
+BOTTOM, the BEHAVIORAL gate: the Newman behavior-equivalence suite and
 its Opus adversarial follow-up, run during Verify against a running
 service. This is the layer that caught the strangler proxy's real
 chunked-body bug (DRQ-026): the in-process routing tests passed while the
 proxy silently sent every POST upstream with no body, because only a real
-WSGI socket run surfaces that class of defect -- a misleadingly
+WSGI socket run surfaces that class of defect, a misleadingly
 correct-looking response, not a traceback.
 
 Neither one substitutes for the other, and knowing which layer is
@@ -43,10 +43,10 @@ g.OUT = os.path.dirname(__file__)
 W, H = 1400, 760
 
 # ============================================================================
-# TOP band -- the structural gate
+# TOP band: the structural gate
 # ============================================================================
 band_top = {"x": 20, "y": 80, "w": 1360, "h": 250,
-            "label": "Structural gate -- ruff + import-time wiring (Generate phase, before a server starts)",
+            "label": "Structural gate: ruff + import-time wiring (Generate phase, before a server starts)",
             "fill": "#fafafa"}
 
 route_check = node(60, 150, 400, 120,
@@ -67,17 +67,17 @@ top_edges = [
 ]
 
 # ============================================================================
-# BOTTOM band -- the behavioral gate
+# BOTTOM band: the behavioral gate
 # ============================================================================
 band_bottom = {"x": 20, "y": 390, "w": 1360, "h": 280,
-               "label": "Behavioral gate -- Newman equivalence suite + adversarial follow-up (Verify phase, against a running service)",
+               "label": "Behavioral gate: Newman equivalence suite + adversarial follow-up (Verify phase, against a running service)",
                "fill": "#eaf4ec"}
 
 suite_check = node(60, 460, 400, 120,
                     ["Newman equivalence suite +", "adversarial follow-up",
                      "exercises real requests, running service"], style="accent")
 catches2 = node(500, 460, 420, 120,
-                ["Catches", "the chunked-body routing bug --",
+                ["Catches", "the chunked-body routing bug,",
                  "a misleadingly correct-looking response"], style="box")
 
 bottom_nodes = [suite_check, catches2]
@@ -104,7 +104,7 @@ notes = [
      "text": "structural gate vs behavioral gate: two layers, two different classes of mistake",
      "anchor": "middle", "bold": True, "size": 17},
     {"x": W / 2, "y": 56,
-     "text": "no MCP-driven structural validator exists for this stack -- the behavioral gate carries more of the weight here than a live route-validator tool would leave it",
+     "text": "no MCP-driven structural validator exists for this stack, the behavioral gate carries more of the weight here than a live route-validator tool would leave it",
      "anchor": "middle", "size": 12, "color": "#555555"},
 
     {"x": 980, "y": 520,
@@ -112,7 +112,7 @@ notes = [
      "anchor": "start", "size": 10, "color": "#777777"},
 
     {"x": 40, "y": H - 46,
-     "text": "Sourced from _plans/build-plan.md (section F.1's tooling column).",
+     "text": "Sourced from the project build plan (the tooling column).",
      "anchor": "start", "size": 10.5, "color": "#555555"},
     {"x": 40, "y": H - 16,
      "text": "Behavioral-gate example: the strangler proxy's chunked-body bug.",

@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""ch.03 figure: rewrite-vs-strangler-risk -- a risk-shape contrast between
+"""ch.03 figure: rewrite-vs-strangler-risk, a risk-shape contrast between
 the big-bang rewrite and the strangler fig.
 
-LEFT -- the big-bang rewrite makes three bets simultaneously: it bets the
+LEFT, the big-bang rewrite makes three bets simultaneously: it bets the
 team correctly understood every piece of behavior the Django monolith had
 accumulated; it bets a FastAPI rebuild of comparable scope can be built
 faster than the old system decays; and it bets the business can tolerate a
 long stretch where almost no new value ships to users. All three bets have
-to land before a single irreversible cutover -- a rewrite that is not yet
+to land before a single irreversible cutover, a rewrite that is not yet
 feature-complete cannot be partially shipped.
 
-RIGHT -- the strangler fig distributes that same risk across many small,
+RIGHT, the strangler fig distributes that same risk across many small,
 independently reversible steps instead of concentrating it into one
 irreversible moment at the end. This project's own concrete anchor is the
 first step: the review extraction (ch.15) is a small slice of the system,
@@ -36,9 +36,9 @@ g.OUT = os.path.dirname(__file__)
 W, H = 1500, 640
 
 band_left = {"x": 20, "y": 60, "w": 710, "h": 540,
-             "label": "BIG-BANG REWRITE -- risk concentrated, payoff late", "fill": "#fafafa"}
+             "label": "BIG-BANG REWRITE: risk concentrated, payoff late", "fill": "#fafafa"}
 band_right = {"x": 770, "y": 60, "w": 710, "h": 540,
-              "label": "STRANGLER FIG -- risk spread, payoff continuous", "fill": "#eaf4ec"}
+              "label": "STRANGLER FIG: risk spread, payoff continuous", "fill": "#eaf4ec"}
 
 # ---- LEFT: one irreversible bet, stacked -----------------------------------
 bets = node(60, 120, 390, 150,
@@ -54,7 +54,7 @@ cutover = node(60, 320, 390, 110,
                 "nothing ships until everything does"],
                style="accent")
 payoff_l = node(60, 480, 390, 100,
-                ["Payoff -- late, all-or-nothing",
+                ["Payoff: late, all-or-nothing",
                  "any one of the three bets failing",
                  "sinks the project"],
                 style="box")
@@ -69,7 +69,7 @@ left_edges = [
 STEP_W, STEP_GUTTER = 150, 18
 STEP_X0, STEP_Y = 800, 150
 steps_meta = [
-    ("Step 1", "review --", "ships behind a flag"),
+    ("Step 1", "review:", "ships behind a flag"),
     ("Step 2", "notification,", "same pattern"),
     ("Step 3", "inventory,", "same pattern"),
     ("Step 4", "payment, shipping,", "order, gateway"),
@@ -86,12 +86,12 @@ for i in range(len(step_nodes) - 1):
 reversible = node(800, 360, STEP_W * 4 + STEP_GUTTER * 3, 110,
                    ["Reversible at every step",
                     "monolith and new service run side by",
-                    "side -- pause, slow, or reverse any one",
+                    "side: pause, slow, or reverse any one",
                     "step without threatening the rest"],
                    style="box")
 
 payoff_r = node(800, 500, STEP_W * 4 + STEP_GUTTER * 3, 80,
-                ["Payoff -- continuous",
+                ["Payoff: continuous",
                  "value ships at every step, not just the last one"],
                 style="box")
 
@@ -109,10 +109,10 @@ notes = [
      "anchor": "middle", "size": 10.5, "color": "#2f5f3d"},
 
     {"x": 60, "y": 596,
-     "text": "A rewrite that is not yet feature-complete cannot be partially shipped --",
+     "text": "A rewrite that is not yet feature-complete cannot be partially shipped.",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 60, "y": 612,
-     "text": "the third bet failing is usually what kills the project.",
+     "text": "The third bet failing is usually what kills the project.",
      "anchor": "start", "size": 11, "color": "#555555"},
 
     {"x": 800, "y": 596,
@@ -123,7 +123,7 @@ notes = [
      "anchor": "start", "size": 11, "color": "#2f5f3d"},
 
     {"x": 20, "y": H - 14,
-     "text": "Sourced from _plans/build-plan.md (\"A. Approach\") and examples/01-strangler-proxy/CUTOVER.md.",
+     "text": "Sourced from the project build plan and examples/01-strangler-proxy/CUTOVER.md.",
      "anchor": "start", "size": 10, "color": "#777777"},
 ]
 

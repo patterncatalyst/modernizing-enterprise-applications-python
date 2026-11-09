@@ -115,6 +115,8 @@ scan_target() {
   #    findings are still present in $scan and still counted below -- just
   #    not counted toward the gate.
   grype "sbom:$sbom" -c "$GRYPE_CFG" -o json -q > "$scan"
+  # Remove host identifiers (checkout path, home directory) from the recorded scan.
+  sed -i -e "s|$REPO_ROOT|<repo>|g" -e "s|$HOME|~|g" "$scan"
 
   # 3. tally by severity -- FIXABLE (from `matches`, what the gate acts on)
   #    and TOTAL (`matches` + `ignoredMatches`, every finding regardless of

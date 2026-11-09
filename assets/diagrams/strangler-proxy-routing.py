@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.14 figure: strangler-proxy-routing -- the Starlette+httpx strangler
+"""ch.14 figure: strangler-proxy-routing, the Starlette+httpx strangler
 proxy's content-based routing, flag OFF vs flag ON, side by side.
 
 Two stacked panels, each a small topology rather than a text label:
@@ -37,7 +37,7 @@ def build_panel(panel_y, flag_on):
     if not flag_on:
         proxy_lines = ["Starlette strangler proxy", ":8888",
                        "STRANGLER_REVIEW_ENABLED=false"]
-        monolith_lines = ["Django monolith", ":8000 -- all contexts", "incl. review/"]
+        monolith_lines = ["Django monolith", ":8000, all contexts", "incl. review/"]
         review_style = "ghost"
         review_lines = ["review-service (FastAPI)", ":8001", "(built, not serving reviews)"]
         proxy_review_edge = {"label": "/api/reviews* (unused while flag=false)", "dashed": True}
@@ -46,7 +46,7 @@ def build_panel(panel_y, flag_on):
     else:
         proxy_lines = ["Starlette strangler proxy", ":8888",
                        "STRANGLER_REVIEW_ENABLED=true"]
-        monolith_lines = ["Django monolith", ":8000 -- everything else", "review/ app still present"]
+        monolith_lines = ["Django monolith", ":8000, everything else", "review/ app still present"]
         review_style = "accent"
         review_lines = ["review-service (FastAPI)", ":8001", "serving /api/reviews*"]
         proxy_review_edge = {"label": "/api/reviews* matched on request.url.path", "amber": True}
@@ -79,14 +79,14 @@ notes = [
      "text": "content-based routing: STRANGLER_REVIEW_ENABLED flag OFF vs ON",
      "anchor": "middle", "bold": True, "size": 18},
 
-    {"x": 40, "y": 65, "text": "FLAG OFF (default) -- /api/reviews* still answered by the monolith",
+    {"x": 40, "y": 65, "text": "FLAG OFF (default): /api/reviews* still answered by the monolith",
      "anchor": "start", "bold": True, "size": 14},
     {"x": 40, "y": 70 + PANEL_H + 48,
-     "text": "FLAG ON -- /api/reviews* answered by review-service; everything else unchanged",
+     "text": "FLAG ON: /api/reviews* answered by review-service; everything else unchanged",
      "anchor": "start", "bold": True, "size": 14},
 
     {"x": 40, "y": H - 34,
-     "text": "_select_backend() matches request.url.path -- the FULL path the client sent -- never a value",
+     "text": "_select_backend() matches request.url.path: the FULL path the client sent, never a value",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 40, "y": H - 18,
      "text": "relative to a mount point or route prefix (the full-path-prefix lesson, see CUTOVER.md).",

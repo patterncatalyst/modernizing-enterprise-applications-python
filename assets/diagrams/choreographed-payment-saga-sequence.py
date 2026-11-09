@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.23 figure: choreographed-payment-saga-sequence -- the full choreographed
+"""ch.23 figure: choreographed-payment-saga-sequence, the full choreographed
 saga, top to bottom, branching into its three possible terminal outcomes. No
 box in this picture coordinates the others; each one reacts only to an event
 it observes on a topic it already subscribes to.
@@ -23,7 +23,7 @@ W, H = 1300, 960
 n1 = node(500, 30, 300, 70, ["Client: POST /api/orders"], style="box")
 n2 = node(470, 130, 360, 90, ["Monolith: reserve gRPC + persist", "Order PENDING + outbox, ONE txn", "-> 202 Accepted, PENDING"], style="accent")
 n3 = node(500, 250, 300, 70, ["Kafka: order.placed", "(key = orderId)"], style="box")
-n4 = node(460, 350, 380, 90, ["payment-service: charge() +", "persist Payment + OWN outbox,", "ONE txn -- idempotent by order_id"], style="accent")
+n4 = node(460, 350, 380, 90, ["payment-service: charge() +", "persist Payment + OWN outbox,", "ONE txn: idempotent by order_id"], style="accent")
 n5 = node(460, 470, 190, 70, ["Kafka:", "payment.captured"], style="box")
 n6 = node(680, 470, 190, 70, ["Kafka:", "payment.declined"], style="box")
 n7 = node(460, 580, 190, 90, ["order_saga_listener:", "status guard,", "dispatch shipping"], style="accent")
@@ -31,7 +31,7 @@ n8 = node(680, 580, 190, 90, ["order_saga_listener:", "status guard,", "gRPC Rel
 n9 = node(230, 710, 220, 90, ["CONFIRMED", "(shipping dispatched OK)"], style="accent")
 n10 = node(460, 710, 220, 90, ["SHIPPING_FAILED", "+ gRPC Release", "(known refund deferral)"], style="ghost")
 n11 = node(700, 710, 220, 90, ["PAYMENT_DECLINED", "+ gRPC Release"], style="accent")
-n12 = node(460, 850, 380, 90, ["Client: GET /api/orders/{id}", "bounded-wait poll -- resolved", "attempt 2/20 in the cutover run"], style="box")
+n12 = node(460, 850, 380, 90, ["Client: GET /api/orders/{id}", "bounded-wait poll: resolved", "attempt 2/20 in the cutover run"], style="box")
 
 nodes = [n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12]
 edges = [
@@ -53,7 +53,7 @@ edges = [
 notes = [
     {"x": W / 2, "y": 20, "text": "the choreographed saga: every arrow is an event one side reacted to, nothing is called synchronously",
      "anchor": "middle", "bold": True, "size": 16},
-    {"x": 40, "y": H - 40, "text": "No orchestrator box exists in this picture -- compare the orchestrated shipping step, where one does.",
+    {"x": 40, "y": H - 40, "text": "No orchestrator box exists in this picture, compare the orchestrated shipping step, where one does.",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 40, "y": H - 22, "text": "Every reaction is idempotent (status guard / order_id uniqueness), so Kafka's at-least-once redelivery is safe here.",
      "anchor": "start", "size": 11, "color": "#555555"},

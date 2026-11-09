@@ -1,4 +1,4 @@
-# graphql-gateway -- Migration Notes (data-less aggregation rationale)
+# graphql-gateway: Migration Notes (data-less aggregation rationale)
 
 This lane has no monolith original and no two-phase (A -> B) migration in the
 sense every prior extraction's `MIGRATION.md` documents. There is nothing to
@@ -6,7 +6,7 @@ sense every prior extraction's `MIGRATION.md` documents. There is nothing to
 `06-shipping-service`, and `07-order-service` already each own their slice of
 the domain as an independently deployable service, each with its own REST (or
 gRPC) read surface. This module is **net-new, additive infrastructure** that
-sits on top of all five -- a single GraphQL endpoint that lets a client ask
+sits on top of all five, a single GraphQL endpoint that lets a client ask
 one question ("give me order 42, its payments, its shipments, and the live
 stock + reviews for every line item") instead of five separate HTTP/gRPC
 calls fanned out client-side.
@@ -19,17 +19,17 @@ purpose:
 - **Single source of truth stays put.** Every field this gateway serves is
   already owned by exactly one extracted service. Caching or re-persisting
   any of it here would create a second copy that can drift from the owner's
-  own data -- the same "owned schema, no shared tables" discipline every
+  own data: the same "owned schema, no shared tables" discipline every
   prior extraction enforced, just applied to a read-aggregation layer
   instead of a write-owning one.
 - **No migration to run, no schema to version.** A stateless FastAPI process
-  with a Strawberry schema has nothing for Alembic to manage -- `uv sync &&
+  with a Strawberry schema has nothing for Alembic to manage, `uv sync &&
   uvicorn app.main:app` is the entire startup sequence (see
   `Containerfile`'s `CMD`, which runs no migration step, unlike every other
   service in this project).
 - **Failure isolation is structural, not incidental.** Because every
   federated field is resolved independently (REST or gRPC, per-field,
-  lazily), a slow or down downstream can only ever cost that ONE field --
+  lazily), a slow or down downstream can only ever cost that ONE field,
   never corrupt or block a cached aggregate this gateway might otherwise be
   tempted to maintain.
 
@@ -37,25 +37,25 @@ purpose:
 
 The Java sibling
 (`~/Dev/modernizing-enterprise-applications/examples/08-graphql-gateway`)
-plays the identical architectural role -- a `GatewayApi` MicroProfile GraphQL
+plays the identical architectural role, a `GatewayApi` MicroProfile GraphQL
 class with `@Source` field resolvers over four REST clients and one gRPC
-client -- but this lane is its own independent implementation on Strawberry,
+client: but this lane is its own independent implementation on Strawberry,
 the code-first GraphQL library this project's Python side already uses as
 its house style (see
 `~/Dev/datamesh-reference-arch-python/examples/lgtm-datamesh/services/graphql-gateway`).
 The resolver SHAPE is the same across both languages (a thin stitching layer,
 one query, lazy per-field federation); the depth/complexity-limiting MECHANISM
-differs by necessity -- `smallrye.graphql.instrumentation.queryDepth`/
+differs by necessity: `smallrye.graphql.instrumentation.queryDepth`/
 `queryComplexity` config properties on the Java side, versus Strawberry's
 `QueryDepthLimiter`/`MaxTokensLimiter` schema extensions here
-(`app/schema.py::build_schema`) -- but both enforce the same secure-by-design
+(`app/schema.py::build_schema`): but both enforce the same secure-by-design
 intent: an aggregation gateway's depth/complexity budget is FIXED operator
 config, never influenced by request content.
 
 ## Protocol parity with the services being federated
 
 Every federated field is resolved over the SAME protocol that service's other
-consumers already use -- never a new, gateway-only protocol:
+consumers already use: never a new, gateway-only protocol:
 
 | Field                      | Owning service       | Protocol | Same seam as                                   |
 |----------------------------|-----------------------|----------|--------------------------------------------------|
@@ -72,14 +72,14 @@ as a gRPC *client* of inventory-service.
 
 ## Verification
 
-- `uv sync --group dev`: resolves cleanly on Python 3.14 -- 48 packages,
+- `uv sync --group dev`: resolves cleanly on Python 3.14, 48 packages,
   `strawberry-graphql==0.335.0` (current stable at build time) included with
   no dependency conflicts.
 - `uv run python -m grpc_tools.protoc ...` + the `inventory_pb2_grpc.py`
   import-path fixup: generates `app/grpc_gen/inventory_pb2.py` and
   `inventory_pb2_grpc.py` cleanly; `inventory_pb2_grpc.InventoryGrpcServiceStub`
   and `GetStock` import and construct without error.
-- `uv run pytest`: **6 passed** --
+- `uv run pytest`: **6 passed**,
   `test_order_stitches_all_five_sources` (the full aggregation shape across
   all five services), `test_downstream_failure_nulls_only_that_field` +
   `test_downstream_grpc_failure_nulls_only_stock_field` (one failing REST or
@@ -98,11 +98,11 @@ as a gRPC *client* of inventory-service.
   both return `200`; a `/graphql` query against a nonexistent order-service
   (nothing listening on `:8088` in this sandbox) came back as
   `{"data": {"order": null}, "errors": [{"message": "order-service
-  unavailable: ...", "path": ["order"]}]}` -- the partial-failure contract
+  unavailable: ...", "path": ["order"]}]}`, the partial-failure contract
   holds end-to-end through the real ASGI app, not only in the mocked unit
   tests.
 - Containerfile: `docker build -f Containerfile -t mea-graphql-gateway:r07 .`
-  -- builds successfully (UBI 10 multi-stage, non-root, same pattern as
+: builds successfully (UBI 10 multi-stage, non-root, same pattern as
   `05-payment-service`/`06-shipping-service`/`07-order-service`'s
   Containerfiles, with the migration step removed since this gateway owns
   no database). The built image was then run LIVE: `docker run -p
@@ -112,5 +112,5 @@ as a gRPC *client* of inventory-service.
 - Live cross-service proof (a real order-/payment-/shipping-/review-/
   inventory-service stack standing behind this gateway, confirming the
   aggregation against REAL data end-to-end) is explicitly out of scope for
-  this lane -- it belongs to the later cutover lane that stands up the full
+  this lane: it belongs to the later cutover lane that stands up the full
   r07 stack together.

@@ -1,0 +1,1 @@
+{"ops":[{"op":"replace","scope":"slide","sldIds":[264],"find":"test_smoke.py -- one assertion","repl":"test_smoke.py: one assertion","expect":1,"cat":"standalone"}]}

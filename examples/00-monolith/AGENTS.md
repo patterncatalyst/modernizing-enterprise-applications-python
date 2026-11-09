@@ -1,4 +1,4 @@
-# AGENTS.md -- 00-monolith
+# AGENTS.md: 00-monolith
 
 Context for an AI agent (or a human) picking this module up.
 
@@ -9,22 +9,22 @@ contexts (order, inventory, payment, shipping, notification, review) living in
 one Django project, sharing one Postgres schema, orchestrated synchronously by
 one god checkout function. It is the Python sibling of
 `~/Dev/modernizing-enterprise-applications/examples/00-monolith` (Java/Spring
-Boot), built to the SAME original schema/seed/smell intent -- not that
+Boot), built to the SAME original schema/seed/smell intent, not that
 project's later, decomposed `main` state.
 
-**FROZEN as of r07** -- all six contexts are now extracted
+**FROZEN as of r07**, all six contexts are now extracted
 (`02`-`07-order-service`); the strangler proxy is a flagless edge router with
 no monolith fallback; this module is decommissioned from the running
 topology (`compose.yaml`/`scripts/`/`demos/` no longer start it or its
 `outbox_relay`/`order_placed_consumer`/`order_saga_listener` commands) but
-kept in-repo as the golden-baseline referent and a break-glass fallback --
+kept in-repo as the golden-baseline referent and a break-glass fallback,
 see `README.md`'s "FROZEN STATUS (r07)" section for the full picture, and
 `SMELLS.md` for the two smells this decommission strikes (#1, #2). An agent
 picking this module up going forward should treat it as read-mostly history,
 not a module to keep extending.
 
 Every smell is intentional. See `SMELLS.md` and `grep -rn 'SMELL\[ch\.' .`
-before "fixing" anything that looks like bad design -- it is bad design, on
+before "fixing" anything that looks like bad design, it is bad design, on
 purpose, planted as teaching material for the chapters that later cure it.
 
 ## Toolchain
@@ -52,35 +52,35 @@ uv run pytest                  # unit + smoke tests (needs a reachable Postgres)
 
 `DATABASE_URL` (see `.env.example`) defaults to the INFRA lane's compose stack
 coordinates (`postgresql://monolith:monolith@localhost:5432/monolith`) but is
-fully overridable -- pytest-django/CI point it at their own throwaway
+fully overridable: pytest-django/CI point it at their own throwaway
 database without this module ever hard-coding a dependency on the compose
 stack being up.
 
 ## Structure
 
-- `config/` -- the one Django project: settings, root urlconf, wsgi/asgi.
-- `common/` -- shared-kernel `Customer` model, the uniform `ApiError`
+- `config/`: the one Django project: settings, root urlconf, wsgi/asgi.
+- `common/`: shared-kernel `Customer` model, the uniform `ApiError`
   exception-mapping surface, and the `seed` management command.
 - `order/`, `inventory/`, `payment/`, `shipping/`, `notification/`, `review/`
-  -- the six bounded-context Django apps. Each follows the same shape:
+: the six bounded-context Django apps. Each follows the same shape:
   `models.py` (thin), `services.py` (the business logic, Java-`Service`-class
   equivalent but as plain functions), `serializers.py` (camelCase DRF
   serializers), `views.py` (thin DRF `APIView`s), `urls.py`.
-- `tests/` -- pytest-django tests (`test_smoke.py` one assertion per
+- `tests/`: pytest-django tests (`test_smoke.py` one assertion per
   `/api/*` surface, `test_checkout.py` the four deterministic
   failure-injection paths).
 
 ## Contract notes
 
 - JSON is **camelCase** (`priceCents`, not `price_cents`) to match the Java
-  sibling's contract -- every serializer maps explicitly via `source=`. Don't
+  sibling's contract: every serializer maps explicitly via `source=`. Don't
   reach for a camelCase-rename middleware/renderer library; the explicit
   per-field mapping is the point (it's what a reader greps to find the wire
   contract).
 - Routes have **no trailing slash** (`/api/inventory/{sku}`, not
   `/api/inventory/{sku}/`) to match that same contract. This trips Django's
   `urls.W002` system check; it's silenced in `config/settings.py` with a
-  comment explaining why -- don't "fix" it by adding trailing slashes, that
+  comment explaining why: don't "fix" it by adding trailing slashes, that
   would 301-redirect `POST`s and break the contract.
 - Uniform error body: `{"error": "<CODE>", "message": "...", "timestamp":
   "..."}`, wired via `REST_FRAMEWORK["EXCEPTION_HANDLER"]` in

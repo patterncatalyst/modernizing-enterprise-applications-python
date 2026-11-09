@@ -2,7 +2,7 @@
 title: "From Shared Data to Owned Data"
 order: 18
 part: "Data Across the Seam"
-description: "Shared-database coupling as the hardest coupling to break; the database-per-service tradeoff; the FK-to-snapshot move on order_items; data duplication as a deliberate choice; planning the split ch.19 executes."
+description: "Shared-database coupling is the hardest coupling to break. Database-per-service trades referential integrity for independence, and the OrderItem foreign key becoming a snapshot is the concrete move that makes inventory extractable."
 duration: 30 minutes
 ---
 
@@ -10,154 +10,56 @@ duration: 30 minutes
 
 By the end of this chapter you can:
 
-- Explain why shared-database coupling (SMELL #3/#4) is harder to detect and break than any code-level smell, because a foreign key is a dependency Postgres enforces, not one application code declares.
-- Weigh what database-per-service buys (independent migrations, independent scaling, an uncontested row lock for Inventory's `Reserve`) against what it costs (referential integrity becomes a contract both sides keep by agreement, not a database guarantee). Decide which fits a given relationship.
-- Apply the core denormalization move on `order.OrderItem`: replace the live `inventory_item` foreign key with a `sku`/`item_name`/`unit_price_cents` snapshot captured once at checkout, using an add-then-backfill-then-drop migration sequence that never loses data.
-- Reframe `OrderItem`'s duplicated sku/name/price as a deliberate design choice rather than a normalization lapse, contrasting a historical snapshot (allowed to diverge) with the foreign key's one-fact-one-home guarantee, and name the cost: a later schema change has two places to land, not one.
-- Compare Review's deferred shared-table choice against Notification's own-schema-from-day-one choice and Inventory's hybrid (owned data behind a transition-only CDC backfill), and state the two-writer/split-brain argument that decides correctly between them.
-- Name the four problems ch.19 has to solve together, an owned schema, a synchronous `Reserve`/`Release` across a network boundary, a transition-only CDC backfill, and cutting `OrderItem`'s foreign key, before Inventory's extraction can be both correct and reversible.
+- Explain why a shared database is harder to break than any code-level smell: a foreign key is a dependency Postgres enforces, not one application code declares.
+- Weigh what database-per-service buys (independent migrations, independent scaling, an uncontested row lock) against what it costs (referential integrity becomes a contract kept by agreement).
+- Replace a cross-context foreign key with a snapshot using an add, backfill, drop migration that never loses data.
+- Treat duplicated data across a service boundary as a deliberate choice, and name its cost.
+- Choose between shared tables, an owned schema from day one, and an owned schema fed by a one-time backfill, using the two-writer argument.
 
 ## Why this matters
 
-Every extraction this book has built so far has quietly deferred the same
-question. `examples/02-review-service` (ch.15) reads and writes the
-monolith's own shared Postgres tables directly, a database-per-service
-pattern with no database-per-service yet. `examples/03-notification-service`
-(ch.17) sidesteps the question by being new enough to never have shared
-anything: its schema was created, owned, and migrated from its very first
-commit. Neither extraction had to *take* a table away from a context that
-was still using it. ch.19's Inventory extraction does, and this chapter is
-the reasoning that has to land before that cut makes sense: why a shared
-schema is coupling of the hardest kind, what a service actually buys by
-owning its data outright, and the specific, mechanical move,
-`order.OrderItem`'s foreign key becoming a snapshot, that this book's own
-codebase had to make to get there.
+The extractions so far deferred the same question. `examples/02-review-service` reads and writes the monolith's own Postgres tables, database-per-service with no database-per-service yet. `examples/03-notification-service` was new enough to never share anything: its schema was owned and migrated from its first commit. Neither had to take a table away from a context that was still using it.
 
-## Why shared-database coupling is the hardest coupling to break
+The inventory extraction does. The reasoning has to land first: why a shared schema is the hardest coupling, what owning data buys, and the mechanical move, `order.OrderItem`'s foreign key becoming a snapshot, that the codebase had to make.
 
-`examples/00-monolith/SMELLS.md` planted this smell and has carried it
-open ever since:
+## Why a shared database is the hardest coupling to break
 
-> **#3: Shared single schema/DB for all six apps**: one Postgres schema,
-> one set of Django migrations, all six bounded contexts migrate and deploy
-> together.
+`examples/00-monolith/SMELLS.md` planted the smell and has carried it open:
 
-> **#4: Cross-context foreign keys**: `order.Order.customer`,
-> `order.OrderItem.inventory_item`, `payment.Payment.order`,
-> `shipping.Shipment.order`, `notification.Notification.customer`/`.order`,
-> `review.Review.customer`/`.inventory_item` are all direct FKs crossing
-> bounded-context boundaries in the one shared schema.
+> **#3: Shared single schema/DB for all six apps**: one Postgres schema, one set of Django migrations, all six bounded contexts migrate and deploy together.
 
-Every other smell this project named, the god checkout service (#1), the
-one ACID transaction spanning six contexts (#2), review's tangled shared
-auth (#7), can be cured by moving *code*: stand up a new process, give it
-its own endpoint, flip a flag that decides who answers a request. Smells #3
-and #4 are different in kind, not degree. A foreign key is not a coupling
-you can route around; it is a coupling the *database itself enforces*. As
-long as `order_items.inventory_item_id` exists, Postgres will reject any
-attempt to delete an `inventory_items` row that order lines still reference,
-and every `SELECT` that needs a line's current name or price has to join
-across what would otherwise be two services' schemas. Review's extraction
-(ch.15) worked precisely because it never had to answer this question:
-`examples/02-review-service`'s own `app/models.py` maps onto the monolith's
-tables because ch.15's whole point was proving the extraction *mechanism*
-(capture the contract, stand up the service, flip the flag) without also
-solving a distributed-data problem in the same chapter. That deferral was
-documented at the time it was made, and this chapter is where it comes due
-for the context that needs to actually give up a table it still has writers
-for.
+> **#4: Cross-context foreign keys**: `order.Order.customer`, `order.OrderItem.inventory_item`, `payment.Payment.order`, `shipping.Shipment.order`, `notification.Notification.customer`/`.order`, `review.Review.customer`/`.inventory_item` are all direct FKs crossing bounded-context boundaries in the one shared schema.
 
-{% include excalidraw.html file="shared-data-vs-owned-data" alt="Three stacked panels: Review stays on the monolith's shared schema (a named deferral), Notification owns its schema from day one (async seam), and Inventory owns its schema too but needs a one-time transaction-log backfill from the still-live monolith table during the cutover window" caption="Figure 18.1: The three data-ownership postures this book builds, in the order they were built" %}
+The other smells (the god checkout service, the one ACID transaction spanning six contexts, review's tangled auth) are cured by moving code: a new process, a new endpoint, a flag that decides who answers. Smells #3 and #4 differ in kind. The database itself enforces a foreign key. While `order_items.inventory_item_id` exists, Postgres rejects deleting an `inventory_items` row that order lines still reference, and every query that needs a line's current name or price joins across what would be two services' schemas.
 
-The reason shared-database coupling resists the same strangler-fig treatment
-every other seam in this book has used is structural: a strangler proxy can
-intercept an HTTP path and decide who answers it because HTTP requests are
-the thing the proxy sits between. There is no equivalent place to sit between
-two services and a *table*. Either exactly one process owns the writes to
-`inventory_items`, or two processes race on the same rows with no shared
-transaction to arbitrate between them, the same split-brain risk ch.17
-named for Notification's async seam, except now the two writers are not
-"the monolith's consumer and this service's consumer reading the same
-topic," they would be two independent processes issuing `UPDATE` statements
-against the identical row with no coordination at all. That is not a
-degraded version of database-per-service; it is the shared-database anti-
-pattern with extra steps.
+Review worked because it never had to answer this: its `app/models.py` maps onto the monolith's tables. That deferral was documented, and it comes due for the context that has to give up a table it still has writers for.
 
-## The database-per-service tradeoff: what you buy, what you give up
+{% include excalidraw.html file="shared-data-vs-owned-data" alt="Three stacked panels: Review stays on the monolith's shared schema (a named deferral), Notification owns its schema from day one (async seam), and Inventory owns its schema too but needs a one-time transaction-log backfill from the still-live monolith table during the cutover window" caption="Figure 18.1: The three data-ownership postures, in the order they were built" %}
 
-Database-per-service is not free, and this book has already paid some of
-its cost without naming it as such. `examples/03-notification-service`'s
-`app/models.py` docstring states the policy directly: `customer_id`/
-`order_id` are plain `BIGINT` columns, **not** foreign keys into the
-monolith's `customers`/`orders` tables, because "this service's schema must
-not reach across into tables it does not own." `examples/04-inventory-
-service`'s `app/models.py` says the identical thing about `inventory_items`
-having no FK back into the monolith. Giving up the foreign key means giving
-up the database's own referential-integrity guarantee at that boundary:
-nothing in Postgres stops a customer id from being deleted on one side while
-still referenced on the other; the two sides now have to *agree* on that
-invariant by contract (a frozen event shape, a versioned proto) rather than
-have the database enforce it for them.
+A strangler proxy can intercept an HTTP path because requests are what it sits between. Nothing sits between two services and a table. Either exactly one process owns the writes to `inventory_items`, or two processes race on the same rows with no shared transaction to arbitrate. That isn't a degraded database-per-service. It is the shared-database anti-pattern with extra steps.
 
-What that buys back is independence along every axis a shared schema
-forecloses: Inventory's Alembic migrations can run without coordinating a
-release with order's Django migrations; Inventory's table can be re-indexed,
-re-sharded, or moved to a different Postgres instance entirely without
-anyone outside that service noticing; and, the specific property ch.19
-needs, Inventory's `Reserve`/`Release` RPCs can take a Postgres row-level
-write lock for the duration of a single `UPDATE` statement and know that
-lock is uncontested by any writer this service doesn't control, because
-there is no second writer. A shared schema can't make that last guarantee
-at all: a pessimistic lock taken by one context's query says nothing about
-whether a different context's query, against the same row, is waiting
-behind it or working around it.
+## Pattern: Database per Service
 
-The tradeoff has a name in the literature this book has already cited
-(ch.13's Khononov reference): this is the move from an *implicit* contract
-(whatever shape the shared schema happens to have today) to an *explicit*
-one (a proto, an event, a REST response shape) that both sides have to keep
-honoring by agreement, not by database constraint. Every ACL this book has built (ch.16's `OrderPlacedEvent`
-translator, ch.19's proto wire vocabulary) is the cost of that explicitness,
-paid once per seam, in exchange for never again needing a cross-schema join
-to answer a question.
+Database-per-service has a cost the project has already paid. notification-service's `app/models.py` keeps `customer_id` and `order_id` as plain `BIGINT` columns, not foreign keys, because "this service's schema must not reach across into tables it does not own." `examples/04-inventory-service` does the same for `inventory_items`. Giving up the foreign key gives up the database's referential-integrity guarantee at that boundary. Nothing in Postgres stops a customer id from being deleted on one side while the other still references it. The sides agree on that invariant by contract, such as a frozen event shape or a versioned proto.
 
-## The tempting shortcut: a read replica instead of an owned schema
+| Axis | Shared schema | Owned schema |
+| --- | --- | --- |
+| Migrations | One Django migration history, deployed together | Inventory's Alembic migrations run without coordinating an order release |
+| Storage | One Postgres schema | Re-index, re-shard or move to another instance without anyone outside noticing |
+| Row lock | A lock in one context says nothing about another context's query on the same row | `Reserve` and `Release` take a row-level write lock for one `UPDATE` with no second writer |
+| Integrity | Enforced by foreign keys | Kept by a contract both sides honor |
 
-Before accepting that Inventory needs its own schema, consider the
-alternative a team under deadline pressure reaches for first: point a
-read-replica connection at the monolith's `public.inventory_items` table and
-call the data problem solved, without migrating anything at all. It needs
-naming specifically because it solves exactly one of Inventory's two
-problems and makes the other one worse.
+The trade is the move from an implicit contract (whatever shape the shared schema has today) to an explicit one (a proto, an event, a REST response shape). Every ACL is the cost of that explicitness, paid once per seam, in exchange for never needing a cross-schema join again.
 
-A read replica would, in fact, work for the **read** surface:
-`GET /api/inventory`/`GET /api/inventory/{sku}` need nothing but an
-eventually-consistent copy to answer correctly, and a logical-replication
-subscriber is a perfectly serviceable way to get one. It does nothing at all
-for the **write** surface. `Reserve`'s whole value is a single, atomic,
-concurrency-safe conditional `UPDATE` against a row this service alone
-writes; a read replica is, definitionally, read-only; there is no write
-path through it for `Reserve` to use. A team that stopped at "replicate the
-table" would still have to solve reservation some other way, and the
-obvious other way (writing straight through to the monolith's primary from
-a second service) is the two-writers-one-table split-brain this chapter
-already ruled out, just relocated one layer down. A read replica isn't a
-cheaper version of database-per-service; it's a correct answer to a
-question Inventory wasn't actually asking, bought at the cost of leaving the
-harder question, who owns the write, completely unaddressed. That's why
-ch.19's transition mechanism (the CDC backfill) looks superficially like a
-read replica but is explicitly scoped as transition-only, not an end state:
-once Inventory's own schema is the write path for `Reserve`/`Release`, the
-replicated copy has no further job and is retired, rather than being kept
-around indefinitely as a permanent, parallel read path nobody owns.
+### The shortcut: a read replica
 
-## From foreign key to snapshot: the `OrderItem` change, concretely
+A team under deadline reaches first for a read replica of the monolith's `public.inventory_items`. It works for the read surface: `GET /api/inventory` and `GET /api/inventory/{sku}` need only an eventually consistent copy, and logical replication provides one. It does nothing for the write surface. `Reserve` is a single atomic, concurrency-safe conditional `UPDATE` against a row one service alone writes, and a replica is read-only. Writing through to the monolith's primary from a second service is the two-writers split-brain, moved one layer down.
 
-The clearest instance of this tradeoff in this project's own codebase is
-`order.OrderItem.inventory_item`, smell #4's own example, and ch.19's
-Inventory extraction is exactly what forces it to move. Before the inventory
-extraction, `order/models.py::OrderItem` carried a live foreign
-key into `inventory.InventoryItem`:
+A replica answers a question inventory wasn't asking and leaves the real one, who owns the write, open. The transition mechanism is a change-data-capture backfill that looks like a replica but is scoped as transition-only. Once inventory's own schema is the write path, the replicated copy is retired instead of kept as a permanent read path nobody owns.
+
+## From foreign key to snapshot
+
+The clearest instance in this codebase is `order.OrderItem.inventory_item`, smell #4's own example. Before the inventory extraction, `order/models.py::OrderItem` held a live foreign key into `inventory.InventoryItem`:
 
 {% include codetabs.html langs="Before: live FK (SMELL[ch.18])|After: denormalized snapshot" %}
 
@@ -172,7 +74,7 @@ class OrderItem(models.Model):
 ```
 
 ```python
-# order/models.py -- AFTER (ch.19, this project's shipped code)
+# order/models.py -- AFTER (the shipped code)
 class OrderItem(models.Model):
     """SMELL[ch.18] CURED here -- sku/item_name are now a denormalized
     SNAPSHOT captured once at checkout time, a plain soft string reference
@@ -190,21 +92,9 @@ class OrderItem(models.Model):
     unit_price_cents = models.BigIntegerField()
 ```
 
-Reading these two side by side, the change looks small: two string columns
-replace one foreign key. What that small change buys is everything ch.19
-needs. With the FK, "what did this order line cost" means joining into
-`inventory_items` and reading its *current* `price_cents`, which is wrong
-the moment inventory's price changes after the order shipped, and which is
-structurally impossible once `inventory_items` lives in a different
-service's database that this process can no longer join against at the SQL
-level at all. With the snapshot, `OrderItem.unit_price_cents` is the price
-*at the moment this line was reserved*, captured once and never revisited:
-correct history, and a query this process can always answer locally, no
-matter which mode (`local` or `grpc`) wrote the row.
+Two string columns replace one foreign key. With the FK, "what did this line cost" means joining into `inventory_items` and reading its current `price_cents`. That is wrong the moment the price changes after the order shipped, and impossible once `inventory_items` lives in another service's database. With the snapshot, `unit_price_cents` is the price when the line was reserved, captured once. The process can always answer locally, whichever mode (`local` or `grpc`) wrote the row.
 
-Cutting the FK safely is itself a small lesson in migration discipline.
-`order/migrations/0002_orderitem_sku_snapshot.py` does it in the only order
-that cannot lose data:
+`order/migrations/0002_orderitem_sku_snapshot.py` cuts the key in the only order that can't lose data:
 
 ```python
 # order/migrations/0002_orderitem_sku_snapshot.py
@@ -225,172 +115,65 @@ class Migration(migrations.Migration):
     ]
 ```
 
-**Add, then backfill, then drop: never any other order.** Adding the new
-columns first, with a safe default, means every existing row is valid the
-instant the migration's first step completes. Backfilling *while the FK is
-still live* means `select_related("inventory_item")` can still do the join
-that is about to become impossible: this is the migration's only chance to
-read `inventory_item.sku`/`.name` at all, because the next step removes the
-column that makes that join possible. Dropping the FK last means nothing
-ever observes a row where the snapshot columns exist but haven't been
-populated yet. Running these steps in any other order, drop first, backfill
-second, would mean the backfill has nothing left to read from: this is
-precisely why `scripts/register-debezium.sh`'s CDC path and this migration's
-own `RunPython` step share a shape, "copy one fact out of the field a
-boundary is about to put away."
+**Add, then backfill, then drop.** Adding the columns first with a safe default makes every existing row valid at once. Backfilling while the FK is live lets `select_related("inventory_item")` still do the join, which is the migration's only chance to read `inventory_item.sku` and `.name`. Dropping the key last means nothing ever sees a row whose snapshot columns exist but are unpopulated. Drop first and the backfill has nothing left to read. The same shape appears in the CDC path (`scripts/register-debezium.sh`): copy one fact out of the field a boundary is about to put away.
 
-{% include excalidraw.html file="orderitem-fk-to-snapshot" alt="Before and after OrderItem's relationship to InventoryItem: a live FK requiring a join versus a denormalized sku/item_name/unit_price_cents snapshot with no FK, plus the three-step add-backfill-drop migration sequence" caption="Figure 18.2: From foreign key to snapshot: the denormalization move, concretely" %}
+{% include excalidraw.html file="orderitem-fk-to-snapshot" alt="Before and after OrderItem's relationship to InventoryItem: a live FK requiring a join versus a denormalized sku/item_name/unit_price_cents snapshot with no FK, plus the three-step add-backfill-drop migration sequence" caption="Figure 18.2: From foreign key to snapshot, the denormalization move" %}
 
-## Duplication as a considered choice, not a lapse
+## Duplication as a considered choice
 
-`OrderItem.sku`/`.item_name` now duplicate data that also lives in
-`inventory.InventoryItem.sku`/`.name`, the same fact, stored twice, in two
-services with two independent schemas. In a single shared database that
-would be a normalization bug a code reviewer should flag. Across a service
-boundary it is the *correct* design, and the distinction deserves precision:
-this isn't the same kind of duplication. The FK version had
-one fact (`inventory_items.name`) with one home, read through a join
-whenever a second context needed it. The snapshot version has two facts
-that happen to start out equal, Inventory's *current* name/price, and
-Order's *historical* name/price at the moment of purchase, and they are
-allowed, even expected, to diverge over time. A rename in Inventory's
-catalog should not rewrite last month's invoices; a denormalized snapshot
-is what keeps it from doing so.
+`OrderItem.sku` and `.item_name` now duplicate `inventory.InventoryItem.sku` and `.name`. In one shared database that is a normalization bug. Across a service boundary it is correct, and the difference is precise. The FK version had one fact with one home, read through a join. The snapshot version has two facts that start out equal: inventory's current name and price, and the order's name and price at the moment of purchase. They are allowed, even expected, to diverge. Renaming an item in the catalog must not rewrite last month's invoices.
 
-This is the same reasoning ch.17 already applied to Notification's owned
-`customer_id`/`order_id` columns (plain `BIGINT`s, not FKs) and ch.16's ACL
-discussion named directly: once two contexts are reached over a stable
-contract instead of a shared table, each side's copy of a fact is scoped to
-what *that side* needs it for, not a globally normalized source of truth
-every reader has to reach into. The alternative, querying Inventory live
-for every historical order's line-item details, would couple Order's read
-path to Inventory's availability for data that, by definition, never
-changes once the order is placed. Duplication here isn't a shortcut around
-solving the coupling problem; it *is* the solution, applied at the one place
-a snapshot is semantically correct rather than merely convenient.
+Notification's plain `BIGINT` columns follow the same reasoning: when two contexts meet over a stable contract instead of a shared table, each side's copy of a fact is scoped to what that side needs it for. Querying inventory live for every historical order line would couple order's read path to inventory's availability for data that never changes after the order is placed.
 
-Duplication of this kind has a real cost, and that cost deserves naming
-rather than presenting it as a pure win. Two copies of "what did
-this sku cost" means two places a future schema change has to be considered
-against: if Inventory's `InventoryItem.price_cents` ever needs a currency
-field, `OrderItem.unit_price_cents` doesn't automatically inherit that
-decision, and nobody is forced to notice the gap until a report tries to sum
-amounts across both tables. The FK version made that inconsistency
-*impossible* by construction: one column, one home, one truth. The snapshot
-version makes it *possible* and relies on each side's own tests and
-contracts to keep the shapes consistent independently. That's the real price of
-the independence this chapter has been arguing for: fewer guarantees the
-database enforces for you, more that the team has to enforce by discipline
-and contract instead. Paying it is still the right call here, because the
-alternative, a live join across a boundary that is about to become a
-network call, is strictly worse, not because duplication is free.
+The cost is real. Two copies of "what did this sku cost" are two places a schema change must land. If `InventoryItem.price_cents` gains a currency field, `OrderItem.unit_price_cents` doesn't inherit the decision, and nobody is forced to notice until a report sums amounts across both tables. The FK made that inconsistency impossible by construction. The snapshot makes it possible and relies on each side's contracts and tests to keep the shapes aligned. That is the price of independence, and it is still right here, because the alternative is a live join across a boundary that is about to become a network call.
 
-## Read models fed by events: the shape ch.21 completes
+## Read models fed by events
 
-The snapshot captured at checkout time is this book's first example of a
-pattern it has not yet named directly: a **read model populated by
-something other than a live query against the system of record**.
-`OrderItem`'s sku/name/price snapshot is populated once, synchronously, at
-the moment of the write that creates it, but the same shape generalizes to
-read models populated *asynchronously*, from events, well after the write
-that caused them. ch.17's `notification-service` already builds exactly
-this: its `Notification` rows are not read through a live join against
-`order`'s tables; they are built entirely from the `order.placed` event's
-payload, consumed once, stored locally, and queried locally forever after.
-Inventory's transition-only CDC consumer (ch.19) is the same shape again,
-with Debezium's change stream standing in for a domain event: a local copy,
-kept current by consuming something published elsewhere, queried without
-ever reaching back across the seam.
+The snapshot is the first example of a read model populated by something other than a live query against the system of record. `OrderItem`'s snapshot is filled once, synchronously, at the write that creates it. The same shape works asynchronously. notification-service's `Notification` rows are built entirely from the `order.placed` payload, consumed once and queried locally afterward. The inventory service's transition-only CDC consumer is the same again, with Debezium's change stream standing in for a domain event.
 
-Naming this pattern precisely, and building the general case, where a
-read model's entire storage IS a rebuild from an append-only event log, rather than
-backed by its own mutable table at all, is ch.21's job (event sourcing and
-CQRS), not this chapter's. What matters here is recognizing that this
-chapter's humble FK-to-snapshot move and ch.17's Kafka-fed `Notification`
-table are the same idea at two different distances: own your data, and keep
-it current by consuming a fact someone else already decided was true,
-rather than reaching into their database to ask.
+The idea is to own your data and keep it current by consuming a fact someone else already decided was true, instead of reaching into their database to ask. The general case, where a read model is rebuilt from an append-only event log, is event sourcing and CQRS.
 
-## The lived contrast: one schema, one deferral, one clean start
+## Three postures
 
-Three extractions now exist in this project, and each took a different
-position on data ownership, for reasons specific to what each extraction
-actually needed:
+Each extraction took a different position on data ownership, for reasons specific to its seam:
 
 | Extraction | Data posture | Why |
 |---|---|---|
-| Review (ch.15) | **Shared**: reads/writes the monolith's own tables directly, no ACL at this seam | A named deferral: ch.15's job was proving the extraction mechanism, not solving data ownership in the same chapter |
-| Notification (ch.17) | **Owned from day one**: its own Alembic-migrated `notification` schema, zero monolith import | The seam is asynchronous; a second, uncoordinated writer to a shared table *is* a split-brain, not a simplification |
-| Inventory (ch.19, next) | **Owned, reached via a one-time transaction-log backfill**: the hybrid this book hasn't built yet | The hardest case: a *synchronous* seam (checkout needs to know *right now* whether stock is available) layered on top of data that still has to move out of a table the monolith was still writing |
+| Review | **Shared**: reads and writes the monolith's tables directly, no ACL at this seam | A named deferral: proving the extraction mechanism came first |
+| Notification | **Owned from day one**: its own Alembic-migrated `notification` schema, no monolith import | The seam is asynchronous; a second uncoordinated writer to a shared table is a split-brain |
+| Inventory | **Owned, reached via a one-time transaction-log backfill** | A synchronous seam (checkout needs stock availability right now) on top of data the monolith was still writing |
 
-Review's deferral was correct for what ch.15 needed to prove and remains a
-named, open item: `examples/02-review-service`'s own `MIGRATION.md` says
-so. Notification's clean start was correct because nothing pre-existed to
-migrate: `OrderPlacedConsumer` had no monolith original to lift, so there
-was no live data to move, only a new schema to create. Inventory is neither
-of those: `inventory_items` is a table the monolith has been writing to
-from the start, with real rows, real foreign keys pointing at it, and a checkout
-path that needs a correct answer to "is this in stock" on every single
-order. ch.19 is the chapter that has to reconcile "own the data" with "don't
-lose a single committed reservation during the transition."
+Review's deferral stays a named open item in `examples/02-review-service/MIGRATION.md`. Notification could start clean because nothing pre-existed to migrate. Inventory is neither: `inventory_items` has real rows, real foreign keys pointing at it, and a checkout path that needs a correct stock answer on every order. The extraction has to own the data without losing a committed reservation during the transition.
 
-## Planning the split: what ch.19 actually has to do
+## Planning the split
 
-Four separate problems have to be solved together for Inventory's extraction
-to be both correct and safely reversible, and naming them now is this
-chapter's last job before ch.19 builds the answer to each:
+Four problems have to be solved together for the inventory extraction to be correct and reversible:
 
-1. **Give Inventory its own schema and its own seed.** Same posture
-   Notification already established: an Alembic-migrated `inventory` schema, created and
-   independently seeded, with no foreign key reaching back into the
-   monolith's tables.
-2. **Move the checkout-time `reserve`/`release` concern across a real
-   network boundary**, not just move a read. Review's and Notification's
-   extractions each moved one direction of traffic (reads, or a one-way
-   event); Inventory's `Reserve` is a synchronous, stock-affecting write
-   that checkout cannot proceed without an answer to, and `Release` is a
-   new concept this book hasn't needed yet: an explicit compensating action
-   for a write that a local transaction can no longer roll back automatically.
-3. **Bridge the gap between "the monolith still owns `inventory_items`"
-   and "Inventory owns its own copy"** without losing or duplicating a
-   reservation during the transition: the job a one-time, then-retired
-   transaction-log backfill does, which is new infrastructure this book
-   hasn't introduced yet (Debezium, tailing Postgres's write-ahead log).
-4. **Cut `OrderItem.inventory_item`'s foreign key**: this chapter's own
-   concrete example above, so `order`'s schema no longer has a live
-   dependency on a table that's about to leave its database entirely.
+1. **Give inventory its own schema and seed.** The notification posture: an Alembic-migrated `inventory` schema, independently seeded, with no foreign key back into the monolith's tables.
+2. **Move `reserve` and `release` across a network boundary.** Reviews and notifications moved one direction of traffic (reads, or a one-way event). `Reserve` is a synchronous, stock-affecting write that checkout can't proceed without, and `Release` is the explicit compensating action for a write that a local transaction can no longer roll back automatically.
+3. **Bridge "the monolith owns `inventory_items`" and "inventory owns its copy"** without losing or duplicating a reservation. A one-time, then-retired transaction-log backfill does this, using Debezium to tail Postgres's write-ahead log.
+4. **Cut `OrderItem.inventory_item`'s foreign key**, as in the migration above, so `order`'s schema stops depending on a table that is about to leave its database.
 
-ch.19 builds all four, in that order, against the real, already-extracted
-`examples/04-inventory-service` and the real `order.services.place_order()`
-cutover path this project ships.
+> **Decision**
+>
+> Replace a cross-context foreign key with a snapshot when the referenced table is leaving your database and the copied fact is historical. Give the service that writes a table sole ownership of it; use a transition-only backfill, not a permanent replica, while writers move.
 
-## What you learned
+> **🤖 Explore with your agent**
+>
+> "In `examples/00-monolith`, list every remaining cross-context foreign key from SMELLS.md #4 (`payment.Payment.order`, `shipping.Shipment.order`, `notification.Notification.customer`) and draft an add, backfill, drop migration for `shipping.Shipment.order` that snapshots the order id and customer email, without running it."
+>
+> Check: read the proposed migration and confirm `RunPython` comes after the `AddField` operations and before `RemoveField`.
 
-- Shared-database coupling (SMELL #3/#4) is harder to break than the
-  coupling every prior extraction in this book cured, because the database
-  itself, not just the code, enforces the dependency: a foreign key
-  cannot be routed around by a proxy the way an HTTP path can.
-- Database-per-service trades the database's own referential-integrity
-  guarantee for independent deployability, independent schema evolution,
-  and (the property ch.19's `Reserve` needs specifically) an uncontested
-  row-level lock with exactly one writer.
-- `OrderItem.inventory_item`'s foreign key becoming `sku`/`item_name`/
-  `unit_price_cents` snapshot columns is this project's concrete instance
-  of that trade: add the columns, backfill them *while the FK is still
-  live* (the only moment the join that populates them is still possible),
-  then drop the FK: never any other order.
-- Duplication across a service boundary is a sound design choice when
-  the two copies are allowed to diverge by design: a checkout-time price
-  snapshot and inventory's live catalog price are two different facts that
-  happen to start out equal, not one fact stored twice by mistake.
-- This project's three extractions took three different, individually
-  correct positions on data ownership (Review shared/deferred, Notification
-  owned-from-day-one, Inventory owned-via-backfill) because each extraction
-  needed a different thing from its seam: there is no single universally
-  "right" answer, only the answer that fits what the seam actually has to
-  do.
+## Build, run, observe
 
-Next: ch.19 builds the extraction this chapter planned: Inventory's own
-schema, the gRPC seam and its proto-as-ACL, the transaction-log backfill
-that bridges the transition, and the compensating `Release` that rebuilds
-the free rollback a shared transaction used to give away for nothing.
+Nothing new runs here; the code is the migration and models already in `examples/00-monolith`.
+
+```bash
+cd examples/00-monolith
+uv run python manage.py migrate order
+uv run python manage.py sqlmigrate order 0002
+```
+
+`migrate order` applies the add, backfill, drop sequence. `sqlmigrate` prints it in that order: two `ADD COLUMN` statements, a "Raw Python operation" placeholder for the backfill, then `DROP COLUMN "inventory_item_id"`. After it, `order_items` has `sku` and `item_name` columns and no `inventory_item_id`.
+
+- Reorder `0002_orderitem_sku_snapshot.py` so `RemoveField` runs before `RunPython`: the backfill has no `inventory_item` left to read from.

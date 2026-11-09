@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""ch.29 figure: deploy-k8s-namespace-topology -- the `mea` namespace as
+"""ch.29 figure: deploy-k8s-namespace-topology, the `mea` namespace as
 rendered by deploy/k8s/base + overlays/minikube: 8 app Deployments/Services,
 one shared Postgres StatefulSet (schema-per-service picked in each service's
-own code, not in the connection string -- see app-config.yaml's header),
+own code, not in the connection string, see app-config.yaml's header),
 one shared Kafka StatefulSet, and the strangler-proxy edge router as the
-ONLY NodePort in the topology (30888) -- every other Service stays
+ONLY NodePort in the topology (30888), every other Service stays
 ClusterIP, including graphql-gateway's own front door.
 
 Sourced from deploy/k8s/base/{namespace,app-config,app-secret,*-service,

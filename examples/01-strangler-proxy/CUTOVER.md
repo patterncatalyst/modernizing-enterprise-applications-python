@@ -1,4 +1,4 @@
-# CUTOVER.md — Review strangler-fig cutover evidence trail (r02)
+# CUTOVER.md: Review strangler-fig cutover evidence trail (r02)
 
 This file records the evidence for the single most load-bearing claim in r02:
 that `STRANGLER_REVIEW_ENABLED` behind this proxy is a **safe, reversible
@@ -29,7 +29,7 @@ The in-process routing tests (`tests/test_routing.py`, via `httpx.ASGITransport`
 passed while a real defect hid underneath: the proxy forwarded the request body
 as an unread async stream, so httpx sent it upstream with
 `Transfer-Encoding: chunked` and no `Content-Length`. The monolith is Django/WSGI,
-which reads `CONTENT_LENGTH` and treats a missing one as an empty body — so every
+which reads `CONTENT_LENGTH` and treats a missing one as an empty body, so every
 `POST` routed to the monolith **through the proxy** arrived empty. It surfaced only
 when the Newman suite ran against the real WSGI server over a real socket. Fixed by
 buffering the body (`content = await request.body()`) so bounded requests carry a
@@ -39,22 +39,22 @@ miniature: equivalence must be proven against the real thing, not a mock.
 
 ## Evidence trail (all green, post-fix)
 
-### 1. Baseline — flag OFF (reversibility window)
+### 1. Baseline: flag OFF (reversibility window)
 Full suite through the proxy, reviews served by the monolith:
 **19 requests / 38 test-scripts / 58 assertions, 0 failed (exit 0).**
 
-### 2. Cutover — flag ON
+### 2. Cutover: flag ON
 Same unedited suite, `STRANGLER_REVIEW_ENABLED=true`, reviews now served by
 `examples/02-review-service`, everything else still the monolith:
-**19 / 38 / 58, 0 failed (exit 0)** — byte-identical in shape to run 1.
+**19 / 38 / 58, 0 failed (exit 0)**, byte-identical in shape to run 1.
 
-### 3. Reversibility — flip back to OFF
+### 3. Reversibility: flip back to OFF
 Restart the proxy with the flag off; monolith serves reviews again:
-**19 / 38 / 58, 0 failed (exit 0).** The reversibility window is genuinely open —
+**19 / 38 / 58, 0 failed (exit 0).** The reversibility window is genuinely open,
 flipping back is a config change plus a restart, right up until the monolith's
 Review app is deliberately decommissioned (a later iteration).
 
-### 4. Negative check — review-service down, the Review folder MUST go RED
+### 4. Negative check, review-service down, the Review folder MUST go RED
 Flag ON, `examples/02-review-service` killed, run only the `Review Context
 Contract` folder: every `/api/reviews*` request gets the proxy's real `502`
 (upstream unavailable), not a soft pass. **5 requests, 6/6 assertions failed,
@@ -69,7 +69,7 @@ The equivalence gate does not quietly pass when the extracted service is down.
 | 1 | `false` | monolith | monolith | 58/58 green |
 | 2 | `true` | review-service | monolith | 58/58 green |
 | 3 | `false` (reverted) | monolith | monolith | 58/58 green |
-| 4a | `true`, review-service **down** | *(nothing — 502)* | monolith | RED, exit 1 (as required) |
+| 4a | `true`, review-service **down** | *(nothing: 502)* | monolith | RED, exit 1 (as required) |
 | 4b | `true`, review-service restarted | review-service | monolith | 16/16 green |
 
 See `tooling/newman/GOLDEN-BASELINE.md` for the verbatim newman tables, and
@@ -79,7 +79,7 @@ See `tooling/newman/GOLDEN-BASELINE.md` for the verbatim newman tables, and
 
 `STRANGLER_NOTIFICATION_ENABLED` gates `/api/notifications*` to
 `examples/03-notification-service` the same way `STRANGLER_REVIEW_ENABLED`
-gates `/api/reviews*` to the review service — a second, independent flag in
+gates `/api/reviews*` to the review service, a second, independent flag in
 the same proxy (`app/config.py`, `_select_backend()` in `app/main.py`). It
 follows the identical OFF → ON → reversible → negative-check discipline
 documented above: baseline with the flag off, cut over, flip back to prove
@@ -89,21 +89,21 @@ trail for this seam (the four-run table and negative-check output) lands in
 `tooling/newman/GOLDEN-BASELINE.md` from a separate lane; this file only
 records that the same discipline applies.
 
-## Inventory seam (r04) — two cutover dimensions
+## Inventory seam (r04), two cutover dimensions
 
 Inventory is the first seam with **two independent cutover switches**,
 because it has two distinct call paths into the monolith:
 
-1. **REST reads** (`GET /api/inventory*`, browsing/display traffic) — go
+1. **REST reads** (`GET /api/inventory*`, browsing/display traffic), go
    through *this* proxy, gated by `STRANGLER_INVENTORY_ENABLED` exactly like
    `STRANGLER_REVIEW_ENABLED`/`STRANGLER_NOTIFICATION_ENABLED` gate their
    seams: `app/config.py` reads the flag and base URL, `_select_backend()`
    in `app/main.py` matches the full path against `/api/inventory` and
    routes to `examples/04-inventory-service` once cut over.
 2. **gRPC reserve/release** (stock decrement/increment during order
-   placement/cancellation) — called directly by the monolith over gRPC, and
+   placement/cancellation): called directly by the monolith over gRPC, and
    gated by the monolith's own `INVENTORY_MODE` setting. This path never
-   goes through the strangler proxy at all — it is internal
+   goes through the strangler proxy at all, it is internal
    monolith-to-service traffic, not browser/client-facing HTTP, so there is
    nothing for `_select_backend()` to intercept.
 
@@ -113,26 +113,26 @@ flag off, cut over, flip back to prove reversibility, then kill the
 inventory service and confirm the affected path fails loudly (a real `502`
 from this proxy for REST reads; the monolith-side equivalent for gRPC
 reserve/release) rather than silently degrading. The two dimensions are
-verified independently — flipping `STRANGLER_INVENTORY_ENABLED` has no
-effect on `INVENTORY_MODE` or vice versa — because a design that requires
+verified independently: flipping `STRANGLER_INVENTORY_ENABLED` has no
+effect on `INVENTORY_MODE` or vice versa, because a design that requires
 flipping both in lockstep to stay correct is not actually two independent
 seams, it is one seam with an extra step.
 
-## Payment seam (r05) — two cutover dimensions
+## Payment seam (r05), two cutover dimensions
 
 Like Inventory, Payment is a seam with **two independent cutover switches**,
 because it has two distinct call paths into the monolith:
 
-1. **REST reads** (`GET /api/payments*`, browsing/display traffic — e.g.
-   payment status/history lookups) — go through *this* proxy, gated by
+1. **REST reads** (`GET /api/payments*`, browsing/display traffic, e.g.
+   payment status/history lookups): go through *this* proxy, gated by
    `STRANGLER_PAYMENT_ENABLED` exactly like the other three flags gate their
    seams: `app/config.py` reads the flag and base URL, `_select_backend()`
    in `app/main.py` matches the full path against `/api/payments` and
    routes to the payment-service once cut over.
 2. **Asynchronous payment capture** (the write path that actually charges a
-   payment method during order placement) — driven internally by the
+   payment method during order placement), driven internally by the
    monolith and gated by the monolith's own `PAYMENT_MODE` setting. This
-   path never goes through the strangler proxy at all — it is internal
+   path never goes through the strangler proxy at all, it is internal
    monolith-side processing, not browser/client-facing HTTP, so there is
    nothing for `_select_backend()` to intercept.
 
@@ -141,28 +141,28 @@ discipline documented above: baseline with the flag off, cut over, flip back
 to prove reversibility, then kill the payment service and confirm the
 affected path fails loudly (a real `502` from this proxy for REST reads; the
 monolith-side equivalent for async capture) rather than silently degrading.
-The two dimensions are verified independently — flipping
-`STRANGLER_PAYMENT_ENABLED` has no effect on `PAYMENT_MODE` or vice versa —
+The two dimensions are verified independently, flipping
+`STRANGLER_PAYMENT_ENABLED` has no effect on `PAYMENT_MODE` or vice versa,
 for the same reason as Inventory: a design that requires flipping both in
 lockstep to stay correct is not actually two independent seams, it is one
 seam with an extra step.
 
-## Shipping seam (r06) — two cutover dimensions
+## Shipping seam (r06), two cutover dimensions
 
 Like Inventory and Payment, Shipping is a seam with **two independent
 cutover switches**, because it has two distinct call paths into the
 monolith:
 
-1. **REST reads** (`GET /api/shipments*`, browsing/display traffic — e.g.
-   shipment status/tracking lookups) — go through *this* proxy, gated by
+1. **REST reads** (`GET /api/shipments*`, browsing/display traffic, e.g.
+   shipment status/tracking lookups): go through *this* proxy, gated by
    `STRANGLER_SHIPPING_ENABLED` exactly like the other four flags gate their
    seams: `app/config.py` reads the flag and base URL, `_select_backend()`
    in `app/main.py` matches the full path against `/api/shipments` and
    routes to the shipping-service once cut over.
 2. **Shipment orchestration** (the write path that actually creates and
-   advances a shipment during order fulfillment) — driven internally by the
+   advances a shipment during order fulfillment), driven internally by the
    monolith and gated by the monolith's own `SHIPPING_MODE` setting. This
-   path never goes through the strangler proxy at all — it is internal
+   path never goes through the strangler proxy at all, it is internal
    monolith-side processing, not browser/client-facing HTTP, so there is
    nothing for `_select_backend()` to intercept.
 
@@ -171,16 +171,16 @@ discipline documented above: baseline with the flag off, cut over, flip back
 to prove reversibility, then kill the shipping service and confirm the
 affected path fails loudly (a real `502` from this proxy for REST reads; the
 monolith-side equivalent for orchestration) rather than silently degrading.
-The two dimensions are verified independently — flipping
-`STRANGLER_SHIPPING_ENABLED` has no effect on `SHIPPING_MODE` or vice versa —
+The two dimensions are verified independently, flipping
+`STRANGLER_SHIPPING_ENABLED` has no effect on `SHIPPING_MODE` or vice versa,
 for the same reason as Inventory and Payment: a design that requires
 flipping both in lockstep to stay correct is not actually two independent
 seams, it is one seam with an extra step.
 
-## Order seam (r07) — the LAST reversible flag, then the irreversible cut
+## Order seam (r07), the LAST reversible flag, then the irreversible cut
 
 Order was the final seam, and the only one proven reversible with the
-**write path itself** cut over through this proxy — `POST /api/orders`
+**write path itself** cut over through this proxy, `POST /api/orders`
 (checkout) routed to `examples/07-order-service` exactly like every `GET`
 under the same prefix, not split into a separate internal dimension the way
 Inventory/Payment/Shipping's write paths were. `STRANGLER_ORDER_ENABLED`
@@ -193,11 +193,11 @@ Full topology live for both runs: Postgres 18.6-alpine, Kafka (KRaft,
 single-node), review-/notification-/inventory-/payment-/shipping-/
 order-service, through the proxy on `:8888`
 (`tooling/newman/proxy.postman_environment.json`). `examples/06-shipping-service`
-was already re-pointed (`ORDER_BASE_URL=http://localhost:8088`) — its saga's
+was already re-pointed (`ORDER_BASE_URL=http://localhost:8088`), its saga's
 `enrich` step reads `shippingAddress` from order-service's `order_view`, not
 the monolith.
 
-**Run 1 — `STRANGLER_ORDER_ENABLED=true` (+ review/notification/inventory/
+**Run 1: `STRANGLER_ORDER_ENABLED=true` (+ review/notification/inventory/
 payment/shipping flags all `true`), order served by order-service:**
 
 ```
@@ -212,11 +212,11 @@ newman run tooling/newman/mea.postman_collection.json \
 O1's checkout returned `202 Accepted` (order-service's always-choreographed
 path); N1b's bounded-wait poll independently confirmed a real order reaching
 terminal `CONFIRMED` via the full Kafka saga (payment.captured →
-AWAITING_SHIPMENT → shipment.dispatched → CONFIRMED) on attempt 4/20 — proof
+AWAITING_SHIPMENT → shipment.dispatched → CONFIRMED) on attempt 4/20, proof
 the lifted reactions (`07-order-service/app/service.py`) drive the lifecycle
 correctly standing alone, with no monolith process running at all.
 
-**Run 2 — flag OFF (no `STRANGLER_*` flags at all), order-service and every
+**Run 2: flag OFF (no `STRANGLER_*` flags at all), order-service and every
 other extracted service stopped, only the bare monolith running
 (`PAYMENT_MODE`/`SHIPPING_MODE`/`INVENTORY_MODE` all left at their
 synchronous/in-process/local defaults):**
@@ -231,7 +231,7 @@ newman run tooling/newman/mea.postman_collection.json \
 
 **33 requests / 66 test-scripts / 105 assertions, 0 failed, exit code 0.**
 O1's checkout returned a plain `201 Created` (the monolith's synchronous
-path) — the same collection, the same environment file, only the proxy's
+path): the same collection, the same environment file, only the proxy's
 own configuration and the live backend changed. **This is the last reversible
 proof in this project's strangler-fig history**: right up to this point,
 turning `STRANGLER_ORDER_ENABLED` off was a config change plus a restart,
@@ -241,8 +241,8 @@ and the monolith still answered `/api/orders*` correctly.
 
 Immediately after the proof above, `STRANGLER_ORDER_ENABLED` (and every
 other `*_ENABLED` flag, and `STRANGLER_MONOLITH_BASE_URL`) were removed from
-`app/config.py` entirely — see the README's "The flagless edge router (r07)"
+`app/config.py` entirely: see the README's "The flagless edge router (r07)"
 section. `_select_backend()` is now an unconditional six-way lookup with a
 real `404` for anything else. The monolith is removed from the running
-topology (`compose.yaml`/`scripts/`/`demos/`) but kept, frozen, in-repo —
+topology (`compose.yaml`/`scripts/`/`demos/`) but kept, frozen, in-repo,
 see `examples/00-monolith/README.md`. There is no flag left to flip back.

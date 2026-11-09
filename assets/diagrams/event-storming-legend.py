@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""ch.12 figure: event-storming-legend -- the sticky-note color grammar from
+"""ch.12 figure: event-storming-legend, the sticky-note color grammar from
 an event-storming session, as a standalone legend card, in the order a
 session typically adds them: domain events first (chaotic exploration), then
 commands, then actors, then aggregates, then policies/reactions, then read
 models, then external systems.
 
 Each row names the real-world sticky color with a small swatch chip, and
-maps it onto this project's diagram palette -- the same box/sub/accent/user/
+maps it onto this project's diagram palette, the same box/sub/accent/user/
 ghost/kernel mapping `event-storm-checkout.py` already uses in its own
 legend note, formalized here as its own figure. House style stays the
 primary visual language (white cards, green accent, grey arrows); the
@@ -30,19 +30,19 @@ g.OUT = os.path.dirname(__file__)
 W, H = 1180, 970
 
 ROWS = [
-    ("Domain event", "orange sticky -- a past-tense fact",
+    ("Domain event", "orange sticky: a past-tense fact",
      "e.g. OrderPlaced, StockReserved, PaymentCaptured", "accent", "#f4b183"),
-    ("Command", "blue sticky -- the imperative that triggered the fact",
+    ("Command", "blue sticky: the imperative that triggered the fact",
      "e.g. Place Order, reserve stock, capture payment", "user", "#9dc3f0"),
-    ("Actor", "small yellow figure, left of its command -- who/what issued it",
+    ("Actor", "small yellow figure, left of its command, who/what issued it",
      "e.g. Customer; or a job, webhook, or policy", "sub", "#f5ea8a"),
-    ("Aggregate", "large yellow sticky -- the data cluster enforcing an invariant",
+    ("Aggregate", "large yellow sticky: the data cluster enforcing an invariant",
      "e.g. Order (is place_order() well-formed?), InventoryItem (enough stock?)", "box", "#f0d64a"),
-    ("Policy / reaction", "lilac sticky -- \"whenever X, then issue command Y\", no human actor",
+    ("Policy / reaction", "lilac sticky: \"whenever X, then issue command Y\", no human actor",
      "e.g. whenever OrderPlaced, then reserve stock", "ghost", "#cdb3e8"),
-    ("Read model", "green sticky -- a view projected forward from events",
+    ("Read model", "green sticky: a view projected forward from events",
      "e.g. Order Status, fed by OrderPlaced/PaymentCaptured/ShipmentDispatched/OrderConfirmed", "kernel", "#a8d9ad"),
-    ("External system", "pink sticky -- outside the team's control, called through a policy",
+    ("External system", "pink sticky: outside the team's control, called through a policy",
      "e.g. the Payment Gateway stand-in, a carrier's dispatch API", "sub", "#f0a8c4"),
 ]
 
@@ -56,7 +56,7 @@ notes = [
     {"x": W / 2, "y": 34, "text": "Event-storming note-type legend: the wall's color grammar",
      "anchor": "middle", "bold": True, "size": 18},
     {"x": W / 2, "y": 60,
-     "text": "in the order a session adds them -- each sticky color named the way the grammar is usually taught, "
+     "text": "in the order a session adds them, each sticky color named the way the grammar is usually taught, "
              "mapped onto this book's house-style box types",
      "anchor": "middle", "size": 12, "color": "#555555"},
 ]
@@ -79,7 +79,7 @@ notes.append({
 })
 notes.append({
     "x": CARD_X, "y": H - 48,
-    "text": "-- the same mapping event-storm-checkout.py (Figure 12.1) already uses.",
+    "text": "The same mapping event-storm-checkout.py (Figure 12.1) already uses.",
     "anchor": "start", "size": 10, "color": "#555555",
 })
 notes.append({

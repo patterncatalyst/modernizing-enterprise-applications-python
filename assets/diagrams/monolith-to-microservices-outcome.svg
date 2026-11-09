@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1560 860" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
 <defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
 <rect x="40" y="70" width="710" height="680" rx="12" fill="#ffffff" stroke="#ddd"/>
-<text x="52" y="90" font-size="12" font-weight="700" fill="#1d1d1d">Django monolith -- one deployable (uv + Python 3.14)</text>
+<text x="52" y="90" font-size="12" font-weight="700" fill="#1d1d1d">Django monolith: one deployable (uv + Python 3.14)</text>
 <rect x="70" y="340" width="640" height="150" rx="12" fill="#fafafa" stroke="#ddd"/>
 <text x="82" y="360" font-size="12" font-weight="700" fill="#1d1d1d">One shared PostgreSQL schema</text>
 <rect x="850" y="70" width="670" height="680" rx="12" fill="#ffffff" stroke="#ddd"/>
@@ -30,10 +30,10 @@
 <text x="390.0" y="439.5" font-size="11.5" fill="#555555" text-anchor="middle">one Django-migrations-managed schema, cross-app foreign keys</text>
 <rect x="870" y="100" width="220" height="160" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="980.0" y="178.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">ASGI strangler proxy</text>
-<text x="980.0" y="195.0" font-size="11.5" fill="#555555" text-anchor="middle">:8888 -- single entry point</text>
+<text x="980.0" y="195.0" font-size="11.5" fill="#555555" text-anchor="middle">:8888, single entry point</text>
 <rect x="870" y="300" width="220" height="160" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
 <text x="980.0" y="378.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Kafka (KRaft)</text>
-<text x="980.0" y="395.0" font-size="11.5" fill="#555555" text-anchor="middle">event backbone -- outbox + saga coordination</text>
+<text x="980.0" y="395.0" font-size="11.5" fill="#555555" text-anchor="middle">event backbone: outbox + saga coordination</text>
 <rect x="1210" y="95" width="280" height="70" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
 <text x="1350.0" y="128.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Review service :8001</text>
 <text x="1350.0" y="145.0" font-size="11.5" fill="#555555" text-anchor="middle">owns review schema</text>
@@ -54,7 +54,7 @@
 <text x="1350.0" y="580.0" font-size="11.5" fill="#555555" text-anchor="middle">owns order schema, CQRS</text>
 <rect x="1210" y="617" width="280" height="70" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="1350.0" y="650.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">GraphQL gateway :8090</text>
-<text x="1350.0" y="667.0" font-size="11.5" fill="#555555" text-anchor="middle">Strawberry -- aggregates, owns no data</text>
+<text x="1350.0" y="667.0" font-size="11.5" fill="#555555" text-anchor="middle">Strawberry: aggregates, owns no data</text>
 <path d="M270.0,147.0 L290.0,147.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
 <path d="M170.0,184.0 L170.0,210.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
 <path d="M170,184 L170,197" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
@@ -80,8 +80,8 @@
 <text x="780.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">the outcome: one deployable, one shared schema -&gt; six owned-data services behind an edge router</text>
 <text x="395" y="58" font-size="14" fill="#555555" text-anchor="middle" font-weight="700">Before</text>
 <text x="1185" y="58" font-size="14" fill="#2f5f3d" text-anchor="middle" font-weight="700">After</text>
-<text x="40" y="844" font-size="10.5" fill="#555555" text-anchor="start">Sourced from _plans/build-plan.md (&quot;A. Approach&quot;), examples/00-monolith/SMELLS.md, and examples/01-strangler-proxy/app/config.py / final-monolith-free-topology.py -- same six services, same ports.</text>
-<text x="395" y="745" font-size="10.5" fill="#555555" text-anchor="middle">review is REST-only -- no synchronous collaborator, outside the checkout transaction</text>
+<text x="40" y="844" font-size="10.5" fill="#555555" text-anchor="start">Sourced from the project build plan, examples/00-monolith/SMELLS.md, and examples/01-strangler-proxy/app/config.py / final-monolith-free-topology.py: same six services, same ports.</text>
+<text x="395" y="745" font-size="10.5" fill="#555555" text-anchor="middle">review is REST-only: no synchronous collaborator, outside the checkout transaction</text>
 <text x="1350" y="745" font-size="10.5" fill="#555555" text-anchor="middle">events: outbox relay (notification, payment, shipping) + saga coordination (order)</text>
 <text x="800" y="370" font-size="12.5" fill="#2f5f3d" text-anchor="middle" font-weight="700">strangler fig,</text>
 <text x="800" y="386" font-size="12.5" fill="#2f5f3d" text-anchor="middle" font-weight="700">one seam at</text>

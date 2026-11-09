@@ -1,11 +1,11 @@
-# AGENTS.md -- 07-order-service
+# AGENTS.md: 07-order-service
 
 Context for an AI agent (or a human) picking this module up.
 
 ## What this is
 
-The r07 **CQRS** extraction of the `order` bounded context -- the LAST
-extraction in this series -- off `../00-monolith` onto a standalone
+The r07 **CQRS** extraction of the `order` bounded context, the LAST
+extraction in this series, off `../00-monolith` onto a standalone
 **FastAPI** service, `:8088`. See `README.md` for the full picture;
 `MIGRATION.md` for the lift-and-reshape write-up (including why this lane
 skips Phase A outright); `EVENTS.md` for the event contracts; `CUTOVER.md`
@@ -13,7 +13,7 @@ for why this lane has no reversible flag of its own.
 
 This service has no monolith original for its read model
 (`order_view`, net-new) and no monolith original for its checkout write path
-(always gRPC-reserve, always choreographed+orchestrated) -- only the GET
+(always gRPC-reserve, always choreographed+orchestrated), only the GET
 contract's field list, the reserve/release gRPC vocabulary, the saga
 status-transition guards' INTENT, and the stable Release idempotency key are
 lifted. Don't go looking for a byte-for-byte Django original beyond those.
@@ -27,7 +27,7 @@ lifted. Don't go looking for a byte-for-byte Django original beyond those.
   **aiokafka 0.14.0**, **grpcio 1.84.0** + **protobuf 7.36.2**. Dev:
   **pytest 9.1.1** + **pytest-asyncio 1.4.0**, **httpx 0.28.1**, **ruff
   0.17.1**, **testcontainers 4.15.0**, **grpcio-tools 1.84.0** (only used to
-  regenerate `app/grpc_gen/` -- see "Regenerating the gRPC stubs" below).
+  regenerate `app/grpc_gen/`: see "Regenerating the gRPC stubs" below).
 
 ## Commands
 
@@ -44,55 +44,55 @@ See `README.md`'s "Commands" section for env var defaults.
 
 ## Structure
 
-- `app/main.py` -- app factory + lifespan (engine/session factory, starts
+- `app/main.py`: app factory + lifespan (engine/session factory, starts
   `OrderSagaConsumer` + `OutboxRelay`), `/health`.
-- `app/routes.py` -- `POST /api/orders`, `GET /api/orders[/{id}]`. Reads call
-  `app/repository.py`'s `order_view`-only functions EXCLUSIVELY -- never
+- `app/routes.py`: `POST /api/orders`, `GET /api/orders[/{id}]`. Reads call
+  `app/repository.py`'s `order_view`-only functions EXCLUSIVELY, never
   import `Order`/`OrderItem` here.
-- `app/service.py` -- `place_order` (the command) + `handle_payment_captured`/
+- `app/service.py`: `place_order` (the command) + `handle_payment_captured`/
   `handle_payment_declined`/`handle_shipment_dispatched`/
   `handle_shipment_failed` (the four reactions) + `rebuild_order_view`. This
   is the ONE module that decides transaction boundaries at the call-site
   level (gRPC calls always happen in their own `async with
   AsyncInventoryClient(...)` block, OUTSIDE any `session_factory()` block).
-- `app/repository.py` -- the ONLY module that touches `app/models.py`'s
+- `app/repository.py`: the ONLY module that touches `app/models.py`'s
   ORM classes directly. Every write function owns its own commit/rollback.
   `create_order_with_outbox_and_view` and `transition_order_status_with_view`
   are the two functions implementing the "aggregate + order_view + (outbox)
-  in one transaction" guarantee -- if you add a new write path, it MUST go
+  in one transaction" guarantee, if you add a new write path, it MUST go
   through one of these two shapes (or a new function following the same
   discipline), never a bare `session.add(Order(...))` from `app/service.py`.
-- `app/inventory_client.py` -- `AsyncInventoryClient`, `grpc.aio`-based.
+- `app/inventory_client.py`: `AsyncInventoryClient`, `grpc.aio`-based.
   Translates `app/grpc_gen/`'s raw proto types into `StockSnapshot`/
   `ReserveResult` dataclasses; never let a raw proto message escape this
   module.
-- `app/consumer.py` -- `OrderSagaConsumer`, one `aiokafka` consumer group,
+- `app/consumer.py`: `OrderSagaConsumer`, one `aiokafka` consumer group,
   four topics, a `_dispatch` method keyed by topic name.
-- `app/relay.py` -- `OutboxRelay`, polls `order_svc.outbox`, publishes
+- `app/relay.py`: `OutboxRelay`, polls `order_svc.outbox`, publishes
   `order.placed`.
-- `app/models.py` -- the 5-table CQRS schema. `SCHEMA = "order_svc"` is
+- `app/models.py`: the 5-table CQRS schema. `SCHEMA = "order_svc"` is
   exported and reused by `migrations/env.py`/`migrations/versions/
-  0001_create_order_schema.py` -- don't hard-code the literal string
+  0001_create_order_schema.py`: don't hard-code the literal string
   `"order_svc"` a second time anywhere; import `SCHEMA`.
-- `app/schemas.py` -- Pydantic v2. `order_view_to_out` is the ONE function
+- `app/schemas.py`: Pydantic v2. `order_view_to_out` is the ONE function
   that bridges `OrderView`'s column names (`order_id`) onto `OrderOut`'s
-  wire field names (`id`) -- route handlers call this, never construct
+  wire field names (`id`), route handlers call this, never construct
   `OrderOut` by hand.
-- `app/grpc_gen/`, `proto/` -- vendored gRPC stubs + the `.proto` contract,
+- `app/grpc_gen/`, `proto/`: vendored gRPC stubs + the `.proto` contract,
   generated from `04-inventory-service/proto/.../inventory.proto` (see
   "Regenerating the gRPC stubs" below). Byte-identical to the canonical copy
-  -- don't hand-edit the `.proto` here; if the contract changes, copy the
+: don't hand-edit the `.proto` here; if the contract changes, copy the
   canonical file over this one and regenerate.
-- `tests/unit/fakes.py` -- `FakeInventoryClient`, a Kafka-free, gRPC-free
+- `tests/unit/fakes.py`: `FakeInventoryClient`, a Kafka-free, gRPC-free
   test double. `install_fake_inventory_client(monkeypatch, fake)` patches
-  `app.service.AsyncInventoryClient` -- the ONLY place `app/service.py`
+  `app.service.AsyncInventoryClient`: the ONLY place `app/service.py`
   constructs the real client, so this one patch covers `place_order` and
   both compensating reactions.
-- `tests/integration/conftest.py` -- `_FakeInventoryServicer`, a REAL
+- `tests/integration/conftest.py`: `_FakeInventoryServicer`, a REAL
   `grpc.aio.server()` bound to an ephemeral localhost port, implementing the
   SAME servicer interface `04-inventory-service/app/grpc_server.py` does.
   Integration tests exercise the real `AsyncInventoryClient` against this
-  real (if minimal) network listener -- not mocked away like the unit-test
+  real (if minimal) network listener, not mocked away like the unit-test
   double.
 
 ## Regenerating the gRPC stubs
@@ -118,16 +118,16 @@ inventory.proto`, and `scripts/check-proto-drift.sh` fails if any of the four
 copies diverge. Run `scripts/gen-proto.sh` after any change to the canonical
 proto, then confirm `scripts/check-proto-drift.sh` exits 0.
 
-## Contract notes (don't "fix" these -- they match the design intent on purpose)
+## Contract notes (don't "fix" these, they match the design intent on purpose)
 
-- `POST /api/orders` returns **`202`**, never `201` -- see `README.md`.
-- Reads are `order_view`-only -- see `app/repository.py`'s module docstring.
-- The schema is `order_svc`, not `order` -- see `app/db.py`'s docstring.
+- `POST /api/orders` returns **`202`**, never `201`, see `README.md`.
+- Reads are `order_view`-only: see `app/repository.py`'s module docstring.
+- The schema is `order_svc`, not `order`, see `app/db.py`'s docstring.
 - `app/service.py`'s four `handle_*` reactions each open a sub-transaction
   for the read-before-release guard, release over gRPC OUTSIDE that
   transaction, then open a SECOND sub-transaction for the atomic
   conditional-UPDATE + `order_view` upsert. Don't try to collapse this into
-  one transaction spanning the gRPC call -- a network call inside an open
+  one transaction spanning the gRPC call, a network call inside an open
   DB transaction holding a row lock is exactly the anti-pattern
   `00-monolith/order/services.py`'s own module docstring (the
   `_place_order_remote`/`_place_order_choreographed` comparison) warns

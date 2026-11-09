@@ -2,7 +2,7 @@
 title: "Deployment Patterns"
 order: 29
 part: "Operating the Modernized System"
-description: "Compose to cluster: a kustomize base/overlay split for the 8-service topology, config-as-data, the real probe and port asymmetries, rolling update and graceful shutdown, and what can be verified without a live cluster."
+description: "Compose to cluster: a kustomize base and overlay for the eight-service topology, config as data, probes that match what each service can answer, zero-downtime rollouts, and what can be verified without a cluster."
 duration: 35 minutes
 ---
 
@@ -10,103 +10,38 @@ duration: 35 minutes
 
 By the end of this chapter you can:
 
-- Explain the two separate moves this chapter makes: containerizing eight processes that previously ran under `docker compose`, and relocating Postgres/Kafka from compose-reachable `localhost` ports into in-cluster StatefulSets, and why they carry different costs.
-- Read a kustomize `base`/`overlays/minikube` tree and explain why this project chose kustomize's patch-a-base model over Helm's templating for a single-target-environment deployment.
-- Distinguish a shared `ConfigMap` (`mea-app-config`) from a per-service `env:` override and a `secretKeyRef`-sourced secret, and trace how a frozen-dataclass `Settings.from_env()` reads whichever value Kubernetes injects with zero code change.
-- Map a service's `GET /health` route to its probe shape: real `httpGet /health` checks for the 6 of 8 services that expose one versus a `tcpSocket` fallback for `inventory-service`'s gRPC-only and `graphql-gateway`'s liveness-only surface.
-- Configure a rolling-update strategy (`maxUnavailable: 0`/`maxSurge: 1`) alongside graceful Kafka-consumer shutdown (a `preStop` sleep plus an extended `terminationGracePeriodSeconds`) to avoid a full rebalance delay.
-- Explain why only the `strangler-proxy` Service is exposed as `NodePort` while every other Service stays `ClusterIP`-only, and how that enforces the strangler fig as the system's one edge router at the Kubernetes layer.
-- State precisely what `kubectl kustomize` plus `kubectl apply --dry-run=client` does and does not verify about a live cluster, and why that boundary is a stated scope limit rather than a gap in rigor.
+- Separate the two moves from Compose to Kubernetes: containerizing eight processes, and relocating Postgres and Kafka into in-cluster StatefulSets.
+- Read a kustomize `base` and `overlays/minikube` tree and say why patching a base beats Helm templating for one target environment.
+- Distinguish a shared `ConfigMap`, a per-service `env:` override and a `secretKeyRef` secret, and see why a frozen-dataclass `Settings.from_env()` needs no code change.
+- Match each probe to what the service can answer: `httpGet /health` for six services, `tcpSocket` for `strangler-proxy` and `review-service`, which have no health route.
+- Configure `maxUnavailable: 0` and `maxSurge: 1` with a `preStop` sleep and a longer `terminationGracePeriodSeconds` so a Kafka consumer leaves its group cleanly.
+- Explain why only `strangler-proxy` is a `NodePort`.
+- State what `kubectl kustomize`, `kubeconform` and `kubectl apply --dry-run=client` do and do not verify without a cluster.
 
 ## Why this matters
 
-Every chapter since ch.14 has run this system through `docker compose`:
-eight Containerfiles, a shared Postgres, a single-broker Kafka, all wired
-together by `compose.yaml` and reached on `localhost`. That has been the
-right tool for building and proving each extraction: fast rebuilds, one
-`docker compose up`, no cluster to manage. It has also been standing in,
-without saying so, for a question none of the first twenty-eight chapters
-had to answer: what does this system look like as a set of *Kubernetes*
-workloads, each with its own rollout, its own health contract, its own
-restart policy, running in a namespace instead of a Compose project? This
-chapter answers that question with `deploy/k8s/`: a kustomize `base` of
-eight Deployment+Service pairs plus two StatefulSets, and a single
-`overlays/minikube` that adapts that base to a local cluster with no
-image registry. It is additive: no application code, no `compose.yaml`
-line, and no CI gate from any earlier chapter changes. This project's
-Python services carry a config model that shapes what the manifests
-actually say.
+Until now the system has run under `docker compose`: eight Containerfiles, a shared Postgres, a single-broker Kafka, all reached on `localhost`. That is the right tool for building and proving each extraction, and it has been hiding a question: what are these services as Kubernetes workloads, each with its own rollout, health contract and restart policy? `deploy/k8s/` answers it with a kustomize `base` of eight Deployment and Service pairs plus two StatefulSets, and one `overlays/minikube` that adapts the base to a local cluster with no image registry. It is additive: no application code, `compose.yaml` line or CI gate changes.
 
-{% include excalidraw.html file="deploy-k8s-namespace-topology" alt="The mea namespace: strangler-proxy as the single NodePort 30888 edge, six bounded-context services plus graphql-gateway's own ClusterIP-only front door, a shared postgres StatefulSet (schema-per-service in app code) and a shared kafka StatefulSet, with order-service and graphql-gateway each a gRPC client of inventory-service" caption="Figure 29.1: The mea namespace: 8 Deployments/Services, 2 StatefulSets, one NodePort edge" %}
+{% include excalidraw.html file="deploy-k8s-namespace-topology" alt="The mea namespace: strangler-proxy as the single NodePort 30888 edge, six bounded-context services plus graphql-gateway's own ClusterIP-only front door, a shared postgres StatefulSet (schema per service, set in app code) and a shared kafka StatefulSet, with order-service and graphql-gateway each a gRPC client of inventory-service" caption="Figure 29.1: The mea namespace: 8 Deployments and Services, 2 StatefulSets, one NodePort edge" %}
 
 ## From compose project to kustomize base
 
-A `docker compose` file and a set of Kubernetes manifests solve overlapping
-problems with different shapes. Compose describes one flat list of
-services on one Docker network; a Deployment describes a desired replica
-count and rollout strategy for one workload, a Service describes a stable
-network identity in front of it, and neither carries an opinion about any
-other workload. `deploy/k8s/base/` makes that translation explicit, one
-file per concern:
+Compose describes one flat list of services on one network. A Deployment describes a replica count and rollout strategy for one workload, and a Service gives it a stable network identity. `deploy/k8s/base/` holds one file per concern:
 
-- `namespace.yaml`: the single `mea` namespace every other resource lives
-  in. Not a namespace per bounded context: this book's topology is one
-  shared Postgres instance with schema-per-service, not one database
-  cluster per context, so a namespace boundary around each service would
-  draw a line this system's real data ownership doesn't draw.
-- `app-config.yaml`: a ConfigMap, `mea-app-config`, carrying every
-  non-secret value that is the *same* across every service that reads it.
-- `app-secret.yaml`: a Secret, `mea-postgres-app`, carrying the one value
-  that isn't safe in a ConfigMap: the Postgres connection string.
-- Eight `*-service.yaml` files, one per service, each a Deployment and a
-  Service in a single manifest: `strangler-proxy.yaml`,
-  `review-service.yaml`, `notification-service.yaml`,
-  `inventory-service.yaml`, `payment-service.yaml`, `shipping-service.yaml`,
-  `order-service.yaml`, `graphql-gateway.yaml`.
-- `infra/postgres-statefulset.yaml` and `infra/kafka-statefulset.yaml`: the
-  shared Postgres and single-broker Kafka, as StatefulSets with their own
-  `PersistentVolumeClaim` per pod, mirroring `compose.yaml`'s own `postgres`
-  and `kafka` services (same images, same tags, same KRaft env block) rather
-  than inventing a different topology for the cluster.
-- `kustomization.yaml`: the manifest that ties the eleven files above into
-  one `kubectl kustomize deploy/k8s/base` render.
+- `namespace.yaml`: the single `mea` namespace. There is one shared Postgres with a schema per service, so a namespace per bounded context would draw a line the data ownership doesn't.
+- `app-config.yaml`: ConfigMap `mea-app-config`, every non-secret value that is the same for all readers.
+- `app-secret.yaml`: Secret `mea-postgres-app`, holding the Postgres connection string.
+- Eight service manifests, each a Deployment and a Service: `strangler-proxy.yaml`, `review-service.yaml`, `notification-service.yaml`, `inventory-service.yaml`, `payment-service.yaml`, `shipping-service.yaml`, `order-service.yaml`, `graphql-gateway.yaml`.
+- `infra/postgres-statefulset.yaml` and `infra/kafka-statefulset.yaml`: the shared Postgres and single-broker Kafka, each with its own `PersistentVolumeClaim`, using the same images, tags and KRaft env block as `compose.yaml`.
+- `kustomization.yaml`: ties the eleven files into one `kubectl kustomize deploy/k8s/base` render.
 
-On top of that base sits exactly one overlay, `overlays/minikube/`, whose
-whole job is environment-specific adaptation that the base should not have
-to know about: retagging every `mea/<svc>` image to a fixed `1.0` instead
-of `latest`, setting `imagePullPolicy: Never` on every app Deployment
-because there is no in-cluster registry to pull from, and patching
-`strangler-proxy`'s Service from `ClusterIP` to `NodePort` so the one
-service meant to be reached from outside the cluster actually is. A
-production overlay, or a CI overlay, or a staging overlay, would sit
-beside `minikube/` as a sibling, patching the same base toward a different
-environment's real constraints (an actual registry, a different replica
-count, a `LoadBalancer` instead of a fixed `NodePort`) without touching a
-single file in `base/`. That is the entire argument for the split: the
-base is the one description of *what this system is*; overlays are each
-description of *what one environment needs to say differently about it*.
+The one overlay, `overlays/minikube/`, holds what the base shouldn't know: it retags every `mea/<svc>` image from `latest` to `1.0`, sets `imagePullPolicy: Never` on every app Deployment because there is no in-cluster registry, and patches `strangler-proxy`'s Service from `ClusterIP` to `NodePort`. A staging or production overlay would sit beside it and patch the same base toward a real registry, another replica count or a `LoadBalancer`, without touching `base/`. The base says what the system is; each overlay says what one environment needs to say differently.
 
-A production-grade alternative considered and set aside here is Helm, the
-tool chosen for this book's OpenShift/CRC appendix instead, where
-templating and a values file earn their complexity for a platform with its
-own operator ecosystem and security-context constraints. For a generic
-Kubernetes target with one environment variant, kustomize's patch-over-base
-model is the simpler, more literal match: every manifest in `base/` is
-still plain, readable YAML, and the overlay is a diff against it, not a
-templating language layered on top. A flat manifest directory with no
-overlay at all was rejected too: it would still work for a single
-environment, but it throws away the one teaching point that matters once a
-second environment exists: specialization belongs in a patch, not in a
-fork of the base files.
+Helm is the tool for the OpenShift appendix, where templating and a values file earn their cost on a platform with its own operators and security constraints. For a generic Kubernetes target with one environment, the patch model is the more literal match: every file in `base/` stays plain YAML and the overlay is a diff against it. A flat directory with no overlay works for one environment but forks the base the moment a second one exists.
 
-## Images: the same Containerfiles, one more consumer
+## Images and security context
 
-`deploy/k8s/` does not add a new build. Every image it deploys is built
-from the same `Containerfile` each service has carried since its own
-extraction chapter: UBI 10's `python-314-minimal` base, a multi-stage
-build that resolves dependencies with `uv sync --locked` before copying
-application code, and a non-root final stage. Every one of those
-Containerfiles ends the same way:
+`deploy/k8s/` adds no build. Each image comes from the service's own `Containerfile`: a UBI 10 `python-314-minimal` base, a multi-stage build that runs `uv sync --locked` before copying application code, and a non-root final stage that ends:
 
 ```
 USER root
@@ -114,13 +49,7 @@ RUN chgrp -R 0 /app && chmod -R g=u /app
 USER 1001:0
 ```
 
-The UBI minimal image ships no `shadow-utils`, so there's no `useradd` to
-reach for; instead, group `0` (root's group, which an arbitrary
-OpenShift-style UID still belongs to) is made the owner of `/app` and given
-the same permissions the file's owner has, and the final `USER 1001:0`
-drops the process to a fixed non-root UID in that group. Every Deployment
-in `base/` carries the matching Kubernetes-side half of that contract in
-its container `securityContext`:
+UBI minimal ships no `shadow-utils`, so there is no `useradd`. Group `0` owns `/app` with the owner's permissions, which an arbitrary OpenShift-style UID still belongs to, and `USER 1001:0` drops to a fixed non-root UID. Every Deployment carries the Kubernetes half of that contract:
 
 ```yaml
 securityContext:
@@ -133,81 +62,20 @@ securityContext:
     type: RuntimeDefault
 ```
 
-`runAsNonRoot: true` makes the kubelet refuse to start the container at all
-if the image's own `USER` directive were ever silently dropped or
-overridden: the Kubernetes-side enforcement of a promise the image already
-keeps, not a second independent promise. The two StatefulSets need their
-own variant of the same idea: the official `postgres:18.6-alpine` image
-owns its data directory as uid `70`, and the `apache/kafka` image runs as
-uid `1000` under a non-numeric username (`appuser`) that `runAsNonRoot`
-can't verify without a numeric UID pinned explicitly, so both StatefulSets
-set `runAsUser` to the image's real UID and an `fsGroup` so the kubelet can
-chown the mounted PVC to a group that UID belongs to, rather than trying to
-force either image onto the app services' own `1001`.
+`runAsNonRoot: true` makes the kubelet refuse to start the container if the image's `USER` is ever dropped. It enforces a promise the image already keeps. The StatefulSets need a variant: the official Postgres image owns its data directory as uid `70`, and the `apache/kafka` image runs as uid `1000` under the non-numeric name `appuser`, which `runAsNonRoot` can't verify. Both set `runAsUser` to the image's real UID and an `fsGroup` so the kubelet can chown the mounted volume.
 
-`overlays/minikube/kustomization.yaml` retags every app image
-`mea/<svc>:latest` to `mea/<svc>:1.0` and sets `imagePullPolicy: Never` on
-every app Deployment. There is no in-cluster registry in this topology:
-`scripts/build-images.sh` builds each image with `docker build` (or
-`podman build`, via `CONTAINER_ENGINE=podman`) directly against the same
-`Containerfile` each service already has, then runs
-`minikube -p mea image load mea/<svc>:1.0` to copy the built image straight
-into the node's container runtime. `imagePullPolicy: Never` turns a missing
-load into `ErrImageNeverPull`, naming exactly what went wrong, instead of
-Kubernetes defaulting to `IfNotPresent` and attempting (and failing) a pull
-from `docker.io/mea/...`, a registry path that was never going to resolve.
+With no registry, `scripts/build-images.sh` builds each image (`docker build`, or `podman build` with `CONTAINER_ENGINE=podman`) and runs `minikube -p mea image load mea/<svc>:1.0` to copy it into the node. A missing load then fails as `ErrImageNeverPull`, which names the problem, instead of Kubernetes falling back to `IfNotPresent` and failing a pull from `docker.io/mea/...`.
 
 ## Config as data: one DATABASE_URL, not six
 
-This project's config model shapes enough of the manifests that
-`app-config.yaml`'s own header comment in this repository spends twenty
-lines on it. One common approach is for each service to build its own
-connection URL with a schema selector (for example a `?currentSchema=...`
-query parameter) baked in, which needs a different ConfigMap key per
-service: one URL string per service, each pointing at the same
-server but a different schema by construction.
+The six DB-backed services (`review-`, `notification-`, `inventory-`, `payment-`, `shipping-` and `order-service`) carry no schema in their connection string. A common alternative bakes a `?currentSchema=...` into each service's URL, which needs one ConfigMap key per service. Here every service reads a single `DATABASE_URL` through its own `app/config.py` and `app/db.py`. The schema is chosen in code: `app/db.py` sets `search_path=<schema>,public` on every connection, and each SQLAlchemy model declares `schema="<schema>"` in `__table_args__`. A different URL would not move a service to another schema, so there is exactly one correct value for all six. It embeds the Postgres credentials, so it lives in `app-secret.yaml` as `database-url`, consumed by each Deployment through `secretKeyRef`, never in the ConfigMap and never typed twice.
 
-This project's six DB-backed services (`review-`, `notification-`,
-`inventory-`, `payment-`, `shipping-`, `order-service`) don't carry a
-schema in their connection string at all. Every one of them reads a single
-environment variable, `DATABASE_URL`, through each service's own
-`app/config.py`/`app/db.py`. Which Postgres *schema* a service writes to is
-decided entirely in that service's own code: `app/db.py` sets
-`search_path=<schema>,public` on every connection it opens, and each
-SQLAlchemy model declares its own `schema="<schema>"` in `__table_args__`.
-Passing a different `DATABASE_URL` to inventory-service would not move it
-to a different schema: there is nothing in the connection string that
-means "schema" to begin with. That has one direct consequence for the
-manifests: there is exactly **one correct value** for `DATABASE_URL`, the
-same one, for all six services. Because that single value already embeds
-the Postgres username and password
-(`postgresql://monolith:monolith@postgres.mea.svc.cluster.local:5432/monolith`),
-it lives in `app-secret.yaml` as the Secret key `database-url`, consumed by
-each Deployment's own `env:` block via `secretKeyRef`, never copied into
-the ConfigMap, never typed twice.
-
-`app-config.yaml` carries everything else that is safe to share and
-the same value for every consumer: the Kafka bootstrap address,
-the six topic names (`ORDER_PLACED_TOPIC`, `PAYMENT_CAPTURED_TOPIC`,
-`PAYMENT_DECLINED_TOPIC`, `PAYMENT_REFUNDED_TOPIC`,
-`SHIPMENT_DISPATCHED_TOPIC`, `SHIPMENT_FAILED_TOPIC`), inventory-service's
-gRPC target (`INVENTORY_GRPC_TARGET`, read by both order-service and
-graphql-gateway as gRPC clients), the strangler's six fixed
-`STRANGLER_*_BASE_URL` backend targets, and graphql-gateway's four REST
-targets. What is *not* in that ConfigMap, by design, is any key whose
-correct value differs by service even though the variable name is
-identical across services: `HTTP_PORT` (or, on notification-service only,
-`PORT`, the one place this project's env-var naming isn't uniform),
-`GRPC_PORT`, and `CONSUMER_GROUP`. A shared `HTTP_PORT: "8085"` key would
-force every service that reads `HTTP_PORT` onto port `8085`, which is
-wrong by construction for seven of the eight services that don't use that
-port. Each of those keys is set directly in its own Deployment's `env:`
-block instead, right next to the matching `containerPort`.
+`app-config.yaml` carries what is safe and identical for every consumer: the Kafka bootstrap address, the six topic names (`ORDER_PLACED_TOPIC`, `PAYMENT_CAPTURED_TOPIC`, `PAYMENT_DECLINED_TOPIC`, `PAYMENT_REFUNDED_TOPIC`, `SHIPMENT_DISPATCHED_TOPIC`, `SHIPMENT_FAILED_TOPIC`), `INVENTORY_GRPC_TARGET` for the two gRPC clients, the strangler's six `STRANGLER_*_BASE_URL` targets and the gateway's four REST targets. It omits keys whose name is shared but whose value differs: `HTTP_PORT` (`PORT` on notification-service, the one inconsistent name), `GRPC_PORT` and `CONSUMER_GROUP`. A shared `HTTP_PORT: "8085"` would be wrong for seven of the eight services. Those keys sit in each Deployment's own `env:` block next to the matching `containerPort`.
 
 {% include codetabs.html langs="deploy/k8s/base/order-service.yaml: Deployment + Service|deploy/k8s/overlays/minikube/kustomization.yaml: images, NodePort, imagePullPolicy" %}
 
 ```yaml
-# deploy/k8s/base/order-service.yaml (abbreviated — full file carries header
+# deploy/k8s/base/order-service.yaml (abbreviated; full file carries header
 # comments on the saga fan-in and the schema-per-service story)
 spec:
   template:
@@ -269,22 +137,11 @@ patches:
         value: Never
 ```
 
-`order-service` is the one manifest in `base/` that uses both delivery
-mechanisms side by side: `envFrom` for the whole shared ConfigMap, and a
-per-service `env:` block layered on top for the three keys that can't be
-shared plus the one secret key that must never sit in a ConfigMap at all.
-That combination, `envFrom` plus a short `env:` override list, is the
-same pattern every one of the eight service manifests follows, with the
-`env:` list's contents being exactly whichever keys that particular
-service's own `app/config.py` needs that aren't safe to broadcast.
+Every service manifest follows the `order-service` shape: `envFrom` for the shared ConfigMap, then a short `env:` list for the keys that can't be shared and the one secret.
 
-## Liveness and readiness: an asymmetry worth keeping
+## Probes that match the service
 
-Every probe in `base/` matches what the service underneath it can actually
-answer, rather than a single convention copied onto all eight. Six of the
-eight services, `notification-`, `inventory-`, `payment-`, `shipping-`,
-`order-service`, and `graphql-gateway`, carry a `GET /health` route in
-`app/main.py`, so their Deployments probe it with `httpGet`:
+Each probe asks what its service can actually answer. Six services (`notification-`, `inventory-`, `payment-`, `shipping-`, `order-service` and `graphql-gateway`) have a `GET /health` route in `app/main.py` and probe it with `httpGet`:
 
 ```yaml
 livenessProbe:
@@ -296,17 +153,7 @@ livenessProbe:
   failureThreshold: 3
 ```
 
-`strangler-proxy` and `review-service` have no such route. `strangler-proxy`
-is a Starlette app with exactly one responsibility, proxy an inbound
-request to the owning backend, and never grew a health endpoint of its
-own across twelve chapters of extractions. `review-service`, the very first
-extraction, kept the monolith's shared Postgres schema instead of taking
-on a database of its own, and its `app/main.py` likewise never added a
-`/health` route. Giving either of them an `httpGet` probe against a path
-that returns `404` would make every readiness check fail permanently,
-which is a worse outcome than the alternative that reflects what each
-service can actually answer: both Deployments
-probe with `tcpSocket` on the HTTP port instead.
+`strangler-proxy` and `review-service` have no such route. The proxy is a Starlette app with one job, forwarding to the owning backend. `review-service`, the first extraction, kept the monolith's shared schema and never added one. An `httpGet` against a path that returns `404` would fail readiness permanently, so both probe the HTTP port with `tcpSocket`:
 
 ```yaml
 readinessProbe:
@@ -317,43 +164,15 @@ readinessProbe:
   failureThreshold: 3
 ```
 
-A `tcpSocket` probe answers a narrower question than `httpGet
-/health` does: "is something listening on this port" rather than "is the
-application layer able to serve a request", and that narrower answer is
-the right one here precisely because it's the only one either service can
-actually give. Writing a decorative `/health` route purely so the
-Deployment could use `httpGet` like its six siblings would manufacture a
-signal with no content behind it; `deploy/k8s/README.md` keeps this table
-next to the manifests specifically so the asymmetry reads as a fact about
-the running services, not an inconsistency in the manifests themselves.
+`tcpSocket` asks whether something is listening, not whether the application can serve, and that is the only answer these two services can give. A decorative `/health` route written so they match their siblings would be a signal with nothing behind it. `deploy/k8s/README.md` keeps the probe table next to the manifests so the asymmetry reads as a fact about the services.
 
-`inventory-service`'s `httpGet /health` carries one more piece of
-information than the others: its JSON body reports
-`grpcServerListening` once the service's separate gRPC server has bound
-`:9004`, alongside the HTTP server on `:8084`. One probe, on the HTTP port,
-covers readiness for both surfaces becoming available together, because
-both are started from the same process in the same `uvicorn` startup
-sequence. `graphql-gateway`'s `/health` is liveness-only by design: its
-own module docstring is explicit that it never probes a
-downstream REST or gRPC dependency, so an outage in order-service or
-payment-service fails the one GraphQL field that depends on it, not this
-gateway's own readiness.
+Two `/health` routes carry extra meaning. `inventory-service` reports `grpcServerListening` once its gRPC server has bound `:9004` next to HTTP on `:8084`; both start in one `uvicorn` startup, so one probe on the HTTP port covers both. `graphql-gateway`'s `/health` is liveness-only: it never probes a downstream, so an outage in order-service or payment-service fails the one GraphQL field that depends on it, not the gateway's readiness.
 
-## Resources, rolling updates, and graceful shutdown
+## Resources, rolling updates and graceful shutdown
 
-Every Deployment sets `resources.requests`/`limits` sized to what that
-service actually does rather than one blanket number: `strangler-proxy`
-and `graphql-gateway`, which hold no database connection pool and no Kafka
-client, request `50m`/`128Mi` and `75m`/`192Mi` respectively; `order-service`,
-which runs a 5-table CQRS write/read model plus an outbox relay plus a
-four-topic saga consumer, requests `150m`/`320Mi`, the highest of the
-eight. The two StatefulSets scale further still: `postgres` at
-`250m`/`512Mi` requests and `1000m`/`1Gi` limits, `kafka` at
-`250m`/`768Mi` requests and `1000m`/`1Gi` limits, because they are shared
-infrastructure every other workload depends on, not one bounded context's
-own process.
+Requests and limits follow what each service does. `strangler-proxy` and `graphql-gateway` hold no connection pool or Kafka client and request `50m`/`128Mi` and `75m`/`192Mi`. `order-service` runs a five-table CQRS model, an outbox relay and a four-topic saga consumer, and requests `150m`/`320Mi`, the highest of the eight. The StatefulSets are shared infrastructure: `postgres` requests `250m`/`512Mi` with limits `1000m`/`1Gi`, and `kafka` requests `250m`/`768Mi` with the same limits.
 
-Every app Deployment uses the same rolling-update shape:
+Every app Deployment rolls the same way:
 
 ```yaml
 strategy:
@@ -363,22 +182,9 @@ strategy:
     maxSurge: 1
 ```
 
-`maxUnavailable: 0` means a rollout never takes the last ready replica of a
-service out of rotation before a new one is confirmed ready to take over;
-with every service at `replicas: 1` in this topology, that is what keeps a
-deploy from producing a visible gap in availability at all. `maxSurge: 1`
-is what makes that possible: the new pod starts *alongside* the old one,
-passes its own startup and readiness probes, and only then does Kubernetes
-terminate the old one.
+With every service at `replicas: 1`, `maxUnavailable: 0` keeps the last ready replica in rotation until its replacement is ready, so a deploy leaves no gap. `maxSurge: 1` makes that possible: the new pod starts beside the old one, passes its probes, and only then does Kubernetes terminate the old one.
 
-Terminating the old one is where `terminationGracePeriodSeconds` and the
-pod's `preStop` hook matter, and where the eight services differ most.
-Most of them default to Kubernetes' own `30`s or set a shorter `10`s
-(`strangler-proxy`, `review-service`, `graphql-gateway`: none holds a
-Kafka consumer group membership or an in-flight background task worth
-waiting on). `order-service` sets the widest grace period in this
-topology, `60`s, with a `preStop` hook that sleeps 15 seconds before
-`SIGTERM` is even delivered:
+Termination is where the services differ. `strangler-proxy`, `review-service` and `graphql-gateway` hold no consumer-group membership or background task, and use the default `30`s or a shorter `10`s. `order-service` has the widest fan-in: one consumer group subscribed to four topics (`payment.captured`, `payment.declined`, `shipment.dispatched`, `shipment.failed`) plus an outbox relay publishing `order.placed`. It sets `terminationGracePeriodSeconds: 60` and a `preStop` hook that sleeps 15 seconds before `SIGTERM` is delivered:
 
 ```yaml
 terminationGracePeriodSeconds: 60
@@ -388,180 +194,88 @@ lifecycle:
       command: ["sh", "-c", "sleep 15"]
 ```
 
-`order-service` is the widest fan-in of any service in this topology: one
-Kafka consumer group (`app/consumer.py::OrderSagaConsumer`) subscribed to
-*four* inbound topics at once, `payment.captured`, `payment.declined`,
-`shipment.dispatched`, `shipment.failed`, the same four topics the
-monolith's own `order_saga_listener` used to consume in one group, plus its
-own outbox relay publishing `order.placed` outbound. A rolling update that
-sends `SIGTERM` to that process the instant the new pod is marked ready
-risks a consumer-group rebalance storm: the old member leaves mid-poll, the
-broker reassigns its four topic-partitions before the new member has
-finished its own startup sequence, and the group churns through an extra
-rebalance it didn't need to. The 15-second `preStop` sleep buys the
-consumer loop time to notice the pod is terminating, commit its offsets,
-and leave the group cleanly through Kafka's own `LeaveGroup` protocol
-*before* `SIGTERM` reaches the process at all; the 60-second total grace
-period is there so the kubelet doesn't force-kill the container partway
-through that sequence.
+Without the sleep, `SIGTERM` reaches the old pod as soon as the new one is ready. The old member leaves mid-poll, the broker reassigns its four topic-partitions before the new member has finished starting, and the group churns through an extra rebalance. The sleep gives the consumer loop time to commit offsets and leave through Kafka's `LeaveGroup`, and the 60 seconds keep the kubelet from killing the container partway through.
 
 ## The strangler as the one front door
 
-`strangler-proxy` is the only Service in this entire namespace patched to
-`NodePort` in the minikube overlay. Every other Service, the six bounded
-contexts, `graphql-gateway`, `postgres`, `kafka`, stays `ClusterIP`,
-reachable only from inside the cluster. That isn't an oversight; it's the
-topology this book has been building toward since ch.14: one flagless edge
-router, with nothing left to fall back to, is the single path a client
-outside the cluster is meant to use. `graphql-gateway` is the one
-planned exception to "everything goes through the proxy": it has
-always been, since ch.26, its own front door, never routed through
-`strangler-proxy`, but "its own front door" means `ClusterIP`-only here,
-not a second `NodePort`. Reaching it from outside the cluster in this
-topology means `kubectl -n mea port-forward svc/graphql-gateway 8090:8090`,
-the same local-only path an operator would use for any other internal
-Service that has no reason to be dialed directly from outside.
+`strangler-proxy` is the only Service patched to `NodePort`. The six bounded contexts, `graphql-gateway`, `postgres` and `kafka` stay `ClusterIP`, reachable only inside the cluster. With the monolith flag-free and nothing left to fall back to, the proxy is the one path an outside client uses. `graphql-gateway` is the planned exception to "everything goes through the proxy": it has always been its own front door, but here that means `ClusterIP` only. From outside the cluster it is reached with `kubectl -n mea port-forward svc/graphql-gateway 8090:8090`, as for any internal Service.
 
-## Shared Postgres and Kafka, in-cluster
+## Shared Postgres and Kafka in the cluster
 
-`infra/postgres-statefulset.yaml` and `infra/kafka-statefulset.yaml` bring
-the same two pieces of shared infrastructure `compose.yaml` has run since
-ch.1 into the cluster as StatefulSets: a headless Service plus one pod
-with its own `PersistentVolumeClaim`, so data survives a pod restart the
-way a Docker named volume already does for Compose. Postgres keeps the
-exact same `wal_level=logical`, `max_replication_slots=4`, and
-`max_wal_senders=4` flags `compose.yaml`'s own `command:` sets, inherited
-from the now-closed ch.19 CDC transition window and kept here even though
-no Kafka Connect/Debezium deployment exists in this manifest-only
-topology, so a future Connect deployment would never need a Postgres
-restart to turn logical replication on. Those flags are passed as `args`,
-not `command`: in Kubernetes, `command` replaces the image's own
-`ENTRYPOINT` outright, which would skip `docker-entrypoint.sh`'s own
-`initdb`/`POSTGRES_*` handling entirely; `args` keeps that entrypoint
-intact and only appends flags to the `postgres` process it eventually
-execs.
+Each StatefulSet is a headless Service plus one pod with its own `PersistentVolumeClaim`, so data survives a restart the way a Docker named volume does under Compose. Postgres keeps the `wal_level=logical`, `max_replication_slots=4` and `max_wal_senders=4` flags from `compose.yaml`, left over from the change-data-capture transition. No Kafka Connect or Debezium deployment exists here, but a future one would need no Postgres restart. The flags go in `args`, not `command`: `command` replaces the image's `ENTRYPOINT` and skips `docker-entrypoint.sh`'s `initdb` and `POSTGRES_*` handling, while `args` only appends flags to the `postgres` process it execs.
 
-Kafka runs as a single-broker, KRaft-mode cluster, no ZooKeeper, mirroring
-`compose.yaml`'s own `kafka` service down to the image tag
-(`apache/kafka:4.3.1`) and the broker+controller-combined-role
-environment block. Two details change only because a Kubernetes
-StatefulSet has one network, not Compose's host-versus-container-network
-split: a single `PLAINTEXT` listener serves every client the same way
-(there's no separate `DOCKER:9094` listener to carry), and
-`KAFKA_ADVERTISED_LISTENERS`/`KAFKA_CONTROLLER_QUORUM_VOTERS` point at
-Kubernetes DNS names instead of `compose.yaml`'s `localhost`/`kafka`
-aliases. The headless Service backing it sets
-`publishNotReadyAddresses: true` for a reason specific to a single-node
-KRaft cluster: that Service would otherwise only publish DNS for *ready*
-endpoints, but the one broker must resolve its own controller address
-(`kafka-0.kafka.mea.svc.cluster.local`) to become ready in the first
-place; without that flag, the broker would deadlock waiting on a DNS
-record that can't exist until the broker itself is marked ready.
+Kafka is a single-broker KRaft cluster with no ZooKeeper, mirroring `compose.yaml` down to the `apache/kafka:4.3.1` tag and the combined broker and controller role. A Kubernetes StatefulSet has one network, so a single `PLAINTEXT` listener serves every client, and `KAFKA_ADVERTISED_LISTENERS` and `KAFKA_CONTROLLER_QUORUM_VOTERS` use Kubernetes DNS names. The headless Service sets `publishNotReadyAddresses: true`: by default it would publish DNS only for ready endpoints, but the single broker must resolve its own controller address (`kafka-0.kafka.mea.svc.cluster.local`) to become ready, so without the flag it waits forever on a record that can't exist yet.
 
-Schema creation is simple here. Each Python service's own Alembic migration
-already issues
-its own `CREATE SCHEMA IF NOT EXISTS` as part of `alembic upgrade head`,
-which runs as every service's own container startup command: there is no
-separate schema-bootstrap ConfigMap. `review-service` is the one exception, and it needs a
-dedicated bootstrap step of its own.
+Schema creation needs no bootstrap ConfigMap. Each service's Alembic migration issues its own `CREATE SCHEMA IF NOT EXISTS` as part of `alembic upgrade head`, which is every container's startup command. `review-service` is the exception.
 
-## review-service's bootstrap: a one-time dependency on the frozen monolith
+## review-service's bootstrap
 
-`review-service` runs no Alembic migration: its `app/db.py` sets no
-`search_path` override at all, because it was never meant to own a schema.
-It reads and writes the monolith's original shared `public` schema
-(`reviews`, plus read-only lookups into `customers`, `inventory_items`,
-`auth_user`), the same schema `examples/00-monolith` has always owned. That
-schema has to exist and be seeded before `review-service` can serve a
-single request, and nothing in this eight-service topology creates it:
-the monolith itself has no Deployment here; it is frozen, and
-`deploy/k8s/README.md` is explicit that it stays that way.
+`review-service` runs no Alembic migration. Its `app/db.py` sets no `search_path` because it never owned a schema: it reads and writes the monolith's original `public` schema (`reviews`, plus read-only lookups into `customers`, `inventory_items` and `auth_user`). That schema must exist and be seeded before the service can answer a request, and nothing in the eight-service topology creates it, because the monolith has no Deployment here.
 
-`scripts/deploy.sh` closes that gap with a one-time bootstrap step, run
-once per fresh Postgres volume: it opens a temporary
-`kubectl port-forward` to the in-cluster `postgres` Service, then runs the
-monolith's own `manage.py migrate` and `manage.py seed` against that
-forwarded port with `DATABASE_URL` pointed at `127.0.0.1`, exactly the
-one-time local setup step `examples/02-review-service/README.md` already
-documents for a bare local Postgres, aimed at the cluster's Postgres
-instead of a developer's own. The script checks
-`to_regclass('public.reviews')` first and skips the whole step if the
-schema is already present, so re-running `deploy.sh` against an existing
-volume is a no-op rather than a second, redundant seed attempt. Every
-other service's own migration runs automatically, every time its container
-starts; `review-service`'s dependency on the monolith's migration tooling
-is the one manual step left in this topology, and it exists
-because of a data-ownership decision made back in ch.15, not because of
-anything particular to Kubernetes.
+`scripts/deploy.sh` closes the gap once per fresh Postgres volume. It opens a temporary `kubectl port-forward` to the `postgres` Service, then runs the monolith's `manage.py migrate` and `manage.py seed` against it with `DATABASE_URL` pointed at `127.0.0.1`. It checks `to_regclass('public.reviews')` first and skips the step if the schema exists, so re-running against an existing volume is a no-op. This is the one manual dependency left, and it comes from the data-ownership decision made at the review extraction, not from Kubernetes.
 
 ## Verifying without a cluster
 
-None of this chapter's claims about manifest correctness depend on a
-reachable Kubernetes apiserver, and it's precise to say exactly
-how far that goes, because three different commands cover three different
-amounts of ground:
+Three commands cover three different amounts of ground:
 
 ```sh
-# Pure client-side templating -- no cluster, no network call at all:
+# Pure client-side templating (no cluster, no network call at all):
 kubectl kustomize deploy/k8s/base
 kubectl kustomize deploy/k8s/overlays/minikube
 
 # Offline schema validation against the upstream Kubernetes OpenAPI
-# schemas -- no cluster, no call to a live apiserver:
-kubectl kustomize deploy/k8s/overlays/minikube | kubeconform -strict -summary
+# schemas (no cluster, no call to a live apiserver):
+kubectl kustomize deploy/k8s/overlays/minikube | kubeconform -strict -ignore-missing-schemas -summary
 
-# Client-side structural validation -- needs apiserver DISCOVERY first:
+# Client-side structural validation (needs apiserver discovery first):
 kubectl kustomize deploy/k8s/base | kubectl apply --dry-run=client -f -
 ```
 
-`kubectl kustomize` resolves every patch and image retag in `base/` and
-`overlays/minikube/` and prints the fully rendered manifests, a pure
-templating step with no cluster involved anywhere. `kubeconform -strict`
-takes that rendered output and checks every object's shape against the
-upstream Kubernetes OpenAPI schemas, entirely offline, catching the class
-of error `kubectl kustomize` itself can't: a missing required field, a
-value of the wrong type, or (under `-strict`) a field Kubernetes doesn't
-recognize at all. Both of those run with no network reachability
-requirement whatsoever, which is exactly why they are the two checks this
-project's CI gate (`deploy-manifests.yml`) runs on every change to this
-tree.
+| Command | Needs an apiserver | Catches |
+| --- | --- | --- |
+| `kubectl kustomize` | No | patches or image retags that don't resolve |
+| `kubeconform -strict` | No | missing required fields, wrong types, unknown fields |
+| `kubectl apply --dry-run=client` | Yes, for discovery | kinds that don't map to a REST resource, once a cluster is reachable |
 
-`kubectl apply --dry-run=client` sits one step further out. Before it can
-validate anything, it needs a RESTMapping discovery step, resolving each
-manifest's `kind` to a concrete REST resource, and that discovery call
-goes to a real apiserver (a running `minikube`/`kind` cluster, or a cached
-discovery document left over from a previous connection to one). Run it
-with no reachable apiserver at all and it fails at that discovery step,
-with a connection error, before manifest validation has even started; it
-is a different kind of check from `kubeconform`, not a stricter
-version of the same one, and the two aren't interchangeable.
+`kubectl kustomize` and `kubeconform` need no network, which is why CI (`deploy-manifests.yml`) runs those two on every change to the tree. `--dry-run=client` first resolves each manifest's `kind` to a REST resource, and that discovery call goes to a real apiserver, a running `minikube` or `kind`, or a cached discovery document from an earlier connection. With none reachable it fails at discovery with a connection error before validating anything. It is a different check from `kubeconform`, not a stricter one.
 
-None of the three touches **server-side** dry-run, real admission control,
-or webhook evaluation, the checks that would catch a `PersistentVolumeClaim`
-that can't actually bind on a given storage class, an `ImagePullBackOff`
-that only shows up once the kubelet tries to honor `imagePullPolicy:
-Never` against an image that was never loaded, or a `PodSecurity` admission
-rule rejecting the `securityContext` block this chapter spent a section
-describing. Those require a cluster that is actually running, and in this
-topology that means the live minikube path `scripts/` documents:
-`setup-profile.sh`, `build-images.sh`, `deploy.sh`, `teardown.sh`, which
-is user-runnable today but isn't wired into any CI gate at this point in
-the book. ch.30 picks that thread back up once Istio and the LGTM
-observability stack land on top of this same base, on a cluster that is
-actually up.
+None of the three runs server-side dry-run, admission control or webhooks. Those catch a `PersistentVolumeClaim` that can't bind on a storage class, an `ImagePullBackOff` from an image that was never loaded under `imagePullPolicy: Never`, or `PodSecurity` admission rejecting the `securityContext` block. They need a running cluster, which means the live path in `scripts/`: `setup-profile.sh`, `build-images.sh`, `deploy.sh` and `teardown.sh`. That path is user-runnable but not wired into CI.
 
-> **ADLC in Action**: This chapter's probe table could have been written
-> by assuming a uniform `httpGet /health` convention across
-> all eight services and calling it done. Confirming whether that convention
-> actually held here meant
-> opening `examples/01-strangler-proxy/app/main.py` and
-> `examples/02-review-service/app/main.py` directly rather than assuming
-> symmetry with the other six services' `app/main.py` files, and finding,
-> in both, no `/health` route of any kind. The same discipline applied to
-> the config model: drafting this chapter from an assumed manifest shape
-> alone would have produced six per-service connection-URL ConfigMap keys that
-> don't correspond to anything in this project's actual `app/db.py` files.
-> Reading `app-config.yaml`'s own header comment first, and then the six
-> services' `search_path` logic it describes, is what kept this chapter's
-> "one `DATABASE_URL`" claim grounded in code instead of in an assumed
-> pattern.
+> **ADLC in Action**
+>
+> The probe table could have been written by assuming a uniform `httpGet /health` and moving on. Checking meant opening `examples/01-strangler-proxy/app/main.py` and `examples/02-review-service/app/main.py` and finding no health route in either. The same discipline applied to config: drafting from an assumed manifest shape would have produced six per-service connection-URL keys that match nothing in the services' `app/db.py` files. Reading `app-config.yaml`'s header comment, then the `search_path` logic it describes, kept the single `DATABASE_URL` claim grounded in code.
+
+> **Decision**
+>
+> Put what is the same everywhere in the base, what differs per environment in an overlay, and what differs per service in that service's own `env:`. Probe only what a service can answer. Give a Kafka consumer a `preStop` sleep and a grace period long enough to leave its group before `SIGTERM`.
+
+> **🤖 Explore with your agent**
+>
+> "Review deploy/k8s/base for the eight services against the probe and rollout rules: list each service's liveness and readiness probe type and whether its app/main.py actually serves /health, flag any Kafka consumer (notification-service, payment-service, shipping-service, order-service) without a preStop sleep and a terminationGracePeriodSeconds above it, and propose the patch without changing any application code."
+>
+> Check: run `kubectl kustomize deploy/k8s/base | kubeconform -strict -summary` and confirm it reports 23 resources valid and none invalid.
+
+## Build, run, observe
+
+Render and validate without a cluster:
+
+```sh
+kubectl kustomize deploy/k8s/base | kubeconform -strict -summary
+```
+
+The base renders 23 resources, all valid. The minikube overlay now also composes the Istio and observability trees, whose Istio custom resources have no published schema, so CI validates it with `kubeconform -strict -ignore-missing-schemas`.
+
+To run it, `deploy/k8s/scripts/` takes a fresh machine to a live `mea` namespace on minikube (docker driver, containerd runtime):
+
+```sh
+deploy/k8s/scripts/setup-profile.sh   # creates the mea profile, publishes NodePort 30888
+deploy/k8s/scripts/build-images.sh    # builds and loads mea/<svc>:1.0 into the node
+deploy/k8s/scripts/deploy.sh          # applies the overlay, bootstraps review-service's schema
+deploy/k8s/scripts/teardown.sh
+```
+
+The strangler-proxy edge answers on `127.0.0.1:30888`.
+
+- **Skip `build-images.sh`:** pods stay in `ErrImageNeverPull`, which names the missing image.
+- **Point `review-service` at a probe path of `/health`:** readiness fails permanently, because it has no such route.
+- **Run `kubectl apply --dry-run=client` with no cluster reachable:** it fails at discovery with a connection error, while `kubeconform` passes.
