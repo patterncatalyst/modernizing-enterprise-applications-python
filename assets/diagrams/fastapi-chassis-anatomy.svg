@@ -7,11 +7,11 @@
 <rect x="60" y="110" width="300" height="110" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="210.0" y="155.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">config.py: frozen @dataclass Settings</text>
 <text x="210.0" y="172.5" font-size="11.5" fill="#555555" text-anchor="middle">Settings.from_env() reads os.environ</text>
-<text x="210.0" y="187.5" font-size="11.5" fill="#555555" text-anchor="middle">at call time -- 7 of 8 services</text>
+<text x="210.0" y="187.5" font-size="11.5" fill="#555555" text-anchor="middle">at call time: 7 of 8 services</text>
 <rect x="400" y="110" width="300" height="110" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="550.0" y="155.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">_configure_logging()</text>
 <text x="550.0" y="172.5" font-size="11.5" fill="#555555" text-anchor="middle">stdlib logging.handlers.RotatingFileHandler</text>
-<text x="550.0" y="187.5" font-size="11.5" fill="#555555" text-anchor="middle">logs/&lt;service&gt;.log + console -- all 8</text>
+<text x="550.0" y="187.5" font-size="11.5" fill="#555555" text-anchor="middle">logs/&lt;service&gt;.log + console: all 8</text>
 <rect x="740" y="110" width="300" height="110" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="890.0" y="155.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">@asynccontextmanager lifespan()</text>
 <text x="890.0" y="172.5" font-size="11.5" fill="#555555" text-anchor="middle">wires db engine, starts owned</text>
@@ -27,15 +27,15 @@
 <rect x="720" y="300" width="320" height="110" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="880.0" y="345.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Containerfile</text>
 <text x="880.0" y="362.5" font-size="11.5" fill="#555555" text-anchor="middle">UBI-based image build</text>
-<text x="880.0" y="377.5" font-size="11.5" fill="#555555" text-anchor="middle">8 of 8 -- every service ships one</text>
+<text x="880.0" y="377.5" font-size="11.5" fill="#555555" text-anchor="middle">8 of 8: every service ships one</text>
 <rect x="60" y="490" width="460" height="120" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
 <text x="290.0" y="540.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">tenacity retry + exponential backoff</text>
 <text x="290.0" y="557.5" font-size="11.5" fill="#555555" text-anchor="middle">examples/06-shipping-service/app/enrich_client.py</text>
-<text x="290.0" y="572.5" font-size="11.5" fill="#555555" text-anchor="middle">ONE call site, ONE service -- not a shared wrapper</text>
+<text x="290.0" y="572.5" font-size="11.5" fill="#555555" text-anchor="middle">ONE call site, ONE service, not a shared wrapper</text>
 <rect x="560" y="490" width="480" height="120" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
 <text x="800.0" y="540.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">DEFERRED: OpenTelemetry/Prometheus,</text>
 <text x="800.0" y="557.5" font-size="11.5" fill="#555555" text-anchor="middle">pybreaker circuit breaker, bulkhead isolation,</text>
-<text x="800.0" y="572.5" font-size="11.5" fill="#555555" text-anchor="middle">a shared chassis library -- named, not built</text>
+<text x="800.0" y="572.5" font-size="11.5" fill="#555555" text-anchor="middle">a shared chassis library: named, not built</text>
 <path d="M593.3333333333334,50.0 L360.0,120.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <path d="M643.7037037037037,50.0 L594.8148148148148,110.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <path d="M694.074074074074,50.0 L796.2962962962963,110.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
@@ -56,5 +56,5 @@
 <text x="546.0" y="544.0" font-size="11" fill="#555" text-anchor="middle">not yet justified</text>
 <text x="660.0" y="30" font-size="14" fill="#1d1d1d" text-anchor="middle" font-weight="700">the chassis is convention, not a framework feature: every box above is code someone wrote, not a dependency someone added</text>
 <text x="40" y="720" font-size="11" fill="#555555" text-anchor="start">Config and logging are the floor every service shares identically; health, errors, and resilience are opt-in and partial by actual count, not by oversight.</text>
-<text x="40" y="738" font-size="11" fill="#555555" text-anchor="start">No service imports a shared chassis package -- each file above is copied and adapted per service, the same convention repeated eight times.</text>
+<text x="40" y="738" font-size="11" fill="#555555" text-anchor="start">No service imports a shared chassis package, each file above is copied and adapted per service, the same convention repeated eight times.</text>
 </svg>

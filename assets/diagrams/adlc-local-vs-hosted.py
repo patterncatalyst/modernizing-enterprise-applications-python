@@ -7,7 +7,7 @@ and a "hosted" path (hosted AI platform + GitHub Actions CI, running the
 same `code-ci.yml` gates), side by side. Steps 1, 6, 7, 8 are
 shared/common; steps 2-5 branch into the two paths and converge again.
 
-Sourced from `_plans/build-plan.md` ("A. Approach" -- toolchain) and
+Sourced from `_plans/build-plan.md` ("A. Approach", toolchain) and
 `.github/workflows/code-ci.yml`'s own existence as the hosted equivalent of
 a local `uv run pytest` run.
 """

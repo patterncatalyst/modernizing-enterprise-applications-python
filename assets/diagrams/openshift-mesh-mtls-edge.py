@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.33 figure: openshift-mesh-mtls-edge -- the opt-in platform tier once
+"""ch.33 figure: openshift-mesh-mtls-edge, the opt-in platform tier once
 `openshift/platform/install-mesh.sh` has run: OSSM 3 (Sail) injects
 `istio-proxy` by the `istio.io/rev: default` pod-template LABEL (NOT the
 classic `sidecar.istio.io/inject` annotation the minikube path uses --
@@ -7,7 +7,7 @@ Sail's revisioned webhook ignores that annotation entirely, DRQ-109). A
 namespace-wide `PeerAuthentication` named `default` sets STRICT; a second,
 workload-scoped `PeerAuthentication` per Route-facing service
 (`<name>-edge`) sets PERMISSIVE, because the OpenShift router is not a mesh
-member and OSSM 3 provisions no ingress gateway of its own here -- the
+member and OSSM 3 provisions no ingress gateway of its own here, the
 Route IS the edge (DRQ-106/109). Kiali has no cluster Prometheus to read on
 CRC, so it points at otel-lgtm's own bundled Prometheus instead
 (install-observability.sh's 4/4 step).
@@ -27,12 +27,12 @@ g.OUT = os.path.dirname(__file__)
 W, H = 1540, 820
 
 band = {"x": 230, "y": 40, "w": 1280, "h": 660, "fill": "#fafafa",
-        "label": "project: mea -- OSSM 3 (Sail), Istio v1.30.5, mesh.enabled=true"}
+        "label": "project: mea, OSSM 3 (Sail), Istio v1.30.5, mesh.enabled=true"}
 
-client = node(30, 330, 170, 80, ["Client", "no sidecar -- plain HTTPS"], style="box")
+client = node(30, 330, 170, 80, ["Client", "no sidecar: plain HTTPS"], style="box")
 
 route_note = node(30, 460, 170, 80,
-                   ["OSSM provisions no", "ingress gateway here --", "the Route IS the edge"],
+                   ["OSSM provisions no", "ingress gateway here,", "the Route is the edge"],
                    style="sub")
 
 proxy = node(270, 300, 230, 110,
@@ -54,10 +54,10 @@ order = node(600, 438, 240, 76, ["order-service + istio-proxy", "default PeerAut
 services = [review, notif, inv, pay, ship, order]
 
 postgres = node(1020, 150, 260, 90,
-                ["postgres StatefulSet", "no istio.io/rev label -- unmeshed"],
+                ["postgres StatefulSet", "no istio.io/rev label: unmeshed"],
                 style="sub")
 kafka = node(1020, 330, 260, 90,
-             ["kafka StatefulSet", "no istio.io/rev label -- unmeshed"],
+             ["kafka StatefulSet", "no istio.io/rev label: unmeshed"],
              style="sub")
 kiali = node(1020, 500, 260, 100,
              ["Kiali -> otel-lgtm Prometheus", "lgtm.<ns>.svc.cluster.local:9090",
@@ -82,13 +82,13 @@ notes = [
     {"x": W / 2, "y": 24, "text": "OSSM 3 on OpenShift: STRICT mesh-wide, a PERMISSIVE carve-out at each Route, Kiali reading otel-lgtm",
      "anchor": "middle", "bold": True, "size": 15},
     {"x": 240, "y": H - 56,
-     "text": "Injection is by the istio.io/rev: default pod-template LABEL (app-deployment.yaml) -- Sail's revisioned webhook ignores sidecar.istio.io/inject entirely.",
+     "text": "Injection is by the istio.io/rev: default pod-template LABEL (app-deployment.yaml), Sail's revisioned webhook ignores sidecar.istio.io/inject entirely.",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 240, "y": H - 38,
      "text": "Without the per-Route PERMISSIVE PeerAuthentication, the STRICT default would 502 every Route request: the router is not a mesh member.",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 240, "y": H - 20,
-     "text": "postgres and kafka carry no istio.io/rev label -- unmeshed, same as the minikube path.",
+     "text": "postgres and kafka carry no istio.io/rev label, unmeshed, same as the minikube path.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

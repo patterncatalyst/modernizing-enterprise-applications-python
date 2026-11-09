@@ -1,8 +1,8 @@
 # 00-monolith
 
-The r01 "before" system: a Django 5.2 LTS + Django REST Framework monolith with
-all six bounded contexts -- **order, inventory, payment, shipping,
-notification, review** -- living in one Django project, sharing one Postgres
+The "before" system: a Django 5.2 LTS + Django REST Framework monolith with
+all six bounded contexts, **order, inventory, payment, shipping,
+notification, review**: living in one Django project, sharing one Postgres
 schema, checkout orchestrated by one synchronous god function. This is the
 walking skeleton the book incrementally decomposes.
 
@@ -11,12 +11,12 @@ Python sibling of
 (Java/Spring Boot), built to that project's *original* schema/seed/smell
 intent.
 
-## FROZEN STATUS (r07) — decommissioned from the running topology
+## Frozen status: decommissioned from the running topology
 
-As of r07, every bounded context this monolith ever owned has an extracted,
+Every bounded context this monolith ever owned has an extracted,
 independently deployable sibling: review (`02-review-service`), notification
 (`03-notification-service`), inventory (`04-inventory-service`), payment
-(`05-payment-service`), shipping (`06-shipping-service`), and — the last and
+(`05-payment-service`), shipping (`06-shipping-service`), and, the last and
 hardest, order (`07-order-service`, CQRS). The strangler proxy
 (`01-strangler-proxy`) is now a **flagless edge router**: every `/api/*`
 prefix routes unconditionally to its one owning service; there is no
@@ -27,12 +27,12 @@ monolith, its `outbox_relay`, `order_placed_consumer`, or
 
 **This module is PRESERVED, not deleted.** It stays in-repo as:
 
-1. The **golden-baseline referent** — the "before" picture every one of the
+1. The **golden-baseline referent**: the "before" picture every one of the
    six extractions was held equivalent to, one seam at a time
    (`tooling/newman/GOLDEN-BASELINE.md`, `GOLDEN-BASELINE-r07.md`).
-2. A **break-glass fallback** — the code still runs (`uv sync && uv run
+2. A **break-glass fallback**, the code still runs (`uv sync && uv run
    python manage.py migrate && ... runserver`) against the same Postgres
-   instance, for a learner (or an operator in a genuine incident) who wants
+   instance, for a learner (or an operator in a real incident) who wants
    to stand the "before" system back up and compare it directly to the
    "after" mesh. It is not part of CI's steady-state gate and not started by
    any `scripts/`/`demos/` script anymore.
@@ -41,15 +41,15 @@ monolith, its `outbox_relay`, `order_placed_consumer`, or
    the pristine, pre-extraction monolith exactly as it stood before any
    seam was cut, independent of this frozen-in-main copy.
 
-Decommissioning this module is the ONE deliberate irreversible move in this
-project's whole strangler-fig arc — see `examples/01-strangler-proxy/CUTOVER.md`'s
-"Order seam (r07)" section for the reversibility proof recorded immediately
+Decommissioning this module is the one irreversible move in this
+project's whole strangler-fig arc, see `examples/01-strangler-proxy/CUTOVER.md`'s
+order-seam section for the reversibility proof recorded immediately
 before this cut, and `SMELLS.md` for the two smells (#1 god checkout service,
 #2 the one-ACID-transaction) this decommission finally strikes.
 
 ## Six deliberate smells
 
-Every smell below is intentional -- see [`SMELLS.md`](./SMELLS.md) for the full
+Every smell below is intentional, see [`SMELLS.md`](./SMELLS.md) for the full
 table and which chapter cures each one.
 
 1. God checkout service (`order/services.py::place_order`)
@@ -73,7 +73,7 @@ uv run python manage.py runserver 0.0.0.0:8000
 ```
 
 Defaults to `DATABASE_URL=postgresql://monolith:monolith@localhost:5432/monolith`
-(the INFRA lane's compose stack). Override via `.env`/environment -- see
+(the INFRA lane's compose stack). Override via `.env`/environment, see
 [`.env.example`](./.env.example). A quick standalone Postgres for local use:
 
 ```sh
@@ -92,7 +92,7 @@ slashes.
 | GET | `/api/inventory` | list |
 | GET | `/api/inventory/{sku}` | |
 | GET | `/api/orders` | list |
-| POST | `/api/orders` | checkout -- 201 + `Location` + `status: CONFIRMED` on success |
+| POST | `/api/orders` | checkout: 201 + `Location` + `status: CONFIRMED` on success |
 | GET | `/api/orders/{id}` | |
 | GET | `/api/payments?orderId=` | |
 | GET | `/api/payments/{id}` | |
@@ -131,7 +131,7 @@ docker run --rm -p 8000:8000 -e DATABASE_URL=postgresql://monolith:monolith@<hos
 ```
 
 UBI 10 (`ubi10/python-314-minimal`), multi-stage `uv sync`, runs as non-root
-(UID 1001, GID 0 -- OpenShift/arbitrary-UID compatible) under gunicorn on
+(UID 1001, GID 0, OpenShift/arbitrary-UID compatible) under gunicorn on
 `:8000`.
 
 ## Structured logging

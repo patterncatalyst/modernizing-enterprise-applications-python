@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""ch.21 figure: order-view-rebuildable-projection -- the read model is a
+"""ch.21 figure: order-view-rebuildable-projection, the read model is a
 cache of the aggregate's shape, never a second source of truth. Top row:
 aggregate -> projection -> view, kept current by every write path upserting
 in the same transaction. Bottom row (ghosted): rebuild_order_view recomputes
-order_view from the CURRENT aggregate state at any time -- and the
+order_view from the CURRENT aggregate state at any time, and the
 projection-disabled negative test proves what happens when the sync stops:
 the aggregate transitions correctly, but a GET against order_view goes
 stale and the bounded-wait poll exhausts its budget.
@@ -24,13 +24,13 @@ g.OUT = os.path.dirname(__file__)
 W, H = 1300, 560
 
 band_top = {"x": 20, "y": 56, "w": 1260, "h": 200,
-            "label": "NORMAL PATH -- every write upserts order_view in the SAME transaction", "fill": "#fafafa"}
+            "label": "Normal path: every write upserts order_view in the same transaction", "fill": "#fafafa"}
 band_bot = {"x": 20, "y": 56 + 200 + 32, "w": 1260, "h": 220,
-            "label": "WHAT PROVES IT'S REBUILDABLE, NOT A SECOND SOURCE OF TRUTH", "fill": "#f1f5f9"}
+            "label": "What proves it's rebuildable, not a second source of truth", "fill": "#f1f5f9"}
 
 agg = node(60, 110, 260, 100, ["orders / order_items", "the write aggregate", "(status, totals, items)"], style="box")
 proj = node(400, 110, 260, 100, ["_upsert_order_view()", "runs inside the caller's", "own transaction"], style="accent")
-view = node(740, 110, 260, 100, ["order_view", "ONE row, replaced wholesale", "never appended to"], style="box")
+view = node(740, 110, 260, 100, ["order_view", "one row, replaced wholesale", "never appended to"], style="box")
 reader = node(1040, 110, 220, 100, ["GET /api/orders/{id}", "reads THIS, only this"], style="box")
 
 top_nodes = [agg, proj, view, reader]
@@ -40,15 +40,15 @@ y2 = 56 + 200 + 32
 rebuild = node(60, y2 + 50, 280, 110,
                ["rebuild_order_view(order_id)",
                 "recomputes order_view from the",
-                "CURRENT aggregate -- a cache,",
+                "CURRENT aggregate: a cache,",
                 "not a parallel source of truth"], style="ghost")
 disabled = node(400, y2 + 50, 300, 110,
-                ["Negative test: skip the upsert", "on one transition -- aggregate",
+                ["Negative test: skip the upsert", "on one transition: aggregate",
                  "still reaches CONFIRMED correctly"], style="ghost")
 stale = node(760, y2 + 50, 290, 110,
-             ["GET keeps returning PENDING --", "bounded-wait poll exhausts",
-              "its full 40x750ms budget, RED"], style="ghost")
-restored = node(1100, y2 + 50, 160, 110, ["Restore the", "upsert ->", "GREEN again"], style="box")
+             ["GET keeps returning PENDING:", "bounded-wait poll exhausts",
+              "its full 40x750ms budget, red"], style="ghost")
+restored = node(1100, y2 + 50, 160, 110, ["Restore the", "upsert ->", "green again"], style="box")
 
 bot_nodes = [rebuild, disabled, stale, restored]
 bot_edges = [

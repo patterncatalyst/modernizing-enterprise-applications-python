@@ -1,4 +1,4 @@
-# Modernizing Enterprise Applications — Python
+# Modernizing Enterprise Applications, Python
 
 Incrementally strangle a **Django monolith** into **FastAPI microservices**, gated
 every step of the way by an executable behavior-equivalence suite, and driven by an
@@ -7,7 +7,7 @@ every step of the way by an executable behavior-equivalence suite, and driven by
 This is the Python-language sibling of
 [modernizing-enterprise-applications](https://github.com/patterncatalyst/modernizing-enterprise-applications)
 (Java: Spring Boot → Quarkus + Apache Camel). Same e-commerce / shipping domain, same six
-extractions, same methodology — a different stack.
+extractions, same methodology: a different stack.
 
 ## What's here
 
@@ -17,7 +17,7 @@ set (101 / 201 / 201-fastapi).
 
 ## Status
 
-🚧 Bootstrapping — iteration **r01** (walking skeleton) in progress.
+🚧 Work in progress.
 
 ## Stack
 
@@ -28,12 +28,12 @@ grpcio · Strawberry GraphQL · OpenTelemetry → Grafana LGTM · Postgres · Ka
 
 This project is dual-licensed to separate the code from the writing:
 
-- **Code** — everything under `examples/`, plus build and helper scripts and
-  inline code snippets — is licensed under the **Apache License 2.0**
+- **Code**: everything under `examples/`, plus build and helper scripts and
+  inline code snippets, is licensed under the **Apache License 2.0**
   ([`LICENSE`](LICENSE)).
-- **Content** — the tutorial and book prose (chapters under `_docs/`),
+- **Content**: the tutorial and book prose (chapters under `_docs/`),
   diagrams and images under `assets/`, and the slide decks under
-  `presentation/` — is licensed under **Creative Commons Attribution 4.0
+  `presentation/`, is licensed under **Creative Commons Attribution 4.0
   International (CC BY 4.0)** ([`LICENSE-docs.md`](LICENSE-docs.md)).
 
 Copyright 2026 PatternCatalyst (Robert Sedor).

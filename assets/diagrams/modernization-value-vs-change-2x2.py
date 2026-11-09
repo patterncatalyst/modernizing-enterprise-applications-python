@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.04 figure: modernization-value-vs-change-2x2 -- the strategic-value x
+"""ch.04 figure: modernization-value-vs-change-2x2, the strategic-value x
 change-frequency quadrant used to decide which strategy fits a candidate
 system, built as a plain in-generator quadrant (four bands + corner
 labels), not a charting engine.
@@ -10,7 +10,7 @@ monolith sits in exactly that quadrant by design: high strategic value (it
 is the order-taking and fulfillment path for a shipping business), and on
 the ease-of-migration rubric, difficult on data (one shared Postgres schema
 with cross-app foreign keys, per `examples/00-monolith/SMELLS.md`) and
-moderate everywhere else -- a believable, unglamorous candidate for
+moderate everywhere else, a believable, unglamorous candidate for
 re-architecture.
 
 Sourced from: `_plans/build-plan.md` ("A. Approach") and
@@ -66,7 +66,7 @@ notes = [
     {"x": PLOT_X + PLOT_W / 2, "y": PLOT_Y + PLOT_H + 52, "text": "change frequency", "anchor": "middle", "size": 11.5, "bold": True, "color": "#1d1d1d"},
 
     {"x": 40, "y": H - 16,
-     "text": "Sourced from _plans/build-plan.md (\"A. Approach\") and examples/00-monolith/SMELLS.md -- "
+     "text": "Sourced from the project build plan and examples/00-monolith/SMELLS.md, "
              "the monolith's own placement: high strategic value, difficult on data, moderate elsewhere.",
      "anchor": "start", "size": 10.5, "color": "#555555"},
 ]

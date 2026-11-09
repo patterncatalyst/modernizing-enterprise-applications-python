@@ -1,44 +1,44 @@
-# Example 10 — The supply-chain gate (SBOM + CVE scan + policy-as-code)
+# Example 10: The supply-chain gate (SBOM + CVE scan + policy-as-code)
 
-This is the runnable companion to **Chapter 31**. It does not change any
+This is the runnable companion to the CI/CD, GitOps, Progressive Delivery & Supply Chain chapter. It does not change any
 service; it is an isolated, additive demonstrator that scans the two
 container images this project already builds:
 
-- **order-service** (the "after") — the extracted, modernized service built
+- **order-service** (the "after"): the extracted, modernized service built
   from [`examples/07-order-service/Containerfile`](../07-order-service/Containerfile).
   This is the artifact the gate protects: `policy.yaml` marks it
   `gate: required`, so a **fixable** High/Critical finding here fails
-  `demo.sh` and the `supply-chain.yml` CI job (`gate-on: fixable` — see
+  `demo.sh` and the `supply-chain.yml` CI job (`gate-on: fixable`, see
   [`policy.yaml`](policy.yaml) and [`.grype.yaml`](.grype.yaml)).
-- **monolith** (the "before") — the frozen
+- **monolith** (the "before"): the frozen
   [`examples/00-monolith`](../00-monolith) Django/gunicorn application, built
   from its [`Dockerfile`](../00-monolith/Dockerfile). `policy.yaml` marks it
-  `gate: reported`: it is built, scanned, and its findings — the full raw
-  count, every severity, not filtered to fixable-only — are written to
+  `gate: reported`: it is built, scanned, and its findings, the full raw
+  count, every severity, not filtered to fixable-only, are written to
   `evidence/` alongside order-service's, but a breach there can never block
-  the pipeline. The monolith is frozen — it exists as comparative evidence,
+  the pipeline. The monolith is frozen, it exists as comparative evidence,
   not as something to patch and re-scan clean.
 
 Both targets scan the **built container image**, not the source tree or a
-`uv.lock` file alone — that catches UBI base-layer CVEs as well as Python
+`uv.lock` file alone: that catches UBI base-layer CVEs as well as Python
 dependency CVEs, which is the whole point of a supply-chain gate.
 
 ## What it does
 
-For each target in [`policy.yaml`](policy.yaml), `demo.sh` runs three steps —
+For each target in [`policy.yaml`](policy.yaml), `demo.sh` runs three steps,
 the same three steps `.github/workflows/supply-chain.yml` runs in CI, so
 "it passed locally" and "it passed in CI" mean the same thing:
 
-1. **Build** — the image, from the target's `Containerfile`/`Dockerfile`.
-2. **SBOM** — `syft` produces a CycloneDX JSON bill of materials (the
+1. **Build**: the image, from the target's `Containerfile`/`Dockerfile`.
+2. **SBOM**: `syft` produces a CycloneDX JSON bill of materials (the
    complete list of packages, versions, and the base OS layer actually
    inside the built image).
-3. **Scan** — `grype` scans that SBOM against its vulnerability database,
+3. **Scan**: `grype` scans that SBOM against its vulnerability database,
    applying the ignore rule in [`.grype.yaml`](.grype.yaml)
-   (`fix-state: not-fixed` — see "Fixable-only gating" below), and reports
+   (`fix-state: not-fixed`: see "Fixable-only gating" below), and reports
    every match by severity; `policy.yaml`'s `fail-on` threshold decides
    pass/fail for `gate: required` targets against the **fixable** findings
-   only. Ignored (not-fixed) findings are never dropped from the scan — grype
+   only. Ignored (not-fixed) findings are never dropped from the scan, grype
    files them in a separate `ignoredMatches` array in the same JSON output,
    so they are still visible in `evidence/*.grype.json` and in the total
    count `demo.sh` prints for every target.
@@ -62,7 +62,7 @@ ignore:
 ```
 
 The rule matches on the `fix-state` property rather than a list of CVE IDs,
-so it keeps working as the grype database updates — a new CVE's not-fixed
+so it keeps working as the grype database updates, a new CVE's not-fixed
 status is whatever the database currently reports, not something this file
 has to be edited to track. `demo.sh` applies the same file locally
 (`grype ... -c .grype.yaml`) that `supply-chain.yml` loads in CI
@@ -81,7 +81,7 @@ the same thing.
   rootless podman and a build fails with a `.venv`/`uv sync` permission
   error, that's a user-namespace UID-remap interaction between rootless
   podman and this project's non-root (`USER 1001:0`) Containerfiles, not a
-  defect in the Containerfile — install docker or use a podman setup with
+  defect in the Containerfile, install docker or use a podman setup with
   idmapped-mounts support.
 
 grype downloads/refreshes its vulnerability DB on first use (one network
@@ -97,10 +97,10 @@ cd examples/10-supply-chain
 
 `demo.sh` exits non-zero only when a `gate: required` target breaches
 `fail-on` on its **fixable** findings. That non-zero exit is exactly what
-fails a CI job for order-service. A breach on the `gate: reported` monolith
-— measured against its full raw count — is tallied and printed but never
+fails a CI job for order-service. A breach on the `gate: reported` monolith,
+measured against its full raw count, is tallied and printed but never
 changes the exit code; see `policy.yaml` for the required/reported split
-(A/B-4 = B, DRQ-088). Evidence is written to `evidence/`: a CycloneDX SBOM
+(the gate is blocking for the required targets only). Evidence is written to `evidence/`: a CycloneDX SBOM
 and the grype findings JSON per target, plus a `summary.txt`.
 
 ## The captured result (2026-10-17)
@@ -114,7 +114,7 @@ Both images carry the same 265 matches: 0 Critical / 35 High / 153 Medium /
 77 Low, against the exact same 35 affected packages. Every one of those 35
 High findings traces to the shared
 `ubi10/python-314-minimal:10.2-1791928506` base layer the two
-`Containerfile`/`Dockerfile`s both pin — `curl`/`libcurl-minimal`, `expat`,
+`Containerfile`/`Dockerfile`s both pin: `curl`/`libcurl-minimal`, `expat`,
 `gnutls`, the `libblkid`/`libmount`/`libsmartcols`/`libuuid` util-linux
 family, and `python3.14`/`python3.14-libs` itself. None of them come from an
 application-level Python dependency: order-service's 140 packages and the
@@ -123,7 +123,7 @@ but neither package set carries a High or Critical finding of its own in
 the grype database dated 2026-10-16.
 
 Checking `fix-state` on those 35 High findings puts all 35, on both images,
-at `not-fixed` — there is no newer `ubi10/python-314-minimal` build to
+at `not-fixed`: there is no newer `ubi10/python-314-minimal` build to
 re-pin to yet (confirmed against the registry's tag list: the currently
 pinned tag is the newest `10.2-` build available). A gate with no
 fixable-only carve-out would stay red on order-service until an upstream
@@ -168,5 +168,5 @@ expected, but, by design, never changes the exit code. The committed
 are that run's findings snapshot, with `ignoredMatches` present in both
 `*.grype.json` files showing the 35 not-fixed High findings excluded from
 the gate. Total/fixable counts and the pass/fail split will drift as the
-grype DB and the pinned base image update — re-run `demo.sh` to refresh the
+grype DB and the pinned base image update, re-run `demo.sh` to refresh the
 evidence.

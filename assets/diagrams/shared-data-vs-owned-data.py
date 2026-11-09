@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.18 figure: shared-data-vs-owned-data -- the three data-ownership
+"""ch.18 figure: shared-data-vs-owned-data, the three data-ownership
 postures this book has built so far, stacked so the progression reads top
 to bottom: Review stays on the monolith's shared schema (a deliberate,
 named deferral); Notification owns its schema from day one because its
@@ -26,17 +26,17 @@ W, H = 1320, 800
 PANEL_H = 200
 
 band_a = {"x": 30, "y": 60, "w": 1260, "h": PANEL_H,
-          "label": "Panel A -- SHARED (Review, deliberate deferral): direct reach into the monolith's own tables, no ACL",
+          "label": "Panel A, SHARED (Review, deliberate deferral): direct reach into the monolith's own tables, no ACL",
           "fill": "#fafafa"}
 band_b = {"x": 30, "y": 60 + PANEL_H + 30, "w": 1260, "h": PANEL_H,
-          "label": "Panel B -- OWNED FROM DAY ONE (Notification): own schema, reached only via a frozen Kafka contract",
+          "label": "Panel B, OWNED FROM DAY ONE (Notification): own schema, reached only via a frozen Kafka contract",
           "fill": "#f1f5f9"}
 band_c = {"x": 30, "y": 60 + 2 * (PANEL_H + 30), "w": 1260, "h": PANEL_H + 40,
-          "label": "Panel C -- OWNED + CDC BACKFILL (next): the hardest cut -- a synchronous seam AND a one-time log tail",
+          "label": "Panel C, OWNED + CDC BACKFILL (next): the hardest cut, a synchronous seam AND a one-time log tail",
           "fill": "#fafafa"}
 
-# Panel A -- Review
-review_svc = node(70, 60 + 70, 280, 100, ["review-service :8001", "app/models.py -- SQLAlchemy mapping", "onto the MONOLITH'S OWN tables"], style="box")
+# Panel A: Review
+review_svc = node(70, 60 + 70, 280, 100, ["review-service :8001", "app/models.py: SQLAlchemy mapping", "onto the MONOLITH'S OWN tables"], style="box")
 shared_tables = node(440, 60 + 70, 300, 100, ["Shared Postgres schema", "reviews, customers,", "inventory_items, auth_user"], style="sub")
 monolith_a = node(820, 60 + 70, 280, 100, ["Django monolith :8000", "writes the same tables", "same schema, same process"], style="box")
 edges_a = [
@@ -44,7 +44,7 @@ edges_a = [
     connect(monolith_a, shared_tables, label="direct ORM writes"),
 ]
 
-# Panel B -- Notification
+# Panel B: Notification
 y_b = 60 + PANEL_H + 30 + 70
 monolith_b = node(70, y_b, 260, 100, ["Django monolith :8000", "writes an OutboxEvent row", "(order.services.place_order)"], style="box")
 kafka_b = node(400, y_b, 240, 100, ["Kafka topic", "order.placed", "frozen JSON contract"], style="sub")
@@ -54,7 +54,7 @@ edges_b = [
     connect(kafka_b, notif_svc, label="consume + translate", amber=True),
 ]
 
-# Panel C -- Inventory
+# Panel C: Inventory
 y_c = 60 + 2 * (PANEL_H + 30) + 90
 monolith_c = node(70, y_c, 280, 100, ["Django monolith :8000", "public.inventory_items", "still shared, pre-cutover"], style="ghost")
 cdc_c = node(420, y_c, 260, 100, ["Debezium", "transition-only backfill", "RETIRED after cutover"], style="ghost")
@@ -62,7 +62,7 @@ inv_svc = node(760, y_c, 280, 100, ["inventory-service", "OWN `inventory` schema
 edges_c = [
     connect(monolith_c, cdc_c, label="tail the WAL", dashed=True),
     connect(cdc_c, inv_svc, label="one-time backfill, then sync", dashed=True, amber=True),
-    connect(monolith_c, inv_svc, label="gRPC Reserve/Release -- the synchronous seam", amber=True),
+    connect(monolith_c, inv_svc, label="gRPC Reserve/Release: the synchronous seam", amber=True),
 ]
 
 notes = [

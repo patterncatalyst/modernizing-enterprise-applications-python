@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""ch.28 figure: hand-duplicated-vs-registry-schema -- two panels. Left,
+"""ch.28 figure: hand-duplicated-vs-registry-schema, two panels. Left,
 "today": payment-service's and notification-service's own hand-authored
 copies of the order.placed Pydantic model, each independently maintained,
 with notification's copy missing paymentMethod (it never needed the field,
-so it was never added -- the cost of no shared module between three
+so it was never added, the cost of no shared module between three
 independently deployable services, DRQ-036). Right, "ch.28's demonstrator":
 one order-placed-v1.avsc registered once with Apicurio, a producer and
 consumer both resolving the SAME artifact by global id, with a BACKWARD
@@ -28,25 +28,25 @@ W, H = 1320, 620
 PANEL_H = 480
 
 band_left = {"x": 30, "y": 60, "w": 610, "h": PANEL_H,
-             "label": "Today -- two hand-authored copies of the same contract",
+             "label": "Today: two hand-authored copies of the same contract",
              "fill": "#fafafa"}
 band_right = {"x": 680, "y": 60, "w": 610, "h": PANEL_H,
-              "label": "the demonstrator -- one schema, registered once",
+              "label": "the demonstrator: one schema, registered once",
               "fill": "#f1f5f9"}
 
 # Left panel
 order_svc = node(70, 110, 530, 70,
-                  ["07-order-service -- EVENTS.md", "\"order.placed\": orderId, customerId, customerEmail,",
+                  ["07-order-service: EVENTS.md", "\"order.placed\": orderId, customerId, customerEmail,",
                    "totalCents, confirmationMessage, placedAt, paymentMethod"],
                   style="box")
 payment_copy = node(70, 230, 250, 110,
-                     ["05-payment-service", "app/schemas.py::OrderPlacedEvent", "7 fields -- paymentMethod", "present (choreographed", "decline rule needs it)"],
+                     ["05-payment-service", "app/schemas.py::OrderPlacedEvent", "7 fields: paymentMethod", "present (choreographed", "decline rule needs it)"],
                      style="sub")
 notif_copy = node(350, 230, 250, 110,
-                   ["03-notification-service", "app/schemas.py::OrderPlacedEvent", "6 fields -- NO paymentMethod", "(never needed, so never", "added to this copy)"],
+                   ["03-notification-service", "app/schemas.py::OrderPlacedEvent", "6 fields: NO paymentMethod", "(never needed, so never", "added to this copy)"],
                    style="ghost")
 drift_note = node(70, 400, 530, 90,
-                   ["Two independent authors, two independent understandings,", "no mechanism checking they still agree -- a hand-maintained",
+                   ["Two independent authors, two independent understandings,", "no mechanism checking they still agree, a hand-maintained",
                     "JSON contract re-declared per consumer"],
                    style="box")
 edges_left = [

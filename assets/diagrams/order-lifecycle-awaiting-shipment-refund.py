@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.24 figure: order-lifecycle-awaiting-shipment-refund -- the full order
+"""ch.24 figure: order-lifecycle-awaiting-shipment-refund, the full order
 lifecycle once SHIPPING_MODE=orchestrated: PENDING -> AWAITING_SHIPMENT ->
 CONFIRMED or SHIPPING_FAILED, PLUS the refund hop that closes r05's
 stranded-payment gap (DRQ-054) the instant a SHIP-FAIL saga compensates.
@@ -8,7 +8,7 @@ Sourced from examples/00-monolith/order/services.py (handle_payment_captured's
 orchestrated branch, handle_shipment_dispatched, handle_shipment_failed,
 _is_awaiting_shipment), examples/05-payment-service/app/refund_consumer.py
 (ShipmentFailedConsumer / process_shipment_failed, CAPTURED -> REFUNDED),
-examples/06-shipping-service/CUTOVER.md's "refund gap -- CLOSED" section.
+examples/06-shipping-service/CUTOVER.md's "refund gap, CLOSED" section.
 """
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts"))
@@ -33,7 +33,7 @@ n_captured = node(620, 530, 300, 60, ["Payment: CAPTURED"], style="box")
 n_refunded = node(620, 630, 300, 70, ["Payment: REFUNDED", "payment.refunded emitted"], style="accent")
 
 n_stuck = node(180, 420, 280, 90,
-               ["stuck AWAITING_SHIPMENT", "(shipping-service down --", "RED, not a false green)"], style="ghost")
+               ["stuck AWAITING_SHIPMENT", "(shipping-service down:", "red, not a false green)"], style="ghost")
 
 nodes = [n_pending, n_awaiting, n_saga, n_confirmed, n_shipfailed,
          n_refund_consumer, n_captured, n_refunded, n_stuck]
@@ -54,7 +54,7 @@ notes = [
      "anchor": "middle", "bold": True, "size": 15},
     {"x": 40, "y": H - 40, "text": "Before the refund hop: a SHIP-FAIL order compensated inventory but left a captured payment stranded (documented, not silent).",
      "anchor": "start", "size": 11, "color": "#555555"},
-    {"x": 40, "y": H - 22, "text": "After the refund hop: the SAME shipment.failed event that triggers the order's SHIPPING_FAILED transition also drives CAPTURED -> REFUNDED.",
+    {"x": 40, "y": H - 22, "text": "After the refund hop: the same shipment.failed event that triggers the order's SHIPPING_FAILED transition also drives CAPTURED -> REFUNDED.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

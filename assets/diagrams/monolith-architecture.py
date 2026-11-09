@@ -9,8 +9,8 @@ Sourced from `examples/00-monolith/SMELLS.md` and the app layout under
 notification/, review/, common/, config/).
 
 Smells drawn as the seams this book later cuts:
-  - SMELL #1 (ch.26): `order/services.py::place_order()` -- the "god"
-    checkout function -- reaches directly into inventory's, payment's, and
+  - SMELL #1 (ch.26): `order/services.py::place_order()`, the "god"
+    checkout function, reaches directly into inventory's, payment's, and
     shipping's services/models, with no anti-corruption layer at the seam.
   - SMELL #4 (ch.18/ch.19): cross-context FK joins living in the one shared
     schema (orders->customers, payments/shipments/notifications->orders,
@@ -20,7 +20,7 @@ SMELL #5/#6 (synchronous send + dual-write) are already CURED as of r03 --
 place_order() writes a `common.models.OutboxEvent` row in the SAME
 transaction instead, and a separate relay/consumer pair carries it to
 `notification` asynchronously. Review is annotated as the first context
-extracted (ch.15) -- this figure still draws it as designed (all six
+extracted (ch.15), this figure still draws it as designed (all six
 contexts), per ch.08's own framing of the monolith "as built" before that
 first cut.
 
@@ -45,7 +45,7 @@ CONTEXTS = [
     ("inventory", "InventoryListView", "inventory/services.py", "inventory/models.py", "box"),
     ("payment", "PaymentListView", "payment/services.py", "payment/models.py", "box"),
     ("shipping", "ShippingListView", "shipping/services.py", "shipping/models.py", "box"),
-    ("notification", "(no view -- consumer only)", "notification/services.py", "notification/models.py", "box"),
+    ("notification", "(no view: consumer only)", "notification/services.py", "notification/models.py", "box"),
     ("review", "ReviewListCreateView", "review/services.py", "review/models.py", "accent"),
 ]
 
@@ -72,9 +72,9 @@ for ctx, c in cols.items():
 # payment/shipping's services (SMELL[ch.26]), with no ACL at the seam.      --
 # Drawn as one highlighted "bus": a drop from order's services.py right     --
 # edge into a lane below the context stacks, a trunk line across, and a    --
-# branch rising into each target service's left edge -- so the arrows      --
+# branch rising into each target service's left edge, so the arrows      --
 # never cross through an intervening box. Notification is kept apart     --
-# NOT one of the bus targets -- see the outbox lane below.
+# NOT one of the bus targets, see the outbox lane below.
 BUS_Y = 400
 order_svc = cols["order"]["svc"]
 order_edge_x = order_svc["x"] + order_svc["w"]
@@ -89,7 +89,7 @@ bus_targets = ["payment", "shipping"]
 farthest_x = cols[bus_targets[-1]]["svc"]["x"]
 edges.append({"x1": order_edge_x, "y1": order_mid_y, "x2": order_edge_x, "y2": BUS_Y, "amber": True})
 edges.append({"x1": order_edge_x, "y1": BUS_Y, "x2": farthest_x, "y2": BUS_Y, "amber": True,
-              "label": "god function -- direct calls into other apps (SMELL #1)"})
+              "label": "god function: direct calls into other apps (SMELL #1)"})
 for ctx in bus_targets:
     svc = cols[ctx]["svc"]
     bx = svc["x"]
@@ -97,7 +97,7 @@ for ctx in bus_targets:
     edges.append({"x1": bx, "y1": BUS_Y, "x2": bx, "y2": by, "amber": True})
 
 # ---- the outbox lane: notification is reached asynchronously, not called --
-# in-process -- SMELL #5/#6 already CURED (r03): place_order() writes an    --
+# in-process, SMELL #5/#6 already CURED (r03): place_order() writes an    --
 # OutboxEvent row in its own transaction; a relay + consumer pair carries   --
 # it the rest of the way.
 outbox_box = node(cols["order"]["x"], 330, 260, 46,
@@ -116,7 +116,7 @@ edges.append({"x1": relay_box["x"] + relay_box["w"], "y1": relay_box["y"] + rela
 # ---- PostgreSQL: one shared schema -------------------------------------
 PG_BAND_Y, PG_BAND_H = 440, 150
 pg_band = {"x": 20, "y": PG_BAND_Y, "w": W - 40, "h": PG_BAND_H,
-           "label": "PostgreSQL -- one shared schema (per-app Django migrations, one DATABASES entry)", "fill": "#fafafa"}
+           "label": "PostgreSQL: one shared schema (per-app Django migrations, one DATABASES entry)", "fill": "#fafafa"}
 
 TABLE_Y, TABLE_H = 470, 50
 TABLE_W, TABLE_GUTTER = 148, 10
@@ -174,7 +174,7 @@ edges += fk_edges
 
 bands = [
     {"x": 20, "y": 70, "w": W - 40, "h": 310,
-     "label": "Django project -- one deployable (gunicorn), six bounded-context apps", "fill": "#ffffff"},
+     "label": "Django project: one deployable (gunicorn), six bounded-context apps", "fill": "#ffffff"},
     pg_band,
 ]
 
@@ -189,7 +189,7 @@ notes = [
      "anchor": "end", "size": 10.5, "color": "#555555"},
 
     {"x": 40, "y": 598,
-     "text": "SMELL #4: FK joins cross bounded-context boundaries freely inside the one shared schema -- "
+     "text": "SMELL #4: FK joins cross bounded-context boundaries freely inside the one shared schema, "
              "orders->customers, payments/shipments/notifications->orders, reviews->customers+inventory_items.",
      "anchor": "start", "size": 10.5, "color": "#555555"},
     {"x": 40, "y": 614,
@@ -200,7 +200,7 @@ notes = [
      "text": "review: first context extracted", "anchor": "middle", "bold": True, "size": 11.5,
      "color": "#3d7a4e"},
     {"x": cols["review"]["x"] + COL_W / 2, "y": REPO_Y + ROW_H + 18,
-     "text": "SMELL #7: REST-only, no runtime collaborator -- yet governed by the",
+     "text": "SMELL #7: REST-only, no runtime collaborator, yet governed by the",
      "anchor": "middle", "size": 9.5, "color": "#555555"},
     {"x": cols["review"]["x"] + COL_W / 2, "y": REPO_Y + ROW_H + 30,
      "text": "monolith's one shared django.contrib.auth table alongside every other context.",

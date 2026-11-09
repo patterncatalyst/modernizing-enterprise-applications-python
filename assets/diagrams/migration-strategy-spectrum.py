@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.04 figure: migration-strategy-spectrum -- four migration options
+"""ch.04 figure: migration-strategy-spectrum, four migration options
 contrasted in one comparison figure: big-bang rewrite, the strangler fig
 (this book's choice, highlighted), branch-by-abstraction, and parallel-run
 (shadow / dual-write).
@@ -12,9 +12,9 @@ the Strangler Fig pattern, gated at every step by a behavior-equivalence
 suite (Newman). Branch-by-abstraction and parallel-run are the other two
 incremental-migration techniques from the same risk-reducing family this
 argument belongs to (an in-process seam toggle, and a live comparison of
-two running paths) -- included for contrast.
+two running paths), included for contrast.
 
-Sourced from: `_plans/build-plan.md` ("A. Approach" -- "incremental
+Sourced from: `_plans/build-plan.md` ("A. Approach", "incremental
 re-architecture... strangler fig... gated at every step").
 """
 import sys, os
@@ -59,7 +59,7 @@ notes = [
      "text": "this book's choice", "anchor": "middle", "bold": True, "size": 11.5, "color": "#2f5f3d"},
 
     {"x": 40, "y": H - 16,
-     "text": "Sourced from _plans/build-plan.md (\"A. Approach\") -- the same incremental-vs-rewrite risk-shape case Sam Newman makes in Building Microservices.",
+     "text": "Sourced from the project build plan, the same incremental-vs-rewrite risk-shape case Sam Newman makes in Building Microservices.",
      "anchor": "start", "size": 10.5, "color": "#555555"},
 ]
 

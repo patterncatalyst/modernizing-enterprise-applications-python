@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""ch.17 figure: outbox-write-in-transaction -- the dual-write hazard (SMELL
+"""ch.17 figure: outbox-write-in-transaction, the dual-write hazard (SMELL
 #5/#6) before and after, inside order.services.place_order()'s single
 @transaction.atomic(). The outbox cure doesn't remove a transaction boundary
 or add a new one; it changes WHAT the last write inside that boundary is.
 
 BEFORE: the last step is a SYNCHRONOUS call out of the transaction's own
-process to a second system (the notification "send") -- a real dual write,
+process to a second system (the notification "send"), a real dual write,
 since the DB commit and the external call are not atomic with each other.
 
 AFTER: the last step is an ordinary INSERT into this service's own
-`outbox` table, in the SAME transaction as everything else -- atomic with
+`outbox` table, in the SAME transaction as everything else, atomic with
 the inventory reservation, the order row, and the payment capture, automatically,
 using nothing but Postgres's own rollback.
 
@@ -28,9 +28,9 @@ W, H = 1280, 640
 PANEL_H = 260
 
 band_before = {"x": 30, "y": 60, "w": 1220, "h": PANEL_H,
-               "label": "BEFORE (SMELL #5/#6) -- @transaction.atomic() ends with a dual write", "fill": "#fafafa"}
+               "label": "BEFORE (SMELL #5/#6): @transaction.atomic() ends with a dual write", "fill": "#fafafa"}
 band_after = {"x": 30, "y": 60 + PANEL_H + 40, "w": 1220, "h": PANEL_H,
-              "label": "AFTER (CURED) -- @transaction.atomic() ends with one ordinary row", "fill": "#f1f5f9"}
+              "label": "AFTER (CURED): @transaction.atomic() ends with one ordinary row", "fill": "#f1f5f9"}
 
 
 before_steps = [

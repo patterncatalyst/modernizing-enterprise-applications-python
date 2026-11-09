@@ -1,9 +1,8 @@
 # Deploying the modernized system to OpenShift
 
 This directory is the **OpenShift counterpart** to [`deploy/k8s/`](../deploy/k8s/).
-`deploy/k8s/` runs the eight-workload topology on vanilla Kubernetes (minikube,
-ch.29/30); this tree runs the same topology on OpenShift, packaged as a **Helm
-chart** (`helm/mea/`). ch.33, "Appendix A: Deploying to OpenShift," walks through
+`deploy/k8s/` runs the eight-workload topology on vanilla Kubernetes (minikube); this tree runs the same topology on OpenShift, packaged as a **Helm
+chart** (`helm/mea/`). The "Appendix A: Deploying to OpenShift" appendix walks through
 it end to end; this README is the quick reference.
 
 ## What's here
@@ -54,15 +53,15 @@ is *deployed*:
 
 1. **Security Context Constraints (SCC), not a pinned UID.** `deploy/k8s/base`
    pins `runAsUser: 1001`. OpenShift's default `restricted-v2` SCC assigns each
-   pod a UID from the namespace's allocated range and rejects a hardcoded one --
+   pod a UID from the namespace's allocated range and rejects a hardcoded one,
    so the 8 app Deployments here drop `runAsUser` entirely (the UBI10 image
    already runs as an arbitrary UID with group 0, which is exactly what
    restricted-v2 expects). Postgres and Kafka *do* need specific UIDs (70 /
    1000), so they run under a dedicated ServiceAccount (`mea-infra`) bound to
    `nonroot-v2`. The one further exception is otel-lgtm (platform tier) under
-   `anyuid`, with only `runAsUser: 0` set -- no `seccompProfile`, or admission
+   `anyuid`, with only `runAsUser: 0` set, no `seccompProfile`, or admission
    flips back to restricted-v2 and its root-owned writes fail again.
-2. **Routes, not a NodePort.** `strangler-proxy` -- the system's one REST edge --
+2. **Routes, not a NodePort.** `strangler-proxy`, the system's one REST edge,
    and `graphql-gateway` get edge-TLS Routes (HTTP redirected to HTTPS),
    replacing `deploy/k8s`'s NodePort 30888 and graphql-gateway's in-cluster-only
    reach. OpenShift Service Mesh 3 provisions no ingress gateway of its own here:
@@ -87,7 +86,7 @@ is *deployed*:
 - A Fedora or RHEL host with **OpenShift Local (CRC)** 2.64.0+ (bundles OpenShift
   4.22.14), `oc` (`eval "$(crc oc-env)"`), `helm` v4.x, `podman`, and a free Red
   Hat account for the CRC pull secret (`crc setup` prompts for it; it is never
-  stored in this repo). Stop any running minikube profile first -- one local
+  stored in this repo). Stop any running minikube profile first, one local
   cluster at a time.
 - Sizing: `crc config set cpus 6; crc config set memory 20480` for the live-core
   topology; `crc config set cpus 12; crc config set memory 32768` once the
@@ -138,8 +137,8 @@ exact `startingCSV`) and are undone by the same `teardown.sh`.
 Runs the happy-path checkout (`project-checks.sh`) through the strangler-proxy
 Route with the same payload `tooling/newman/mea.postman_collection.json`'s
 "Scenario 1" uses (customer 1, `SKU-WIDGET-001`, `CARD-VISA`, a non-`SHIP-FAIL`
-address), polls the order to its terminal `CONFIRMED` status, and -- when the
-mesh/observability tiers are installed -- checks STRICT mTLS, the PERMISSIVE
+address), polls the order to its terminal `CONFIRMED` status, and, when the
+mesh/observability tiers are installed, checks STRICT mTLS, the PERMISSIVE
 Route carve-out, and a captured trace. Every check fails the script on a miss;
 nothing here invents a result it could not produce.
 

@@ -48,11 +48,11 @@ W, H = 1500, 620
 
 # ---- the six context boxes, one row --------------------------------------
 CONTEXTS = [
-    ("order", ["order", "checkout aggregate -- 3 outbound edges + 1 async"], "accent"),
-    ("inventory", ["inventory", "stock per SKU -- conformed-to by order"], "box"),
-    ("payment", ["payment", "charge capture -- called from place_order()"], "box"),
-    ("shipping", ["shipping", "dispatch -- called from place_order()"], "box"),
-    ("notification", ["notification", "confirmation msg -- reached via outbox only"], "box"),
+    ("order", ["order", "checkout aggregate: 3 outbound edges + 1 async"], "accent"),
+    ("inventory", ["inventory", "stock per SKU: conformed-to by order"], "box"),
+    ("payment", ["payment", "charge capture: called from place_order()"], "box"),
+    ("shipping", ["shipping", "dispatch: called from place_order()"], "box"),
+    ("notification", ["notification", "confirmation msg: reached via outbox only"], "box"),
     ("review", ["review", "a rating on a purchased SKU"], "ghost"),
 ]
 
@@ -69,7 +69,7 @@ order_n, inv_n = cols["order"], cols["inventory"]
 
 # ---- the missing ACL, sitting above the order<->inventory seam -----------
 acl_box = node(110, 108, 340, 62,
-               ["Anti-corruption layer -- unused by default",
+               ["Anti-corruption layer: unused by default",
                 "RemoteInventoryClient/inventory.proto exist",
                 "should be: customer/supplier (negotiated contract)"],
                style="ghost")
@@ -77,12 +77,12 @@ nodes.append(acl_box)
 
 edges = []
 
-# the central seam: conformist today, no ACL on the default path -- routed
+# the central seam: conformist today, no ACL on the default path, routed
 # along the TOP edge of both boxes (not through their vertical center) so
 # the label lands in the clear gap below the ACL callout instead of
 # printing over either box's text
 edges.append({"x1": order_n["x"] + order_n["w"], "y1": ROW_Y, "x2": inv_n["x"], "y2": ROW_Y,
-              "amber": True, "label": "conformist -- raw model instance, no ACL on default path", "ly": -22})
+              "amber": True, "label": "conformist: raw model instance, no ACL on default path", "ly": -22})
 
 # the ACL gap, drawn as a bridge from the callout box into both sides of the seam
 edges.append(connect(acl_box, order_n, dashed=True))
@@ -98,7 +98,7 @@ farthest_x = cols[bus_targets[-1]]["x"]
 
 edges.append({"x1": ox, "y1": order_mid_y, "x2": ox, "y2": BUS_Y, "amber": True})
 edges.append({"x1": ox, "y1": BUS_Y, "x2": farthest_x, "y2": BUS_Y, "amber": True,
-              "label": "direct synchronous call -- no port, same transaction.atomic()"})
+              "label": "direct synchronous call: no port, same transaction.atomic()"})
 for name in bus_targets:
     t = cols[name]
     tx = t["x"] + t["w"] / 2
@@ -108,15 +108,15 @@ for name in bus_targets:
 # order -> notification: the one edge already cured, drawn dashed/non-amber
 notif_n = cols["notification"]
 edges.append({"x1": ox, "y1": order_mid_y + 16, "x2": notif_n["x"] + notif_n["w"] / 2, "y2": notif_n["y"],
-              "dashed": True, "label": "async via outbox -- cured (SMELL #5/#6)"})
+              "dashed": True, "label": "async via outbox: cured (SMELL #5/#6)"})
 
 # ---- the one shared Postgres schema: shared kernel with no edges ---------
 PG_Y, PG_H = 410, 90
 pg_band = {"x": 40, "y": PG_Y, "w": W - 80, "h": PG_H,
-           "label": "PostgreSQL -- one shared schema (shared kernel, ungoverned -- no edges)",
+           "label": "PostgreSQL: one shared schema (shared kernel, ungoverned, no edges)",
            "fill": "#fafafa"}
 pg_box = node(W / 2 - 220, PG_Y + 28, 440, 44,
-              ["one schema -- every table joinable by any context's Django ORM"], style="sub")
+              ["one schema: every table joinable by any context's Django ORM"], style="sub")
 nodes.append(pg_box)
 
 db_edges = []
@@ -130,7 +130,7 @@ for name, n in cols.items():
 
 bands = [
     {"x": 20, "y": 70, "w": W - 40, "h": 300,
-     "label": "Six bounded contexts -- edge = the context-mapping relationship that actually exists", "fill": "#ffffff"},
+     "label": "Six bounded contexts: edge = the context-mapping relationship that actually exists", "fill": "#ffffff"},
     pg_band,
 ]
 
@@ -143,11 +143,11 @@ notes = [
      "anchor": "middle", "size": 11.5, "color": "#555555"},
 
     {"x": review_n["x"] + review_n["w"] / 2, "y": ROW_Y - 12,
-     "text": "zero outbound edges to siblings -- extracted first",
+     "text": "zero outbound edges to siblings, extracted first",
      "anchor": "middle", "size": 10, "color": "#3d7a4e"},
 
     {"x": 40, "y": PG_Y + PG_H + 24,
-     "text": "Shared kernel with no edges: nobody drew a narrow, governed slice of shared model -- the whole schema is treated as commonly",
+     "text": "Shared kernel with no edges: nobody drew a narrow, governed slice of shared model, the whole schema is treated as commonly",
      "anchor": "start", "size": 10.5, "color": "#555555"},
     {"x": 40, "y": PG_Y + PG_H + 38,
      "text": "owned by all six contexts, because a foreign key is the cheapest way to relate two rows that happen to live in the same schema.",

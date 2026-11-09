@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""ch.03 figure: migration-metrics-review -- the Review-extraction
+"""ch.03 figure: migration-metrics-review, the Review-extraction
 measurement table turned into a comparison figure. Unlike a dramatic
 before/after speedup, this project's own finding is that Phase A
 (illustrative: FastAPI routes bridged onto the monolith's Django ORM via
 `sync_to_async`, never shipped as code) and Phase B (the real, shipped
 idiomatic FastAPI + async SQLAlchemy service) are STATISTICALLY
-INDISTINGUISHABLE on raw import/startup time and import-only RSS -- both
+INDISTINGUISHABLE on raw import/startup time and import-only RSS, both
 columns are dominated by FastAPI + Pydantic v2's own import graph, so
 swapping the ORM barely moves the needle at process-startup granularity.
 
-This is a box/band/edge generator, not a charting library -- the "bars"
+This is a box/band/edge generator, not a charting library, the "bars"
 below are plain node() rectangles whose WIDTH is scaled to the measured
 value. Because the two builds measure almost the same, the bars are drawn
 nearly equal length by design; that near-equality is the finding, not a
@@ -23,7 +23,7 @@ measured table: import/startup time Phase A (proxy measurement) 0.32-0.35 s
 vs Phase B 0.35-0.36 s; import-only RSS Phase A ~73.5 MB vs Phase B ~72.3
 MB. Phase A's numbers are a faithful proxy (real `django.setup()` cost plus
 `import fastapi, uvicorn`, in the same process) since Phase A was never
-built as a running server -- that is named explicitly in the chapter, not
+built as a running server, that is named explicitly in the chapter, not
 glossed over.
 """
 import sys, os
@@ -46,8 +46,8 @@ EQUIV_X = 1280
 
 builds = [
     # (label, style)
-    ("Phase A -- Django-ORM bridge (proxy measurement, never shipped)", "box"),
-    ("Phase B -- idiomatic async SQLAlchemy (shipped app/main.py)", "accent"),
+    ("Phase A: Django-ORM bridge (proxy measurement, never shipped)", "box"),
+    ("Phase B: idiomatic async SQLAlchemy (shipped app/main.py)", "accent"),
 ]
 
 startup_vals = [0.335, 0.355]          # midpoints used only to size bars
@@ -79,10 +79,10 @@ band2_y = band1_y + band1_h + 40
 band2_h = 170
 
 band_startup = {"x": 20, "y": band1_y, "w": 1460, "h": band1_h,
-                "label": "Import/startup time -- own scale; nearly equal by design (that is the finding)",
+                "label": "Import/startup time: own scale; nearly equal by design (that is the finding)",
                 "fill": "#fafafa"}
 band_memory = {"x": 20, "y": band2_y, "w": 1460, "h": band2_h,
-               "label": "Import-only RSS -- own scale; nearly equal by design (that is the finding)",
+               "label": "Import-only RSS: own scale; nearly equal by design (that is the finding)",
                "fill": "#eaf4ec"}
 
 nodes1, notes1, bottom1 = bars_for_band(band1_y, startup_vals, startup_labels)
@@ -98,7 +98,7 @@ structural = node(20, structural_y, 1460, 130,
                    ["The real Phase A -> Phase B win is STRUCTURAL, not a startup-time number",
                     "Phase A would carry: a synchronous Django ORM bridged into an async framework via sync_to_async on every query",
                     "Phase A would carry: a hard build-time dependency on the entire monolith just to reach one model",
-                    "Phase B has neither -- independent SQLAlchemy models, zero import from 00-monolith"],
+                    "Phase B has neither: independent SQLAlchemy models, zero import from 00-monolith"],
                    style="accent")
 
 notes = [
@@ -115,7 +115,7 @@ notes += notes1 + [callout1] + notes2 + [callout2]
 notes.append({
     "x": LABEL_X, "y": H - 28,
     "text": "Sourced from examples/02-review-service/MIGRATION.md's measured table. This stack has no compiled-vs-native-image axis to "
-            "show a dramatic win on -- the finding is reported as measured, not adjusted for a cleaner story.",
+            "show a dramatic win on, the finding is reported as measured, not adjusted for a cleaner story.",
     "anchor": "start", "size": 10, "color": "#777777",
 })
 

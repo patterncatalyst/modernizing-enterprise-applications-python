@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""ch.11 figure: hexagonal-ports-adapters -- the ports-and-adapters
+"""ch.11 figure: hexagonal-ports-adapters, the ports-and-adapters
 discipline as the structural counterpart to strategic/tactical DDD: a domain
 core sits in the middle, holding entities, aggregates, and business logic,
-and depends on nothing -- no web framework, no ORM, no message broker. It
+and depends on nothing, no web framework, no ORM, no message broker. It
 declares ports: inbound ports describing what it can be asked to do,
 outbound ports describing what it needs from the world. Driving adapters --
-a REST route, a gRPC service, a message consumer -- translate an incoming
-protocol into a call on an inbound port. Driven adapters -- a database
-repository, an event publisher -- implement the outbound ports the core
+a REST route, a gRPC service, a message consumer, translate an incoming
+protocol into a call on an inbound port. Driven adapters, a database
+repository, an event publisher, implement the outbound ports the core
 declared. Every dependency arrow points inward, toward the core.
 
-This generator draws rectangles, not literal hexagons -- the hexagon's only
+This generator draws rectangles, not literal hexagons, the hexagon's only
 real content is "ports in the middle, adapters on the outside, dependencies
 pointing in," which this layered left-core-right layout preserves without
 inventing a new primitive.
@@ -22,7 +22,7 @@ message consumer are left at the generic level, matching `order/
 inventory_client.py` (ch.19's gRPC ACL) and `notification/management/
 commands/order_placed_consumer.py` (ch.17's Kafka consumer). The caveat note
 is this chapter's own: `app/repository.py` is a module of plain async
-functions, not a declared Port interface/Protocol the domain owns -- "not
+functions, not a declared Port interface/Protocol the domain owns, "not
 textbook hexagonal with an explicit Port abstraction."
 
 Sourced from `examples/02-review-service/app/routes.py`,
@@ -99,7 +99,7 @@ edges = [
     connect(grpc_adapter, inbound_port, amber=True),
     connect(consumer_adapter, inbound_port, amber=True),
     connect(inbound_port, core, amber=True,
-            label="dependency points inward -- adapters are swappable", ly=130),
+            label="dependency points inward: adapters are swappable", ly=130),
 
     connect(repo_adapter, outbound_port, amber=True),
     connect(publisher_adapter, outbound_port, amber=True),
@@ -115,14 +115,14 @@ notes = [
      "anchor": "middle", "size": 11.5, "color": "#555555"},
 
     {"x": W / 2, "y": core["y"] - 14,
-     "text": "the core never imports a protocol -- a protocol can be swapped without the core noticing",
+     "text": "the core never imports a protocol, a protocol can be swapped without the core noticing",
      "anchor": "middle", "size": 10.5, "color": "#3d7a4e"},
 
     {"x": 40, "y": H - 60,
      "text": "Caveat (this chapter's own): examples/02-review-service's app/repository.py is a module of plain async functions, not a declared",
      "anchor": "start", "size": 10.5, "color": "#555555"},
     {"x": 40, "y": H - 46,
-     "text": "Port abstraction the core programs against -- what made review cheap to extract was zero outbound edges to other contexts.",
+     "text": "Port abstraction the core programs against, what made review cheap to extract was zero outbound edges to other contexts.",
      "anchor": "start", "size": 10.5, "color": "#555555"},
 
     {"x": 40, "y": H - 16,

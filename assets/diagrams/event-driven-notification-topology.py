@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""ch.17 figure: event-driven-notification-topology -- the full pipeline, end
+"""ch.17 figure: event-driven-notification-topology, the full pipeline, end
 to end: checkout commits an outbox row -> a relay publishes it at-least-once
 -> Kafka -> TWO INDEPENDENT consumer groups race to read the same topic, one
 in the still-running monolith (the "decorating collaborator" move: the
 monolith becomes a consumer of its own event) and one in the new
 notification-service. The strangler proxy's STRANGLER_NOTIFICATION_ENABLED
-flag only decides which read path GET /api/notifications hits -- both
+flag only decides which read path GET /api/notifications hits, both
 consumers keep running throughout the strangle window.
 
 Sourced from examples/00-monolith/common/management/commands/outbox_relay.py,
@@ -59,7 +59,7 @@ edges = [
 notes = [
     {"x": W / 2, "y": 32, "text": "one outbox row, two independent consumer groups, one flag choosing who answers the read",
      "anchor": "middle", "bold": True, "size": 17},
-    {"x": 30, "y": 250, "text": "Both consumer groups run for the ENTIRE strangle window -- the monolith becomes a consumer of its own event",
+    {"x": 30, "y": 250, "text": "Both consumer groups run for the ENTIRE strangle window, the monolith becomes a consumer of its own event",
      "anchor": "start", "size": 12, "color": "#1d1d1d"},
     {"x": 30, "y": 270, "text": "(the decorating-collaborator pattern), not a placeholder removed once notification-service ships.",
      "anchor": "start", "size": 12, "color": "#1d1d1d"},

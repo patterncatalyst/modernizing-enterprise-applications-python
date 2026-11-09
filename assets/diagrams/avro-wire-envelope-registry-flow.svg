@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 700" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
 <defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
 <rect x="30" y="60" width="1260" height="160" rx="12" fill="#fafafa" stroke="#ddd"/>
-<text x="42" y="80" font-size="12" font-weight="700" fill="#1d1d1d">The wire envelope -- app/envelope.py (NOT Confluent&#x27;s wire format; this demo&#x27;s own, documented framing)</text>
+<text x="42" y="80" font-size="12" font-weight="700" fill="#1d1d1d">The wire envelope: app/envelope.py (NOT Confluent&#x27;s wire format; this demo&#x27;s own, documented framing)</text>
 <rect x="30" y="250" width="1260" height="420" rx="12" fill="#f1f5f9" stroke="#ddd"/>
 <text x="42" y="270" font-size="12" font-weight="700" fill="#1d1d1d">Produce / consume against a live Apicurio registry</text>
 <rect x="70" y="115" width="160" height="70" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
@@ -64,5 +64,5 @@
 <text x="1086.0" y="509.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">5. parse_schema</text>
 <text x="1086.0" y="509.0" font-size="11" fill="#2f5f3d" text-anchor="middle">5. parse_schema</text>
 <text x="660.0" y="32" font-size="18" fill="#1d1d1d" text-anchor="middle" font-weight="700">the hand-rolled envelope and the register/resolve round trip, pure-Python (fastavro + aiokafka + httpx)</text>
-<text x="50" y="678" font-size="11" fill="#555555" text-anchor="start">The consumer always fetches the writer schema by global id -- it never trusts its own locally parsed .avsc matches what produced the bytes.</text>
+<text x="50" y="678" font-size="11" fill="#555555" text-anchor="start">The consumer always fetches the writer schema by global id, it never trusts its own locally parsed .avsc matches what produced the bytes.</text>
 </svg>

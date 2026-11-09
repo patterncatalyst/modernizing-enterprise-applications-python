@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.24 figure: orchestrated-shipping-saga-sequence -- the four-step
+"""ch.24 figure: orchestrated-shipping-saga-sequence, the four-step
 orchestrated saga top to bottom, with ONE coordinator (app/orchestrator.py)
 deciding what happens next at every step, and the reverse-order compensation
 path it takes on a book_carrier failure. Contrast with ch.23's
@@ -24,7 +24,7 @@ W, H = 1320, 1020
 n_trigger = node(500, 25, 320, 65, ["Kafka: payment.captured", "(key = orderId)"], style="box")
 n_consumer = node(470, 115, 380, 75,
                    ["service.handle_payment_captured:", "check-then-insert + uq_sagas_order_id"], style="box")
-n_orch = node(460, 215, 400, 70, ["orchestrator.advance(saga_id)", "THE coordinator -- decides each next step"], style="accent")
+n_orch = node(460, 215, 400, 70, ["orchestrator.advance(saga_id)", "THE coordinator: decides each next step"], style="accent")
 
 n_s1 = node(80, 320, 280, 90, ["Step 1: enrich", "GET monolith /api/orders/{id}", "tenacity retry + bounded timeout"], style="box")
 n_s2 = node(400, 320, 280, 90, ["Step 2: dispatch", "persist Shipment DISPATCHED", "(own shipping schema)"], style="box")
@@ -65,7 +65,7 @@ edges = [
 notes = [
     {"x": W / 2, "y": 18, "text": "the orchestrated saga: ONE coordinator sequences every step and owns the compensation decision",
      "anchor": "middle", "bold": True, "size": 16},
-    {"x": 40, "y": H - 46, "text": "enrich and book_carrier persist nothing of their own, so neither has a compensation entry -- only dispatch's Shipment row needs undoing.",
+    {"x": 40, "y": H - 46, "text": "enrich and book_carrier persist nothing of their own, so neither has a compensation entry, only dispatch's Shipment row needs undoing.",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 40, "y": H - 28, "text": "Compare the choreographed payment saga: no box in this picture's counterpart decides anything for another box.",
      "anchor": "start", "size": 11, "color": "#555555"},

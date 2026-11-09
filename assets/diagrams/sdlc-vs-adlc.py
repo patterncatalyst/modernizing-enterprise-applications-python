@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""ch.05 figure: sdlc-vs-adlc -- the centerpiece.
+"""ch.05 figure: sdlc-vs-adlc, the centerpiece.
 
 Traditional SDLC (8 steps, weeks-months, muted/neutral) vs. the agentic
 SDLC (8 steps, hours-days, green) with a transformation arrow and a "Key
-Differences" table. Generic throughout -- no stack-specific tool names, so
+Differences" table. Generic throughout, no stack-specific tool names, so
 nothing to re-author here beyond the shared house style.
 """
 import sys, os

@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 680" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
 <defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f3d"/></marker></defs>
 <rect x="20" y="68" width="1560" height="112" rx="12" fill="#ffffff" stroke="#ddd"/>
-<text x="32" y="88" font-size="12" font-weight="700" fill="#1d1d1d">ADLC phases -- this project&#x27;s own cycle (Frame -&gt; Map -&gt; Plan -&gt; Generate -&gt; Verify -&gt; Operate -&gt; Reconcile)</text>
+<text x="32" y="88" font-size="12" font-weight="700" fill="#1d1d1d">ADLC phases: this project&#x27;s own cycle (Frame -&gt; Map -&gt; Plan -&gt; Generate -&gt; Verify -&gt; Operate -&gt; Reconcile)</text>
 <rect x="20" y="186" width="1560" height="174" rx="12" fill="#fafafa" stroke="#ddd"/>
-<text x="32" y="206" font-size="12" font-weight="700" fill="#1d1d1d">The ledger this project keeps -- checkable against the repository as you read</text>
+<text x="32" y="206" font-size="12" font-weight="700" fill="#1d1d1d">The ledger this project keeps, checkable against the repository as you read</text>
 <rect x="150" y="400" width="1300" height="180" rx="12" fill="#eaf4ec" stroke="#ddd"/>
-<text x="162" y="420" font-size="12" font-weight="700" fill="#1d1d1d">Interruption and resume -- not hypothetical; this project&#x27;s own checkpoint discipline</text>
+<text x="162" y="420" font-size="12" font-weight="700" fill="#1d1d1d">Interruption and resume: not hypothetical; this project&#x27;s own checkpoint discipline</text>
 <rect x="40" y="90" width="200" height="70" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5"/>
 <text x="140.0" y="123.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Frame</text>
 <text x="140.0" y="140.0" font-size="11.5" fill="#555555" text-anchor="middle">human states intent + PRD</text>
@@ -37,15 +37,15 @@
 <text x="492.0" y="312.5" font-size="11.5" fill="#555555" text-anchor="middle">header records approval status</text>
 <rect x="656" y="235" width="288" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
 <text x="800.0" y="280.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Decision log</text>
-<text x="800.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">append decision outcomes --</text>
+<text x="800.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">append decision outcomes,</text>
 <text x="800.0" y="312.5" font-size="11.5" fill="#555555" text-anchor="middle">rows: fixed / accepted / proposed</text>
 <rect x="964" y="235" width="288" height="110" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
 <text x="1108.0" y="280.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Reconciliation log</text>
-<text x="1108.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">append artifact-vs-source verdicts --</text>
+<text x="1108.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">append artifact-vs-source verdicts,</text>
 <text x="1108.0" y="312.5" font-size="11.5" fill="#555555" text-anchor="middle">live: one section per iteration</text>
 <rect x="1272" y="235" width="288" height="110" rx="9" fill="#ffffff" stroke="#999999" stroke-width="1.5" stroke-dasharray="6 4"/>
 <text x="1416.0" y="280.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">a scaffolding skill</text>
-<text x="1416.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">Map/Generate substitute --</text>
+<text x="1416.0" y="297.5" font-size="11.5" fill="#555555" text-anchor="middle">Map/Generate substitute,</text>
 <text x="1416.0" y="312.5" font-size="11.5" fill="#555555" text-anchor="middle">no MCP equivalent</text>
 <rect x="270" y="430" width="1060" height="120" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="800.0" y="473.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Resume mechanism: the iteration&#x27;s own plan header, read again</text>
@@ -65,12 +65,12 @@
 <text x="1158.0" y="186.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">append decision outcomes</text>
 <text x="1158.0" y="186.0" font-size="11" fill="#2f5f3d" text-anchor="middle">append decision outcomes</text>
 <path d="M1385.3333333333333,160.0 L1225.3333333333333,235.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
-<text x="1311.3333333333333" y="209.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">append drift verdict -- zero unexplained drift</text>
-<text x="1311.3333333333333" y="209.5" font-size="11" fill="#2f5f3d" text-anchor="middle">append drift verdict -- zero unexplained drift</text>
+<text x="1311.3333333333333" y="209.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">append drift verdict: zero unexplained drift</text>
+<text x="1311.3333333333333" y="209.5" font-size="11" fill="#2f5f3d" text-anchor="middle">append drift verdict: zero unexplained drift</text>
 <path d="M800.0,345 L800.0,380" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
 <path d="M800.0,380 L184.0,380" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
-<text x="498.0" y="374.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Reconcile also updates the build plan&#x27;s status -- same discipline</text>
-<text x="498.0" y="374.0" font-size="11" fill="#2f5f3d" text-anchor="middle">Reconcile also updates the build plan&#x27;s status -- same discipline</text>
+<text x="498.0" y="374.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Reconcile also updates the build plan&#x27;s status, same discipline</text>
+<text x="498.0" y="374.0" font-size="11" fill="#2f5f3d" text-anchor="middle">Reconcile also updates the build plan&#x27;s status, same discipline</text>
 <path d="M184.0,380 L184.0,345" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
 <path d="M576.7,345.0 L707.6,430.0" fill="none" stroke="#2f5f3d" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
 <text x="902.1500000000001" y="381.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">status line read again to resume</text>

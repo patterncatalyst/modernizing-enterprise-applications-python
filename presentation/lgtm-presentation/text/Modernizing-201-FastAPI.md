@@ -468,7 +468,7 @@ p. 26
 class Settings:
     http_port: int
     database_url: str
-    order_base_url: str        # r07 re-point: order-service's own order_view
+    order_base_url: str        # re-pointed: order-service's own order_view
     monolith_base_url: str     # documented operator-only fallback, not read by enrich()
     outbox_poll_ms: int
     enrich_timeout_s: float
@@ -508,7 +508,7 @@ def install_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(status_code=exc.status_code,
             content=_error_body(exc.error_code, exc.message))
 
-# examples/06-shipping-service/app/enrich_client.py -- the one retry in this system
+# examples/06-shipping-service/app/enrich_client.py: the one retry in this system
 @retry(
     retry=retry_if_exception_type((httpx.TransportError, httpx.TimeoutException)),
     stop=stop_after_attempt(3), wait=wait_exponential(multiplier=0.5, max=4),

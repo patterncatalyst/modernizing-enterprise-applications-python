@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""ch.20 figure: outbox-relay-at-least-once -- the outbox pattern generalized
+"""ch.20 figure: outbox-relay-at-least-once, the outbox pattern generalized
 past Notification's single case (ch.17's outbox-write-in-transaction), as the
 reusable shape every extraction in this book reuses: one DB transaction
 commits the state change AND the outbox row together; a separate relay polls
 and publishes at-least-once; the required counterpart on the far side is an
 IDEMPOTENT consumer, because "at-least-once" is a promise about the pipe, not
-about the final effect -- idempotency is what turns "delivered one or more
+about the final effect, idempotency is what turns "delivered one or more
 times" into "applied exactly once," and this book has landed three different
 idioms for it by r05.
 
@@ -28,12 +28,12 @@ W, H = 1360, 760
 band_top = {"x": 20, "y": 56, "w": 1320, "h": 230,
             "label": "The bridge: one transaction, state change + outbox row, same commit", "fill": "#fafafa"}
 band_mid = {"x": 20, "y": 56 + 230 + 30, "w": 1320, "h": 150,
-            "label": "The relay: polls unpublished rows, publishes, THEN stamps published_at -- at-least-once", "fill": "#f1f5f9"}
+            "label": "The relay: polls unpublished rows, publishes, THEN stamps published_at, at-least-once", "fill": "#f1f5f9"}
 band_bot = {"x": 20, "y": 56 + 230 + 30 + 150 + 30, "w": 1320, "h": 230,
             "label": "The necessary counterpart: an idempotent consumer, in whichever idiom fits the write", "fill": "#fafafa"}
 
 n_request = node(50, 130, 210, 110, ["Handle the request", "(checkout, order.placed, ...)"], style="box")
-n_txn = node(300, 110, 290, 150, ["ONE DB transaction", "state row (Order/Payment) +", "outbox row -- same COMMIT"], style="accent")
+n_txn = node(300, 110, 290, 150, ["ONE DB transaction", "state row (Order/Payment) +", "outbox row: same COMMIT"], style="accent")
 n_db = node(640, 130, 180, 110, ["Postgres", "outbox table", "published_at IS NULL"], style="box")
 top_nodes = [n_request, n_txn, n_db]
 top_edges = [connect(n_request, n_txn), connect(n_txn, n_db)]
@@ -43,7 +43,7 @@ top_edges.append({"x1": 820, "y1": 180, "x2": 850, "y2": 180, "label": "reads"})
 top_nodes.append(n_poll)
 
 n_relay = node(70, 56 + 230 + 30 + 35, 260, 80, ["AIOKafkaProducer", "send_and_wait(topic, key, value)"], style="box")
-n_kafka = node(400, 56 + 230 + 30 + 35, 260, 80, ["Kafka topic", "order.placed / payment.captured /", "payment.declined -- key=aggregateId"], style="accent")
+n_kafka = node(400, 56 + 230 + 30 + 35, 260, 80, ["Kafka topic", "order.placed / payment.captured /", "payment.declined: key=aggregateId"], style="accent")
 n_stamp = node(730, 56 + 230 + 30 + 35, 280, 80, ["mark published_at", "(crash here -> row stays", "unpublished -> republished)"], style="ghost")
 mid_nodes = [n_relay, n_kafka, n_stamp]
 mid_edges = [connect(n_relay, n_kafka), connect(n_kafka, n_stamp, dashed=True, label="after ack")]
@@ -69,7 +69,7 @@ mid_edges.append({"x1": 860, "y1": 56 + 230 + 30 + 75, "x2": 860, "y2": bot_y - 
 notes = [
     {"x": W / 2, "y": 30, "text": "the outbox done right: one bridge, three idempotent-consumer idioms this book has already shipped",
      "anchor": "middle", "bold": True, "size": 17},
-    {"x": 40, "y": H - 46, "text": "At-least-once is a promise about the PIPE, not the effect -- the relay can republish, the broker can redeliver.",
+    {"x": 40, "y": H - 46, "text": "At-least-once is a promise about the PIPE, not the effect, the relay can republish, the broker can redeliver.",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 40, "y": H - 28, "text": "Idempotency at the consumer is what makes redelivery safe; which idiom fits depends on what kind of write it is.",
      "anchor": "start", "size": 11, "color": "#555555"},

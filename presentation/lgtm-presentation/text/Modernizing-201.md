@@ -106,7 +106,7 @@ def test_ship_fail_sentinel_rolls_back_entire_checkout(api_client, customer, wid
     widget.refresh_from_db()
     assert widget.quantity_on_hand == before  # net-zero stock, SMELL
 
-# examples/00-monolith/tests/test_smoke.py -- one assertion per /api/* surface
+# examples/00-monolith/tests/test_smoke.py: one assertion per /api/* surface
 def test_inventory_serves(api_client, widget):
     response = api_client.get("/api/inventory")
     assert response.status_code == 200

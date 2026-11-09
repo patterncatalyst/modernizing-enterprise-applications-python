@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.30 figure: mesh-mtls-topology -- the `mea` namespace once the ch.30
+"""ch.30 figure: mesh-mtls-topology, the `mea` namespace once the ch.30
 seam is activated: all 8 app Deployments carry the `sidecar.istio.io/inject`
 pod-template LABEL (overlays/minikube/kustomization.yaml) and run 2/2 with an
 injected Envoy sidecar; PeerAuthentication STRICT (deploy/k8s/istio/
@@ -27,7 +27,7 @@ g.OUT = os.path.dirname(__file__)
 
 W, H = 1540, 820
 
-band = {"x": 230, "y": 40, "w": 1280, "h": 660, "fill": "#fafafa", "label": "namespace: mea -- mesh active (sidecar.istio.io/inject label on 8 Deployments)"}
+band = {"x": 230, "y": 40, "w": 1280, "h": 660, "fill": "#fafafa", "label": "namespace: mea, mesh active (sidecar.istio.io/inject label on 8 Deployments)"}
 
 client = node(30, 330, 170, 80, ["Client", "127.0.0.1:30888"], style="box")
 
@@ -51,14 +51,14 @@ order = node(600, 438, 240, 76, ["order-service + istio-proxy", "mesh STRICT",
 services = [review, notif, inv, pay, ship, order]
 
 postgres = node(1020, 150, 260, 90,
-                ["postgres StatefulSet", "NO sidecar.istio.io/inject", "unmeshed -- own TLS unchanged"],
+                ["postgres StatefulSet", "NO sidecar.istio.io/inject", "unmeshed: own TLS unchanged"],
                 style="sub")
 kafka = node(1020, 330, 260, 90,
-             ["kafka StatefulSet", "NO sidecar.istio.io/inject", "unmeshed -- own TLS unchanged"],
+             ["kafka StatefulSet", "NO sidecar.istio.io/inject", "unmeshed: own TLS unchanged"],
              style="sub")
 lgtm = node(1020, 500, 260, 100,
             ["lgtm (Tempo/Loki/Mimir/Grafana)", "NO sidecar.istio.io/inject",
-             "unmeshed -- OTLP ingest stays plaintext"],
+             "unmeshed: OTLP ingest stays plaintext"],
             style="sub")
 
 db_group_box = {"x": 600, "y": 78, "w": 240, "h": 420}
@@ -85,13 +85,13 @@ notes = [
     {"x": W / 2, "y": 24, "text": "the meshed mea namespace: mTLS STRICT inside, one PERMISSIVE edge, two unmeshed backends",
      "anchor": "middle", "bold": True, "size": 15},
     {"x": 240, "y": H - 56,
-     "text": "Green boxes (strangler-proxy, order-service, inventory-service) are the 3 OTel-instrumented services -- app depth. All 8 get mesh breadth automatically via Envoy.",
+     "text": "Green boxes (strangler-proxy, order-service, inventory-service) are the 3 OTel-instrumented services, app depth. All 8 get mesh breadth automatically via Envoy.",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 240, "y": H - 38,
-     "text": "postgres, kafka, and the lgtm backend itself carry no sidecar.istio.io/inject label -- meshing their own TLS/plaintext would collide with the injected sidecar's mTLS wrapping.",
+     "text": "postgres, kafka, and the lgtm backend itself carry no sidecar.istio.io/inject label, meshing their own TLS/plaintext would collide with the injected sidecar's mTLS wrapping.",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 240, "y": H - 20,
-     "text": "PeerAuthentication: default (STRICT, namespace-wide) + strangler-proxy-edge (PERMISSIVE, inbound only) -- deploy/k8s/istio/peer-authentication*.yaml.",
+     "text": "PeerAuthentication: default (STRICT, namespace-wide) + strangler-proxy-edge (PERMISSIVE, inbound only), deploy/k8s/istio/peer-authentication*.yaml.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

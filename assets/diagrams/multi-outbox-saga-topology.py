@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.20 figure: multi-outbox-saga-topology -- this project's first
+"""ch.20 figure: multi-outbox-saga-topology, this project's first
 MULTI-SERVICE outbox choreography. Notification (ch.17) was one outbox
 feeding one consumer. Payment (r05) chains TWO outboxes end to end, each
 owned by a different service, with no coordinator anywhere in the picture:
@@ -24,11 +24,11 @@ g.OUT = os.path.dirname(__file__)
 W, H = 1360, 620
 
 band_mono1 = {"x": 20, "y": 50, "w": 620, "h": 190,
-              "label": "Monolith -- order context (owns the checkout)", "fill": "#fafafa"}
+              "label": "Monolith: order context (owns the checkout)", "fill": "#fafafa"}
 band_pay = {"x": 700, "y": 50, "w": 640, "h": 190,
-            "label": "payment-service -- owns its OWN schema + outbox", "fill": "#f1f5f9"}
+            "label": "payment-service: owns its OWN schema + outbox", "fill": "#f1f5f9"}
 band_mono2 = {"x": 20, "y": 280, "w": 620, "h": 190,
-              "label": "Monolith -- order_saga_listener (a second consumer, same process)", "fill": "#fafafa"}
+              "label": "Monolith: order_saga_listener (a second consumer, same process)", "fill": "#fafafa"}
 
 n_checkout = node(50, 130, 250, 90, ["_place_order_choreographed()", "PENDING order + outbox row,", "ONE local transaction"], style="accent")
 n_relay1 = node(330, 130, 280, 90, ["outbox_relay", "(this service's OWN relay)"], style="box")
@@ -54,7 +54,7 @@ notes = [
      "anchor": "middle", "bold": True, "size": 17},
     {"x": 40, "y": H - 46, "text": "Each hop (outbox -> relay -> topic -> consumer) is independently at-least-once; the monolith is BOTH the first producer",
      "anchor": "start", "size": 11, "color": "#555555"},
-    {"x": 40, "y": H - 28, "text": "and the final consumer -- a request that started as a checkout ends as a Kafka message the same process reacts to.",
+    {"x": 40, "y": H - 28, "text": "and the final consumer: a request that started as a checkout ends as a Kafka message the same process reacts to.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

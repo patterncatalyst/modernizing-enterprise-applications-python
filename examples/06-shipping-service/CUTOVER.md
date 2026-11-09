@@ -1,4 +1,4 @@
-# shipping-service -- Cutover Notes (ch.23-25, r06)
+# shipping-service: Cutover Notes (ch.23-25, r06)
 
 This service has **two independent cutover dimensions**, same posture as
 `../04-inventory-service/CUTOVER.md` and `../05-payment-service/CUTOVER.md`
@@ -7,25 +7,25 @@ This service has **two independent cutover dimensions**, same posture as
 ## Dimension 1: the read surface (strangler proxy)
 
 `../01-strangler-proxy`'s `STRANGLER_SHIPPING_ENABLED` flag (already wired,
-default base URL `http://localhost:8087` -- this service's own port) routes
+default base URL `http://localhost:8087`, this service's own port) routes
 `GET /api/shipments*` to this service instead of the monolith's Django view.
 Pure read traffic, safe to flip independently and roll back instantly (flip
 the flag back). This service's read contract (`GET /api/shipments?orderId=`,
 `GET /api/shipments/{id}`) matches the monolith's `shipping/views.py`
 byte-for-byte (camelCase, same uniform error body), so flipping this flag
 alone changes nothing observable to a caller as long as both surfaces agree
-on what's been shipped -- which they do only once `SHIPPING_MODE=orchestrated`
+on what's been shipped, which they do only once `SHIPPING_MODE=orchestrated`
 is also flipped (Dimension 2), since otherwise the monolith is still the one
 writing `shipping.Shipment` rows in ITS OWN shared schema, not this
 service's owned one.
 
 ## Dimension 2: who dispatches shipping (`settings.SHIPPING_MODE`)
 
-This is the REAL cutover -- a checkout-behavior change, not just a read-path
+This is the REAL cutover, a checkout-behavior change, not just a read-path
 redirect, and it is NOT a strangler-proxy flag. It is a monolith-side
 environment variable (`examples/00-monolith/config/settings.py`,
 `SHIPPING_MODE`, default `inprocess`) read only inside
-`order.services.handle_payment_captured` -- the THIRD, ORTHOGONAL axis on top
+`order.services.handle_payment_captured`: the THIRD, ORTHOGONAL axis on top
 of `INVENTORY_MODE` (r04) and `PAYMENT_MODE` (r05):
 
 | `SHIPPING_MODE` | Who dispatches | Order's terminal path | Shipment persisted where? |
@@ -40,7 +40,7 @@ monolith's own `handle_payment_captured`/this service's consumer
 respectively off the SAME `payment.captured` event, regardless of whether
 payment itself was charged synchronously or choreographed.
 
-## The refund gap -- CLOSED (r06/DRQ-054)
+## The refund gap, CLOSED (r06/DRQ-054)
 
 Earlier drafts of this file carried over r05's documented gap verbatim ("a
 captured payment stays on the books for a `SHIPPING_FAILED` order, no Refund
@@ -53,7 +53,7 @@ service's saga compensates a `SHIP-FAIL` order. See the CUTOVER lane below
 for the live proof, including the redelivery/idempotency check (a redelivered
 `shipment.failed` does not double-refund).
 
-## CUTOVER lane -- the orchestrated dispatch cutover, proven live end-to-end
+## CUTOVER lane: the orchestrated dispatch cutover, proven live end-to-end
 
 `tooling/newman/GOLDEN-BASELINE.md`'s "r06 CUTOVER lane" section is the full
 record: the FULL topology (monolith, inventory-service, payment-service,
@@ -65,7 +65,7 @@ behavior-equivalence suite was run live through the proxy. In short:
   checkout genuinely goes `PENDING -> AWAITING_SHIPMENT -> CONFIRMED` (poll
   attempt 2/40, a real multi-hop Kafka round trip, not an instant resolve); a
   `SHIP-FAIL` checkout goes `PENDING -> AWAITING_SHIPMENT -> SHIPPING_FAILED`
-  AND its captured payment reaches `REFUNDED` (poll attempt 1/20) -- the r06
+  AND its captured payment reaches `REFUNDED` (poll attempt 1/20), the r06
   win. Shipping Context Contract (S1-S3) green against this service's own
   `/api/shipments` surface.
 - **Reversibility GREEN**: `SHIPPING_MODE=inprocess` + `PAYMENT_MODE=synchronous`
@@ -73,14 +73,14 @@ behavior-equivalence suite was run live through the proxy. In short:
   synchronous contract (`201`/`402`/`422` in one round trip), no data
   migration, no restart needed on this service's own side.
 - **Crash-resume proven**: a `Saga` row seeded `RUNNING` (mirroring
-  `tests/integration/test_crash_resume.py`'s own technique -- simulating a
+  `tests/integration/test_crash_resume.py`'s own technique: simulating a
   crash right after `enrich` committed but before `dispatch` ran) survived a
   real process restart; `resume_running_sagas()` picked up at the persisted
   `step_index` without re-invoking `enrich`, and the order genuinely reached
   `CONFIRMED`.
 - **Negative, honesty proof**: with this service killed, a checkout gets
-  stuck at `AWAITING_SHIPMENT` forever -- Scenario 1 run alone goes RED
-  (newman exit 1), not a false green -- and drains to `CONFIRMED` the instant
+  stuck at `AWAITING_SHIPMENT` forever, Scenario 1 run alone goes RED
+  (newman exit 1), not a false green, and drains to `CONFIRMED` the instant
   this service restarts.
 - **Refund idempotency proven**: a redelivered `shipment.failed` for an
   already-`REFUNDED` payment is a safe no-op (no double refund, no second
@@ -88,11 +88,11 @@ behavior-equivalence suite was run live through the proxy. In short:
 
 **One honest finding, not papered over**: `tooling/newman/mea.postman_collection.json`'s
 bounded-wait poll scripts (`1c`/`3c`/`4c`) retry only while an order's status
-is `PENDING` -- they have no knowledge of the `AWAITING_SHIPMENT`
+is `PENDING`: they have no knowledge of the `AWAITING_SHIPMENT`
 intermediate status this service's orchestrated path introduces, so a poll
 landing in that (sub-second) window can report a false RED on an otherwise
 healthy saga. Reproduced once, root-caused, and left unfixed on purpose (this
-lane's scope excludes editing the collection) -- see `GOLDEN-BASELINE.md` for
+lane's scope excludes editing the collection), see `GOLDEN-BASELINE.md` for
 the full writeup and the mechanical fix a future lane should make.
 
 ## What this lane did NOT touch

@@ -1,4 +1,4 @@
-# AGENTS.md -- 02-review-service
+# AGENTS.md: 02-review-service
 
 Context for an AI agent (or a human) picking this module up.
 
@@ -7,15 +7,15 @@ Context for an AI agent (or a human) picking this module up.
 The r02 extraction of the `review` bounded context off `../00-monolith` onto
 a standalone FastAPI service, `:8001`. Two-phase migration (ch.15, DRQ-009):
 **Phase A** (lift onto FastAPI via the monolith's own Django ORM) is
-documented, not shipped as code -- see `MIGRATION.md`. **Phase B** (idiomatic
+documented, not shipped as code, see `MIGRATION.md`. **Phase B** (idiomatic
 FastAPI + async SQLAlchemy/asyncpg + passlib) is the only code in `app/`, and
 is the final state. Don't go looking for a Phase A module; it was
 deliberately never committed here, only measured and written up.
 
 This is the Python sibling of
 `~/Dev/modernizing-enterprise-applications/examples/02-review-service`
-(Java/Quarkus) -- same role in the book, same chapter, same two-phase
-structure -- but it is its own independent implementation, not a port of that
+(Java/Quarkus): same role in the book, same chapter, same two-phase
+structure: but it is its own independent implementation, not a port of that
 code.
 
 ## Toolchain
@@ -42,60 +42,60 @@ uv run pytest        # needs the same reachable, migrated+seeded Postgres
 
 `DATABASE_URL` (same convention as `00-monolith`, default
 `postgresql://monolith:monolith@localhost:5432/monolith`) is normalized onto
-the asyncpg driver scheme by `app/db.py::resolve_database_url` -- the SAME
+the asyncpg driver scheme by `app/db.py::resolve_database_url`, the SAME
 env var value works unmodified for both services.
 
 ## Structure
 
-- `app/main.py` -- FastAPI app factory + lifespan (creates the async engine/
+- `app/main.py`: FastAPI app factory + lifespan (creates the async engine/
   session factory once at startup, disposes it at shutdown), structured file
   logging setup, `redirect_slashes=False`.
-- `app/routes.py` -- the three `/api/reviews*` endpoints.
-- `app/schemas.py` -- Pydantic v2 request/response models, camelCase via
+- `app/routes.py`: the three `/api/reviews*` endpoints.
+- `app/schemas.py`: Pydantic v2 request/response models, camelCase via
   `Field(alias=...)` (explicit per-field mapping, same convention as the
   monolith's DRF `source=`).
-- `app/repository.py` -- async SQLAlchemy queries; no ORM relationship
+- `app/repository.py`: async SQLAlchemy queries; no ORM relationship
   traversal, every cross-table join written out explicitly.
-- `app/auth.py` -- HTTP Basic dependency for `POST /api/reviews` only,
+- `app/auth.py`: HTTP Basic dependency for `POST /api/reviews` only,
   verified against the shared `auth_user` table via passlib's
   `django_pbkdf2_sha256` scheme.
-- `app/models.py` -- SQLAlchemy declarative mappings for `reviews`,
-  `auth_user`, `customers`, `inventory_items` -- matching the monolith's
+- `app/models.py`: SQLAlchemy declarative mappings for `reviews`,
+  `auth_user`, `customers`, `inventory_items`: matching the monolith's
   `db_table`s exactly. No `Base.metadata.create_all()` anywhere: this
   service never creates or alters these tables.
-- `app/db.py` -- async engine/session factory, `DATABASE_URL` normalization.
-  No Alembic, no migrations directory -- intentional (see README.md).
-- `app/errors.py` -- the uniform `{"error","message","timestamp"}` body,
+- `app/db.py`: async engine/session factory, `DATABASE_URL` normalization.
+  No Alembic, no migrations directory, intentional (see README.md).
+- `app/errors.py`: the uniform `{"error","message","timestamp"}` body,
   wired via FastAPI exception handlers for the domain `ApiError` hierarchy,
   `RequestValidationError` (-> 400 `VALIDATION_FAILED`, not FastAPI's
   default 422), and the catch-all `StarletteHTTPException`.
-- `tests/` -- pytest + `fastapi.testclient.TestClient`, run against the
+- `tests/`: pytest + `fastapi.testclient.TestClient`, run against the
   shared seeded database (no mocking of Postgres).
 
-## Contract notes (don't "fix" these -- they match the monolith on purpose)
+## Contract notes (don't "fix" these, they match the monolith on purpose)
 
 - JSON is **camelCase**, no trailing slash, same uniform error body as
-  `00-monolith`'s `common/exceptions.py` -- see `README.md`'s endpoint table.
+  `00-monolith`'s `common/exceptions.py`: see `README.md`'s endpoint table.
 - `POST /api/reviews`'s 401 uses error code `"ERROR"`, not a dedicated
-  `"UNAUTHORIZED"` code -- that's what the monolith's DRF exception handler
+  `"UNAUTHORIZED"` code: that's what the monolith's DRF exception handler
   actually produces for an auth failure (its generic catch-all branch, not a
   domain `ApiError`). Matching it byte-for-byte means keeping that
   (slightly surprising) code, not "improving" it.
-- `comment` is always a string, never `null`, on read -- the underlying
+- `comment` is always a string, never `null`, on read, the underlying
   Django `CharField` is `blank=True, default=""`, not nullable.
 - Rating validation (`1..5`) happens via Pydantic's `Field(ge=1, le=5)` on
-  `ReviewCreate` -- a constraint violation becomes `RequestValidationError`,
+  `ReviewCreate`: a constraint violation becomes `RequestValidationError`,
   remapped by `app/errors.py` to `400 VALIDATION_FAILED` (FastAPI's default
   would be 422; that default is the wrong contract here).
 - Auth is checked against `auth_user.password` using passlib's
-  `django_pbkdf2_sha256` scheme -- never hand-roll PBKDF2 verification here;
+  `django_pbkdf2_sha256` scheme: never hand-roll PBKDF2 verification here;
   getting the iteration count, salt format, or comparison timing wrong is a
   real, easy mistake (see `app/auth.py`'s docstring).
 
 ## Testing
 
 Needs a reachable Postgres with `00-monolith`'s schema already migrated and
-seeded (the `reviewer` / `review-pw-r02` auth user included) -- there is no
+seeded (the `reviewer` / `review-pw-r02` auth user included), there is no
 separate throwaway schema for this service to create itself:
 
 ```sh

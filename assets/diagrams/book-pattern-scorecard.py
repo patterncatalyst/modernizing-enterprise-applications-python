@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ch.32 figure: book-pattern-scorecard -- the whole book's pattern-coverage
+"""ch.32 figure: book-pattern-scorecard, the whole book's pattern-coverage
 verdict, as three stacked bands (same shape as ch.27's chassis-scorecard,
 one level up: patterns, not chassis capabilities). Earned (8 cards): a
 lasting role across the finished migration. Adapted (5 cards): real and
@@ -24,17 +24,17 @@ g.OUT = os.path.dirname(__file__)
 
 W, H = 1460, 700
 
-band_earned = {"x": 20, "y": 50, "w": 1420, "h": 270, "label": "EARNED -- a lasting role across the finished migration", "fill": "#f1f5f9"}
-band_adapted = {"x": 20, "y": 340, "w": 1420, "h": 150, "label": "ADAPTED -- real and shipped, narrower than the deck's original shape", "fill": "#fafafa"}
-band_deferred = {"x": 20, "y": 510, "w": 1420, "h": 150, "label": "NAMED, DEFERRED -- scoped out with a stated condition, not skipped silently", "fill": "#fafafa"}
+band_earned = {"x": 20, "y": 50, "w": 1420, "h": 270, "label": "EARNED: a lasting role across the finished migration", "fill": "#f1f5f9"}
+band_adapted = {"x": 20, "y": 340, "w": 1420, "h": 150, "label": "ADAPTED: real and shipped, narrower than the deck's original shape", "fill": "#fafafa"}
+band_deferred = {"x": 20, "y": 510, "w": 1420, "h": 150, "label": "NAMED, DEFERRED: scoped out with a stated condition, not skipped silently", "fill": "#fafafa"}
 
-# EARNED -- row 1
+# EARNED: row 1
 e1 = node(40, 95, 330, 105, ["Strangler Fig + ASGI proxy", "the spine;", "decommission complete"], style="accent")
 e2 = node(390, 95, 330, 105, ["Content-Based Routing + ACL", "notification +", "the inventory.proto gRPC seam"], style="accent")
 e3 = node(740, 95, 330, 105, ["Shared -> Owned Data + sync gRPC", "CDC-backfilled,", "then Alembic-migrated"], style="accent")
 e4 = node(1090, 95, 330, 105, ["Transactional Outbox + event-driven", "cures the sync-send", "and dual-write smells"], style="accent")
 
-# EARNED -- row 2
+# EARNED: row 2
 e5 = node(40, 210, 330, 105, ["CQRS + ACID -> ACD", "order_view,", "the 201 -> 202 PENDING flip"], style="accent")
 e6 = node(390, 210, 330, 105, ["Saga: Choreographed + Orchestrated", "payment reacts,", "shipping's coordinator decides"], style="accent")
 e7 = node(740, 210, 330, 105, ["Deployment (kustomize)", "base + overlays/minikube,", "23/23 kubeconform-strict Valid"], style="accent")
@@ -58,7 +58,7 @@ f6 = node(1205, 545, 213, 95, ["Caching", "generic, no migration driver;", "demo
 nodes = [e1, e2, e3, e4, e5, e6, e7, e8, d1, d2, d3, d4, d5, f1, f2, f3, f4, f5, f6]
 
 notes = [
-    {"x": W / 2, "y": 24, "text": "The book's pattern-coverage verdict -- one card per pattern family, matching build-plan.md SS C",
+    {"x": W / 2, "y": 24, "text": "The book's pattern-coverage verdict: one card per pattern family",
      "anchor": "middle", "bold": True, "size": 15},
 ]
 

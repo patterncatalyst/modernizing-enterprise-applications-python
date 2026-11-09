@@ -30,14 +30,14 @@ W, H = 1680, 700
 client = node(30, 270, 150, 80, ["Client", "POST /api/orders"], style="sub")
 
 band = {"x": 200, "y": 170, "w": 1310, "h": 300,
-        "label": "ONE transaction.atomic() -- order/services.py::_place_order_local",
+        "label": "ONE transaction.atomic(), order/services.py::_place_order_local",
         "fill": "#eaf4ec"}
 
 STEP_Y, STEP_H, STEP_W, GUTTER = 240, 120, 145, 12
 STEP_X0 = 220
 steps = [
     ("validate", ["Validate customer", "Customer.objects.get", "404 if missing"]),
-    ("reserve", ["Reserve stock (loop)", "inventory_services.reserve()", "row lock -- SMELL #1 no ACL"]),
+    ("reserve", ["Reserve stock (loop)", "inventory_services.reserve()", "row lock: SMELL #1 no ACL"]),
     ("persist", ["Persist order", "Order/OrderItem.objects.create", "snapshot sku/name/price"]),
     ("charge", ["Charge payment", "payment_services.charge()", "decline -> rolls back all above"]),
     ("confirm", ["Confirm order", "order.confirm()", "status -> CONFIRMED"]),

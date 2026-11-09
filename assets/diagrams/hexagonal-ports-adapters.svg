@@ -36,8 +36,8 @@
 <path d="M310.0,310.0 L380.0,310.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
 <path d="M278.3333333333333,420.0 L385.6060606060606,360.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
 <path d="M570.0,310.0 L610.0,310.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
-<text x="596.0" y="440.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">dependency points inward -- adapters are swappable</text>
-<text x="596.0" y="440.0" font-size="11" fill="#2f5f3d" text-anchor="middle">dependency points inward -- adapters are swappable</text>
+<text x="596.0" y="440.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">dependency points inward: adapters are swappable</text>
+<text x="596.0" y="440.0" font-size="11" fill="#2f5f3d" text-anchor="middle">dependency points inward: adapters are swappable</text>
 <path d="M1190.0,265.1818181818182 L1140.0,280.6363636363636" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
 <path d="M1190.0,370.6363636363636 L1140.0,349.72727272727275" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
 <path d="M950.0,310.0 L890.0,310.0" fill="none" stroke="#2f5f3d" stroke-width="2" marker-end="url(#am)"/>
@@ -45,8 +45,8 @@
 <text x="926.0" y="440.0" font-size="11" fill="#2f5f3d" text-anchor="middle">core declares the port; the adapter implements it</text>
 <text x="750.0" y="32" font-size="17" fill="#1d1d1d" text-anchor="middle" font-weight="700">Hexagonal architecture: ports and adapters, dependencies pointing inward</text>
 <text x="750.0" y="56" font-size="11.5" fill="#555555" text-anchor="middle">driving adapters translate a protocol into an inbound-port call; driven adapters implement the outbound port the core declared</text>
-<text x="750.0" y="216" font-size="10.5" fill="#3d7a4e" text-anchor="middle">the core never imports a protocol -- a protocol can be swapped without the core noticing</text>
+<text x="750.0" y="216" font-size="10.5" fill="#3d7a4e" text-anchor="middle">the core never imports a protocol, a protocol can be swapped without the core noticing</text>
 <text x="40" y="560" font-size="10.5" fill="#555555" text-anchor="start">Caveat (this chapter&#x27;s own): examples/02-review-service&#x27;s app/repository.py is a module of plain async functions, not a declared</text>
-<text x="40" y="574" font-size="10.5" fill="#555555" text-anchor="start">Port abstraction the core programs against -- what made review cheap to extract was zero outbound edges to other contexts.</text>
+<text x="40" y="574" font-size="10.5" fill="#555555" text-anchor="start">Port abstraction the core programs against, what made review cheap to extract was zero outbound edges to other contexts.</text>
 <text x="40" y="604" font-size="10" fill="#777777" text-anchor="start">Sourced from examples/02-review-service/app/routes.py + app/repository.py, examples/00-monolith/order/inventory_client.py + notification/management/commands/order_placed_consumer.py.</text>
 </svg>

@@ -11,7 +11,7 @@
 # docker://registry.access.redhat.com/ubi10/python-314-minimal` (newest
 # non-source tag as of 2026-10-15; matches examples/00-monolith's own pin).
 # Re-verify before bumping.
-ARG UBI_PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506
+ARG UBI_PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal:10.2-1793853808
 ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.13.1
 
 FROM ${UV_IMAGE} AS uv

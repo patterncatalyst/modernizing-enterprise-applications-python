@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""ch.31 figure: supply-chain-gate-pipeline -- two bands.
+"""ch.31 figure: supply-chain-gate-pipeline, two bands.
 
 Top band: the actual syft -> grype -> policy-as-code pipeline
 examples/10-supply-chain/demo.sh runs for BOTH targets in policy.yaml,
-side by side -- order-service ("after", gate: required) on top,
+side by side, order-service ("after", gate: required) on top,
 00-monolith ("before", gate: reported) below it, both producing the
 IDENTICAL 265-match / 0 Critical / 35 High / 153 Medium / 77 Low result
 (evidence/summary.txt, 2026-10-17) because both images pin the same
@@ -13,17 +13,18 @@ High findings into 0 fixable High -> PASS, while the monolith's
 `gate: reported` verdict is measured on the RAW count (35 High) and
 reports FAIL without ever blocking the pipeline.
 
-Bottom band: the CI gate map -- the four separate, additive workflows
-this repo actually ships (code-ci.yml/contract-gate, schema-registry.yml,
-deploy-manifests.yml, supply-chain.yml), each with its own changes/gate/
+Bottom band: the CI gate map, the six separate, additive gate workflows
+this repo ships (code-ci.yml/contract-gate, schema-registry.yml,
+deploy-manifests.yml, mesh-manifests.yml, openshift-chart.yml,
+supply-chain.yml), plus pages.yml (site build, no summary job), each gate with its own changes/gate/
 `*-ok` summary job and no `paths:` filter, converging on one repository
 ruleset. monolith-scan is drawn hanging off supply-chain.yml's sbom-scan
-node, explicitly NOT feeding supply-chain-ok -- it is continue-on-error
+node, explicitly NOT feeding supply-chain-ok, it is continue-on-error
 and absent from that job's `needs:` list (supply-chain.yml).
 
 Sourced from: examples/10-supply-chain/policy.yaml, .grype.yaml,
 demo.sh, README.md ("The captured result"), evidence/summary.txt;
-.github/workflows/code-ci.yml, schema-registry.yml, deploy-manifests.yml,
+.github/workflows/code-ci.yml, schema-registry.yml, deploy-manifests.yml, mesh-manifests.yml, openshift-chart.yml, pages.yml,
 supply-chain.yml.
 """
 import sys, os
@@ -34,13 +35,13 @@ from _lib import node, connect
 
 g.OUT = os.path.dirname(__file__)
 
-W, H = 1400, 920
+W, H = 1400, 960
 
 band_pipeline = {"x": 20, "y": 50, "w": 1360, "h": 340,
                   "label": "examples/10-supply-chain/demo.sh == supply-chain.yml: build -> syft SBOM -> grype scan -> fixable-only policy gate",
                   "fill": "#f1f5f9"}
-band_gates = {"x": 20, "y": 420, "w": 1360, "h": 460,
-              "label": "Four separate, additive required checks -- same changes / gate / *-ok summary-job shape, no paths: filter",
+band_gates = {"x": 20, "y": 420, "w": 1360, "h": 480,
+              "label": "Six separate, additive gate workflows, same changes / gate / *-ok summary-job shape, no paths: filter; plus the Pages build",
               "fill": "#fafafa"}
 
 # ---- Band 1, row A: order-service, the "after", gate: required ------------
@@ -54,7 +55,7 @@ a_pass = node(1210, 95, 150, 95, ["gate: required", "PASS", "exit 0"], style="us
 # ---- Band 1, row B: 00-monolith, the "before", gate: reported -------------
 b_build = node(50, 225, 190, 95, ["Build image", "00-monolith (frozen)", "Dockerfile (UBI10)"], style="accent")
 b_sbom = node(270, 225, 190, 95, ["syft", "CycloneDX JSON SBOM", "5690 components"], style="box")
-b_scan = node(490, 225, 210, 95, ["grype, same DB", "SAME base layer", "265 matches: 0C/35H/153M/77L"], style="box")
+b_scan = node(490, 225, 210, 95, ["grype, same DB", "same base layer", "265 matches: 0C/35H/153M/77L"], style="box")
 b_raw = node(730, 225, 230, 95, ["gate: reported", "measured on RAW count", "(not filtered to fixable)"], style="sub")
 b_fail = node(990, 225, 190, 95, ["fail-on: High", "raw High = 35 > 0", "reported FAIL"], style="ghost")
 b_excl = node(1210, 225, 150, 95, ["continue-on-error", "never blocks", "the pipeline"], style="ghost")
@@ -76,42 +77,54 @@ pipeline_edges = [
 ]
 
 # ---- Band 2: the four CI gates, each its own changes/gate/*-ok -----------
-g1 = node(60, 460, 290, 95, ["code-ci.yml", "contract-gate", "full Newman suite, no monolith"], style="accent")
-g1ok = node(60, 580, 290, 70, ["code-ci-ok"], style="box")
+g1 = node(40, 460, 200, 95, ["code-ci.yml", "contract-gate", "full Newman suite"], style="accent")
+g1ok = node(40, 580, 200, 70, ["code-ci-ok"], style="box")
 
-g2 = node(390, 460, 290, 95, ["schema-registry.yml", "schema-registry-gate", "Avro round trip + BACKWARD compat"], style="accent")
-g2ok = node(390, 580, 290, 70, ["schema-registry-ok"], style="box")
+g2 = node(264, 460, 200, 95, ["schema-registry.yml", "schema-registry-gate", "Avro + BACKWARD compat"], style="accent")
+g2ok = node(264, 580, 200, 70, ["schema-registry-ok"], style="box")
 
-g3 = node(720, 460, 290, 95, ["deploy-manifests.yml", "render", "kubectl kustomize + kubeconform -strict"], style="accent")
-g3ok = node(720, 580, 290, 70, ["deploy-manifests-ok"], style="box")
+g3 = node(488, 460, 200, 95, ["deploy-manifests.yml", "render", "kustomize + kubeconform"], style="accent")
+g3ok = node(488, 580, 200, 70, ["deploy-manifests-ok"], style="box")
 
-g4 = node(1050, 460, 290, 95, ["supply-chain.yml", "sbom-scan (order-service)", "fixable-only grype gate"], style="accent")
-g4ok = node(1050, 580, 290, 70, ["supply-chain-ok"], style="box")
+g5 = node(712, 460, 200, 95, ["mesh-manifests.yml", "render", "istio + observability"], style="accent")
+g5ok = node(712, 580, 200, 70, ["mesh-manifests-ok"], style="box")
 
-monolith_scan = node(1050, 680, 290, 70, ["monolith-scan", "continue-on-error: true", "absent from needs: -- never gates"], style="ghost")
+g6 = node(936, 460, 200, 95, ["openshift-chart.yml", "render", "helm lint + kubeconform"], style="accent")
+g6ok = node(936, 580, 200, 70, ["openshift-chart-ok"], style="box")
 
-ruleset = node(420, 790, 540, 95, ["Repository ruleset", "4 required checks, each if: always()",
+g4 = node(1160, 460, 200, 95, ["supply-chain.yml", "sbom-scan (order-service)", "fixable-only grype gate"], style="accent")
+g4ok = node(1160, 580, 200, 70, ["supply-chain-ok"], style="box")
+
+monolith_scan = node(1060, 680, 300, 70, ["monolith-scan", "continue-on-error: true", "absent from needs:, never gates"], style="ghost")
+
+pages = node(40, 680, 300, 70, ["pages.yml", "Jekyll build; deploy only from main", "no changes / *-ok summary job"], style="ghost")
+
+ruleset = node(420, 790, 540, 95, ["Repository ruleset", "requires *-ok summary jobs, each if: always()",
                                     "a new gate = a new additive workflow, old ones untouched"], style="user")
 
-gate_nodes = [g1, g1ok, g2, g2ok, g3, g3ok, g4, g4ok, monolith_scan, ruleset]
+gate_nodes = [g1, g1ok, g2, g2ok, g3, g3ok, g5, g5ok, g6, g6ok, g4, g4ok, monolith_scan, pages, ruleset]
 
 gate_edges = [
     connect(g1, g1ok),
     connect(g2, g2ok),
     connect(g3, g3ok),
+    connect(g5, g5ok),
+    connect(g6, g6ok),
     connect(g4, g4ok),
-    connect(g4, monolith_scan, dashed=True, label="built + scanned, never gates"),
+    connect(g4, monolith_scan, dashed=True),
     connect(g1ok, ruleset),
     connect(g2ok, ruleset),
     connect(g3ok, ruleset),
+    connect(g5ok, ruleset),
+    connect(g6ok, ruleset),
     connect(g4ok, ruleset),
     connect(a_pass, g4, dashed=True, label="same 3 steps as demo.sh"),
 ]
 
 notes = [
-    {"x": W / 2, "y": 30, "text": "the supply-chain gate pipeline (top) and the four additive, separately-gated CI checks it joins (bottom)",
+    {"x": W / 2, "y": 30, "text": "the supply-chain gate pipeline (top) and the six additive gate workflows it joins (bottom)",
      "anchor": "middle", "bold": True, "size": 16},
-    {"x": 40, "y": H - 46, "text": "Both images inherit the SAME 35 High CVEs from the shared ubi10/python-314-minimal base layer -- none from either service's own Python dependencies.",
+    {"x": 40, "y": H - 46, "text": "Both images inherit the same 35 High CVEs from the shared ubi10/python-314-minimal base layer, none from either service's own Python dependencies.",
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 40, "y": H - 28, "text": "gate-on: fixable (.grype.yaml) scopes the block to what a re-pin or a dependency bump could actually fix; point-in-time against the grype DB (built 2026-10-16) and the pinned base-image tag.",
      "anchor": "start", "size": 11, "color": "#555555"},

@@ -8,7 +8,7 @@
 <text x="660.0" y="167.5" font-size="11.5" fill="#555555" text-anchor="middle">check-then-insert + uq_sagas_order_id</text>
 <rect x="460" y="215" width="400" height="70" rx="9" fill="#eaf4ec" stroke="#3d7a4e" stroke-width="2"/>
 <text x="660.0" y="248.0" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">orchestrator.advance(saga_id)</text>
-<text x="660.0" y="265.0" font-size="11.5" fill="#555555" text-anchor="middle">THE coordinator -- decides each next step</text>
+<text x="660.0" y="265.0" font-size="11.5" fill="#555555" text-anchor="middle">THE coordinator: decides each next step</text>
 <rect x="80" y="320" width="280" height="90" rx="9" fill="#ffffff" stroke="#111111" stroke-width="2"/>
 <text x="220.0" y="355.5" font-size="13.5" font-weight="700" fill="#111111" text-anchor="middle">Step 1: enrich</text>
 <text x="220.0" y="372.5" font-size="11.5" fill="#555555" text-anchor="middle">GET monolith /api/orders/{id}</text>
@@ -72,6 +72,6 @@
 <path d="M560.0,730.0 L560.0,760.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <path d="M560.0,850.0 L560.0,890.0" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <text x="660.0" y="18" font-size="16" fill="#1d1d1d" text-anchor="middle" font-weight="700">the orchestrated saga: ONE coordinator sequences every step and owns the compensation decision</text>
-<text x="40" y="974" font-size="11" fill="#555555" text-anchor="start">enrich and book_carrier persist nothing of their own, so neither has a compensation entry -- only dispatch&#x27;s Shipment row needs undoing.</text>
+<text x="40" y="974" font-size="11" fill="#555555" text-anchor="start">enrich and book_carrier persist nothing of their own, so neither has a compensation entry, only dispatch&#x27;s Shipment row needs undoing.</text>
 <text x="40" y="992" font-size="11" fill="#555555" text-anchor="start">Compare the choreographed payment saga: no box in this picture&#x27;s counterpart decides anything for another box.</text>
 </svg>

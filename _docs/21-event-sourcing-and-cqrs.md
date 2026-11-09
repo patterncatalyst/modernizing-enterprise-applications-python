@@ -2,7 +2,7 @@
 title: "Event Sourcing & CQRS"
 order: 21
 part: "Data Across the Seam"
-description: "CQRS read/write split, central to the gateway read side; event sourcing covered but kept light and optional; the trade-offs of each, proven against the real order_view same-transaction projection."
+description: "CQRS splits the write model from the read model, shown with order_view, a projection committed in the same transaction as its aggregate. Event sourcing is covered as the heavier, optional pattern and declined."
 duration: 40 minutes
 ---
 
@@ -10,88 +10,31 @@ duration: 40 minutes
 
 By the end of this chapter you can:
 
-- Define CQRS and explain why splitting a write model from one or more read models pays off when commands and queries need different shapes, scaling, and consistency.
-- Identify `examples/03-notification-service` as an already-running CQRS read model and explain exactly why it qualifies: its own schema, no foreign key into the monolith, populated by idempotently folding `order.placed` events.
-- Explain `order_view` as this book's clearest CQRS example: a read model owned by the same service as its write model, projected inside the same transaction rather than by a separate consumer reacting to a topic.
-- Distinguish a CQRS read model (a materialized view) from full event sourcing, where the event log itself is the system of record and current state is computed by replay.
-- Explain the real, ongoing costs of event sourcing (perpetual event schema evolution and upcasting, a snapshot strategy to bound replay cost, and tooling and team unfamiliarity) and why this book declines to pay them.
-- Apply the bounded-wait-poll-plus-negative-check technique to verify a read model is current within a stated window, and use the projection-disabled negative check to prove a read path never silently falls back to the aggregate.
-- Distinguish two legitimate forms of rebuildability: notification's topic-retention-bounded replay versus `order_view`'s on-demand recompute from the current aggregate, with the write side remaining the durable source of truth either way.
+- Define CQRS and say when a separate read model pays off.
+- Recognize `examples/03-notification-service` as a CQRS read model: its own schema, no foreign key into the monolith, populated by idempotently folding `order.placed` events.
+- Build `order_view` as a read model owned by the same service as its write model and projected in the same transaction as every write.
+- Distinguish a CQRS read model (a materialized view) from event sourcing, where the event log is the system of record and state is computed by replay.
+- Name the costs of event sourcing (event schema evolution and upcasting, snapshots to bound replay, tooling and team familiarity) and the reason to decline them.
+- Prove a read model is current with a bounded-wait poll, and prove a read path never falls back to the aggregate with a projection-disabled negative check.
+- Tell apart two forms of rebuildability: replay bounded by a topic's retention, and on-demand recompute from the current aggregate.
 
 ## Why this matters
 
-ch.20 generalized the outbox past Notification's single case and answered
-the question "how do I get a fact out of one service and onto a log
-reliably." This chapter asks the question on the other side of that log:
-once a fact is published, reliably, what do you *do* with it on the
-consuming side? And when does building a second model around "react to
-facts" pay for itself rather than adding cost for no reason? That is the
-question CQRS and event sourcing both answer, in two related but distinct
-ways, and this chapter was held back, by design, to answer it
-against the one artifact in this book built to make the answer concrete:
-`examples/07-order-service`'s `order_view`, a read model projected inside
-the **same transaction** as every write to the order it describes. ch.17's
-`examples/03-notification-service` already qualified as a CQRS read model
-two parts ago, without either chapter using the term. This chapter names
-what that service already was, then builds the harder version: a read
-model owned by the same service as its write model, kept current by
-construction rather than by a separate consumer reacting to a topic.
+Once a fact is published reliably, the consumer has to do something with it, and a second model built around "react to facts" has to pay for itself. CQRS and event sourcing answer that in two related ways. `examples/07-order-service`'s `order_view` makes the first concrete: a read model owned by the same service as its write model and kept current by construction, not by a consumer reacting to a topic. `examples/03-notification-service` was already a CQRS read model without the name.
 
-The code is in `examples/07-order-service/app/repository.py` (the write
-functions that do the projecting) and `app/models.py` (`OrderView`'s own
-docstring states the contract this chapter explains). There is no new run
-script for this chapter; `07-order-service`'s existing run path already
-exercises every mechanism described below, and its `README.md` covers how
-to drive it.
+The code is in `examples/07-order-service/app/repository.py` (the write functions that project) and `app/models.py`. Its `README.md` covers how to run it.
 
-## CQRS: one model for writing, maybe several for reading
+## Pattern: CQRS
 
-Command Query Responsibility Segregation says something smaller than its
-name suggests: stop assuming the model you use to *change* data and the
-model you use to *read* data have to be the same shape, stored the same
-way, or kept consistent on the same schedule. A conventional service
-collapses both responsibilities into one table, one entity, one query path
-serving both an `INSERT` that enforces an invariant and a `SELECT` that
-renders a screen, which is free and correct exactly when the two
-responsibilities want the same shape. That is why `review-service`
-(ch.15) and `inventory-service`'s stock table (ch.19) are plain CRUD and
-are right to be plain CRUD: nothing about their read shape differs from
-their write shape enough to justify a second model. CQRS pays for its
-own cost precisely where that assumption breaks: where the write side
-needs to enforce an invariant across a small, normalized cluster of fields
-(can this customer place this order, is there enough stock to reserve)
-while the read side needs to answer a differently-shaped question, at a
-different scale (show me this order's current status, its line items, and
-its total, denormalized into one response, served to however many clients
-are polling it). Force both needs through one model and the result is
-either a write table polluted with read-shaped denormalization it doesn't
-need, or a read path paying for joins the write side was never designed to
-make cheap. CQRS's actual mechanism for avoiding both outcomes is
-unglamorous: keep the write model exactly as normalized as it should
-already be, and build a separate, purpose-shaped read model next to it.
+Command Query Responsibility Segregation says the model that changes data and the model that reads it needn't share a shape, storage or consistency schedule. A conventional service uses one table and one query path for both an `INSERT` that enforces an invariant and a `SELECT` that renders a screen. That is correct when both want the same shape, which is why `review-service` and `inventory-service`'s stock table are plain CRUD.
 
-## `order_view`: the read model this book builds CQRS to demonstrate
+CQRS pays where the assumption breaks. The write side enforces an invariant across a small normalized cluster of fields (can this customer place this order, is there enough stock). The read side answers a differently shaped question at a different scale: this order's status, line items and total, denormalized into one response for however many clients poll it. One model for both leaves either a write table polluted with read-shaped denormalization or a read path paying for joins the write side never made cheap. CQRS keeps the write model as normalized as it should be and builds a purpose-shaped read model beside it.
 
-`07-order-service/app/models.py` ships two distinct table families in one
-`order_svc` schema, and the module's own docstring names the split
-directly: a **command side** (`customers`, `orders`, `order_items`,
-`outbox`) and a **read side** (`order_view`), the one table
-`app/routes.py`'s `GET` handlers ever query. `OrderView` is a denormalized
-projection: one row per order, `items` stored as a JSON array rather than
-a joined child table, because the read side's only query shape is "the
-whole order, exactly as the wire contract renders it," and there is no
-normalized-query benefit to a child table here, only an extra join on
-every read that nothing in this service ever needs. This is CQRS in its
-smallest, plainest form: not a second datastore, not a second team of
-infrastructure to operate, just two tables in one schema, each shaped for
-the job it does.
+### `order_view`
 
-What makes `order_view` the concrete example this chapter was held back to
-teach against is not the table's shape; it's *when* it gets written.
-Every write path in this service upserts `order_view` inside the exact
-same local transaction as the aggregate mutation that produced it, not in
-a follow-up step, not from a separate consumer reacting to the service's
-own event:
+`07-order-service/app/models.py` holds two table families in one `order_svc` schema: a command side (`customers`, `orders`, `order_items`, `outbox`) and a read side (`order_view`), the only table the `GET` handlers in `app/routes.py` query. `OrderView` is one row per order with `items` stored as a JSON array, because the only read shape is the whole order as the wire contract renders it, and a child table would add a join on every read. This is CQRS in its plainest form: two tables in one schema, each shaped for its job, with no second datastore.
+
+What makes it the strongest example is when it's written. Every write path upserts `order_view` in the same local transaction as the aggregate change, not in a follow-up step and not from a consumer of the service's own event:
 
 {% include codetabs.html langs="create_order_with_outbox_and_view: the checkout write|transition_order_status_with_view: a saga reaction's write" %}
 
@@ -149,224 +92,102 @@ async def transition_order_status_with_view(session, *, order_id,
     return order
 ```
 
-Both functions commit the aggregate change and the `order_view` upsert
-together, inside the one transaction Postgres's own write-ahead log
-already spans: the same mechanism ch.20 built the outbox pattern around,
-reused here for a projection instead of an event row. `create_order_with_
-outbox_and_view` is this service's three-way atomicity guarantee: the
-`orders`/`order_items` write, the `order_view` PENDING row, and the
-`order.placed` outbox row all land together, or none of them do, which
-means a reader can never observe the aggregate without a matching view row
-and the outbox relay can never publish an event for an order that didn't
-actually persist. `transition_order_status_with_view` carries the same
-discipline into every one of the four saga reactions (`handle_
-payment_captured`/`handle_payment_declined`/`handle_shipment_dispatched`/
-`handle_shipment_failed`, built in full in ch.26): the conditional `UPDATE`
-is the idempotency backstop against a redelivered event racing a second
-delivery: a `WHERE status = expected_status` clause that only one of two
-concurrent deliveries can satisfy. The `order_view` upsert that
-follows it, inside the same transaction, is what keeps the read model from
-ever lagging behind a transition that already committed.
+Both functions commit the aggregate change and the `order_view` upsert in the one transaction Postgres's WAL already spans, the mechanism the outbox uses, reused for a projection. `create_order_with_outbox_and_view` makes three writes atomic: the `orders` and `order_items` rows, the `PENDING` view row and the `order.placed` outbox row. A reader never sees the aggregate without its view row, and the relay never publishes an event for an order that didn't persist.
 
-{% include excalidraw.html file="order-cqrs-write-read-split" alt="The CQRS command/query split inside order-service: the command path reserves over gRPC outside any local transaction, then persists the write aggregate, the order_view projection, and the order.placed outbox row in one transaction; the query path reads order_view exclusively, never the write tables" caption="Figure 21.1: CQRS, concretely: one write aggregate, one projection, upserted in the same transaction as every mutation" %}
+`transition_order_status_with_view` applies the same rule to all four saga reactions (`handle_payment_captured`, `handle_payment_declined`, `handle_shipment_dispatched`, `handle_shipment_failed`). Its conditional `UPDATE ... WHERE status = expected_status` is the idempotency backstop: only one of two concurrent deliveries can satisfy it. The `order_view` upsert after it, in the same transaction, keeps the read model from lagging a transition that already committed.
 
-## Read-your-writes within a service, not across a saga
+{% include excalidraw.html file="order-cqrs-write-read-split" alt="The CQRS command and query split inside order-service: the command path reserves over gRPC outside any local transaction, then persists the write aggregate, the order_view projection and the order.placed outbox row in one transaction; the query path reads order_view exclusively and never the write tables" caption="Figure 21.1: One write aggregate and one projection, upserted in the same transaction as every mutation." %}
 
-What this buys is precise, and the precise version matters more than
-a generous one. Because the `order_view` upsert commits in the same
-transaction as the write it reflects, a `GET /api/orders/{id}` issued the
-instant after `POST /api/orders` returns its `202` sees the new `PENDING`
-row immediately: no polling, no delay, no window where the aggregate
-exists but the read model hasn't caught up yet. That is **read-your-writes
-consistency**, and it is a real, structural guarantee this service's own
-`app/routes.py` depends on: `get_order_view_by_id`/`list_order_views` are
-the *only* two query functions `app/routes.py`'s `GET` handlers call;
-`Order`/`OrderItem`, the write-model classes, are never imported there at
-all. What this guarantee does **not** buy is consistency across the saga
-that eventually resolves the order. A client polling `GET /api/orders/{id}`
-moments after checkout can and will observe `PENDING`, then
-`AWAITING_SHIPMENT`, then `CONFIRMED`, each a real, committed intermediate
-state; the `CONFIRMED` transition is only as fresh as the Kafka event
-(`shipment.dispatched`) that eventually drives `handle_shipment_dispatched`
-to write it. ch.22 names that gap by its proper terms (PACELC, isolation
-traded for latency); this chapter's narrower claim is that the gap starts
-exactly at the service boundary, not one line earlier. `order_view` closes
-the distance between a write and its own service's read to zero, and
-closes nothing else.
+### Read-your-writes within a service, not across a saga
 
-## Proving it: the projection-disabled negative
+Because the upsert commits with the write, a `GET /api/orders/{id}` issued right after `POST /api/orders` returns `202` sees the new `PENDING` row with no polling and no lag. That is read-your-writes consistency. `get_order_view_by_id` and `list_order_views` are the only query functions the `GET` handlers call, and the write-model classes `Order` and `OrderItem` are never imported in `app/routes.py`.
 
-A read path that could silently fall back to querying `orders`/
-`order_items` directly whenever the projection lagged would hide a broken
-projection completely, and a chapter that only asserted "reads come from
-`order_view`" in prose would be making exactly the kind of claim this
-book's own verification discipline refuses to let stand unproven.
-`tooling/newman/`'s order-service contract run closes that gap with a
-real intervention, not a thought experiment: the `await
-_upsert_order_view(session, order, items)` call inside `transition_order_
-status_with_view` was temporarily commented out: the aggregate still
-transitions correctly, only the CQRS read-side projection stops being kept
-in sync. The service restarted, and Scenario 1 (a plain happy-path
-checkout) ran alone:
+It doesn't extend across the saga that resolves the order. A client polling after checkout observes `PENDING`, then `AWAITING_SHIPMENT`, then `CONFIRMED`, each a committed intermediate state, and `CONFIRMED` is only as fresh as the `shipment.dispatched` event that drives `handle_shipment_dispatched`. `order_view` closes the distance between a write and its own service's read to zero and closes nothing else.
+
+### Prove the projection: the disabled negative
+
+A read path that fell back to `orders` and `order_items` whenever the projection lagged would hide a broken projection completely. The order-service contract run in `tooling/newman/` disables the projection: the `await _upsert_order_view(session, order, items)` call inside `transition_order_status_with_view` was commented out, so the aggregate still transitions and only the projection stops. After a restart, the happy-path scenario ran alone:
 
 ```
 1. AssertionError  Order reaches terminal status CONFIRMED within the bounded-wait budget (40 x 750ms, attempt 40/40)
                    expected 'PENDING' to deeply equal 'CONFIRMED'
 ```
 
-`GET /api/orders/{id}`, which reads `order_view` exclusively per this
-service's own contract, never observed the real, successful transition
-happening on the write side. The bounded-wait poll exhausted its full
-40-attempt budget and failed loudly: **1/53 assertions failed, newman exit
-code 1.** Restoring the one commented-out line and re-running Scenario 1
-produced a clean pass: **0 failed, exit 0.** That is the proof this
-chapter's central claim needed and the kind every CQRS read model in this
-book should be held to: not "the projection code exists," but "removing
-the projection call breaks exactly the read path it was supposed to keep
-current, and restoring it fixes exactly that." A projection that can't be
-proven this way, by breaking it to see what actually fails, is a
-projection nobody has confirmed does anything at all.
+`GET /api/orders/{id}` never saw the transition that succeeded on the write side. The poll exhausted its 40-attempt budget and failed: 1 of 53 assertions failed, newman exit 1. Restoring the line produced 0 failed, exit 0. A projection that can't be shown to break the read path when removed hasn't been shown to do anything.
 
-{% include excalidraw.html file="order-view-rebuildable-projection" alt="Aggregate feeds a projection feeds the view under normal operation; rebuild_order_view recomputes the view from the current aggregate at any time; the projection-disabled negative test proves the read path never silently falls back to the aggregate by showing it go stale instead" caption="Figure 21.2: A rebuildable read model: the projection-disabled negative is the proof the read path never falls back to the aggregate" %}
+{% include excalidraw.html file="order-view-rebuildable-projection" alt="Aggregate feeds a projection which feeds the view in normal operation; rebuild_order_view recomputes the view from the current aggregate at any time; the projection-disabled negative shows the read path going stale instead of falling back to the aggregate" caption="Figure 21.2: A rebuildable read model, and the projection-disabled negative that proves the read path never falls back." %}
 
-## Rebuildable, not a second source of truth
+### Rebuildable, not a second source of truth
 
-The property that keeps `order_view` from quietly becoming a second,
-competing source of truth is that it is always recomputable from the
-aggregate it describes. `app/repository.py::rebuild_order_view` does
-exactly this: reads the current `Order`/`OrderItem` rows and calls the
-same `_upsert_order_view` helper every write path already calls, producing
-an identical result whether it runs as a side effect of a checkout or as a
-standalone repair. `app/service.py::rebuild_order_view` wraps it as an
-operational entry point, and the test suite's own projection-disabled
-negative reuses it directly to restore `order_view` to a known-correct
-state after breaking it by hand. `OrderView`'s own docstring states
-the property without hedging: this table is "a cache of the aggregate's
-shape for reads, never a second source of truth." That property is what
-makes a read model's own storage *disposable* rather than precious: a
-corrupted or lost `order_view` is an operational inconvenience fixed by
-one function call, never a data-loss incident, because the aggregate
-tables remain the only place a fact about an order is ever decided.
+`order_view` is always recomputable from the aggregate. `app/repository.py::rebuild_order_view` reads the current `Order` and `OrderItem` rows and calls the same `_upsert_order_view` helper every write path calls. `app/service.py::rebuild_order_view` wraps it as an operational entry point, and the projection-disabled check reuses it to restore the view afterward. The `OrderView` docstring puts it this way: the table is "a cache of the aggregate's shape for reads, never a second source of truth." A corrupted or lost `order_view` is fixed by one function call, never a data-loss incident, because the aggregate tables are the only place a fact about an order is decided.
 
-## `notification-service` was already a CQRS read model
+### Notification was already a read model
 
-ch.17 built `examples/03-notification-service` without this chapter's
-vocabulary, and it is worth going back to name precisely why it qualifies.
-The monolith's checkout, the write side, decides whether an order is
-valid and commits that decision as ordinary relational rows. Notification
-is a second, independently stored, independently scaled model: its own
-`notification` schema, its own `Notification` table, built for exactly one
-query shape: "what has this customer been told, and when." It consumes
-`order.placed` off the same outbox-fed topic every other consumer in this
-book reads, applies a check-then-insert idempotency guard backstopped by a
-database unique index, and produces one row representing a fact the write
-side already decided. It does not enforce the order's invariants and
-cannot reject a checkout; it is, in Kleppmann's term, a **materialized
-view**: a derived answer kept current by folding new facts into it,
-rebuildable from the source topic if it were ever lost, never itself a
-source of truth. That makes it a CQRS read model by every test that
-matters, and the contrast with `order_view` is instructive precisely
-because the two differ on the one axis CQRS leaves open: Notification's
-projection is fed by an asynchronous consumer reacting to a topic, owned by
-a *different* service than the one that wrote the fact; `order_view`'s
-projection is a direct method call inside the *same* transaction as the
-write, owned by the same service. Both are CQRS. Only one of them buys
-read-your-writes consistency, and the difference between them is exactly
-the difference between "eventually consistent, rebuildable from a topic's
-retention window" and "immediately consistent within one transaction,
-rebuildable on demand from the aggregate itself," two legitimate points on
-the same spectrum, chosen for different reasons by different services in
-this same book.
+The monolith's checkout, the write side, decides whether an order is valid and commits ordinary relational rows. Notification is a second, independently stored model with its own `notification` schema and `Notification` table, built for one query: "what has this customer been told, and when." It consumes `order.placed` from the outbox-fed topic, applies a check-then-insert guard backed by a unique index, and writes one row recording a fact the write side already decided. It can't reject a checkout. It is what Kleppmann calls a materialized view: a derived answer kept current by folding in new facts, rebuildable from the source topic, never a source of truth.
 
-## Why this book builds CQRS, not event sourcing: stated as a decision
+The two differ on the axis CQRS leaves open:
 
-It is worth being precise about which pattern this chapter is and is not
-teaching, because the two are easy to conflate and the conflation causes
-real design mistakes. CQRS says: separate the model you write from the
-model you read. Event sourcing says something stronger, and specifically
-about the *write* side: don't store current state as mutable rows at all;
-store the append-only sequence of events that produced that state, and
-treat that sequence as the only system of record, with current state
-computed by replaying it. This book's write side never does that. `Order`
-in `07-order-service/app/models.py` is a conventional, mutable row with a
-`status` column updated in place by an ordinary `UPDATE` statement; there
-is no event store anywhere in this project, and no code that reconstructs
-an order's state by folding a stream of past events. What this book builds
-instead is **CQRS with an outbox event log, not event sourcing**: the
-outbox (ch.17, ch.20) and `order_view`'s projection (this chapter) are both
-ways of letting other things react to what the write side already decided,
-without the write side itself being redefined as a log. That is a
-deliberate scoping decision, not an unfinished one: event sourcing commits
-a team to schema evolution of every event type forever (a consumer written
-years from now still has to deserialize and correctly interpret `order.
-placed` v1), to a snapshot strategy that bounds replay cost as history
-grows, and to tooling and team familiarity most shops don't have on day
-one: real, ongoing costs with no equivalent in a mutable-row system, where
-a migration simply retires the old shape. Nothing in this project's own
-needs justifies paying them: every read model this book builds,
-Notification's "has this customer been told" and `order_view`'s "what does
-this order currently look like," needs "the current state, derived from
-recent facts," never "replay this aggregate's entire history to reconstruct
-an arbitrary past point in time," which is the specific question event
-sourcing exists to answer well. Building the heavier pattern to answer a
-question this migration never asks would be exactly the kind of
-unjustified complexity this book's scope discipline argues against
-everywhere else, dressed up as thoroughness here. The event payloads this
-project does publish, `order.placed`, `payment.captured`, and the rest,
-stay JSON on the wire, versioned only by convention; a schema registry with
-real compatibility enforcement (Avro, Apicurio) is a different, later
-concern this book picks up in ch.28, once the question shifts from "should
-events be the system of record" (no) to "how do independently-deployed
-consumers stay safe when a producer's event shape changes" (yes, and that
-needs tooling CQRS alone doesn't provide).
+| | `notification` | `order_view` |
+|---|---|---|
+| Fed by | An asynchronous consumer of a topic | A method call in the write transaction |
+| Owned by | A different service than the writer | The same service as the writer |
+| Consistency | Eventual | Read-your-writes |
+| Rebuilt from | The topic, within its retention window | The aggregate, on demand |
 
-> **ADLC in Action**: Deferring this chapter was
-> a planning-phase decision, not a scheduling accident: the build plan
-> judged that teaching CQRS against a read model fed by an asynchronous
-> consumer (Notification, already shipped) would only demonstrate half the
-> pattern, and that the stronger teaching example, a projection written
-> inside the same transaction as its aggregate with a negative test proving
-> the read path never falls back to the write tables, did not exist until
-> `07-order-service` did. Rather than writing a weaker version of this
-> chapter early and revising it later, the decision was to hold the whole
-> chapter until the artifact that earns it was real, verified code. The
-> projection-disabled evidence cited above is exactly that artifact,
-> exercised in `tooling/newman/`'s order-service contract run, not a
-> claim asserted from reading `repository.py` alone.
+Both are CQRS, and each service chose the point on the spectrum that fits.
 
-## What you learned
+## Pattern: Event Sourcing (declined)
 
-- **CQRS separates the model that accepts writes from the model that serves
-  reads** because the two often want different shapes, different scales, and
-  different consistency guarantees, not because splitting a model is
-  inherently better than keeping one.
-- **`order_view` is this book's strongest CQRS example because the
-  projection commits inside the same transaction as the write it reflects**
-  (`create_order_with_outbox_and_view`, `transition_order_status_with_view`),
-  a stronger guarantee than Notification's asynchronous, topic-fed
-  projection, and a deliberate choice available only because both the
-  aggregate and the read model are owned by the same service.
-- **Read-your-writes is a within-service promise, not a whole-saga one**: a
-  `GET` right after a `POST` sees the new row immediately, but a status that
-  depends on a later Kafka event is only as fresh as that event; the gap
-  starts at the service boundary, nowhere earlier.
-- **A read path that could silently fall back to the aggregate would hide a
-  broken projection completely**: the only real proof a CQRS read model
-  does anything at all is a negative check that disables the projection and
-  watches the read go stale while the write moves on, exactly what
-  that contract run did against live code.
-- **A CQRS read model should be rebuildable, not precious**:
-  `rebuild_order_view` recomputes `order_view` from the current aggregate at
-  any time, which is what keeps it a cache rather than a second source of
-  truth.
-- **This book builds CQRS with an outbox event log, not event sourcing**:
-  the write side stays conventional, mutable rows throughout; the heavier
-  pattern (the log as the only system of record, state computed by replay)
-  is a cost this migration's own needs never justify paying, and real
-  schema-evolution tooling for the events this project does publish is a
-  separate concern ch.28 picks up.
+CQRS separates the model you write from the model you read. Event sourcing is stronger and concerns the write side: don't store current state as mutable rows. Store the append-only sequence of events that produced it as the only system of record, and compute current state by replay.
 
-Next: ch.22's ACID → ACD argument already named what a saga costs once no
-single transaction spans a whole business operation; read it alongside this
-chapter's narrower claim: a same-transaction projection closes the
-consistency gap at exactly one service boundary, and nowhere past it.
+This system doesn't do that. `Order` in `07-order-service/app/models.py` is a mutable row with a `status` column changed by an ordinary `UPDATE`. There is no event store and no code that rebuilds an order by folding past events. What it has is CQRS with an outbox event log: the outbox and `order_view` let other things react to what the write side already decided, without redefining the write side as a log.
+
+Event sourcing commits a team to costs a mutable-row system doesn't have:
+
+| Cost | What it means |
+|---|---|
+| Schema evolution | Every event type is versioned forever, and a consumer written years from now must still read `order.placed` v1 |
+| Snapshots | A strategy to bound replay cost as history grows |
+| Tooling and familiarity | Event stores, replay and upcasting that most teams don't have on day one |
+
+Every read model here needs "current state, derived from recent facts," not "replay this aggregate's history to reconstruct an arbitrary past point," which is the question event sourcing answers well. The event payloads (`order.placed`, `payment.captured` and the rest) stay JSON on the wire, versioned by convention. A schema registry with compatibility enforcement (Avro, Apicurio) addresses a different problem: keeping independently deployed consumers safe when a producer's event shape changes.
+
+> **ADLC in Action**
+>
+> The plan held this material back until the right artifact existed. Teaching CQRS against Notification's topic-fed read model would have shown half the pattern. The stronger example is a projection written in the same transaction as its aggregate, with a negative check that the read path never falls back to the write tables, and that didn't exist until `07-order-service` did. The projection-disabled run above is that artifact, exercised against live code in the order-service contract run.
+
+> **Decision**
+>
+> Add a read model when reads and writes need different shapes or scale, and project it in the write transaction when the owning service needs read-your-writes. Choose event sourcing only when the question is "what was the state at time T," because the schema evolution, snapshot and tooling costs never go away.
+
+> **🤖 Explore with your agent**
+>
+> "In examples/07-order-service/app/repository.py, add a new status transition for a cancelled order using `transition_order_status_with_view` so the `order_view` row is upserted in the same transaction as the `orders` update, with the conditional `WHERE status = expected_status` guard. Then show `GET /api/orders/{id}` returns the new status right after the write."
+>
+> Check: `uv run pytest -m "not integration"` in examples/07-order-service passes, and removing the `_upsert_order_view` call from your new function makes the read return the old status.
+
+## Build, run, observe
+
+`07-order-service` needs a migrated Postgres. From its directory:
+
+```bash
+cd examples/07-order-service
+uv sync --group dev
+uv run alembic upgrade head
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8088
+uv run pytest -m "not integration"
+uv run pytest -m integration
+```
+
+The integration marker uses Testcontainers for Kafka and Postgres plus an in-process fake gRPC inventory server. `bash demos/demo-final-topology.sh` runs the whole topology.
+
+Experiments:
+
+- Comment out the `_upsert_order_view` call in `transition_order_status_with_view`, restart, and run the happy-path scenario. The order stays `PENDING` and the bounded-wait poll fails after 40 attempts.
+- Call `rebuild_order_view` for an order. The view row is recomputed from the aggregate and matches what the write path produced.
+
+## For deeper coverage
+
+- Martin Fowler, "CQRS" and "Event Sourcing" on martinfowler.com.
+- Martin Kleppmann, *Designing Data-Intensive Applications*: derived data, materialized views and event sourcing.
+- Chris Richardson, *Microservices Patterns*: CQRS and Event Sourcing.

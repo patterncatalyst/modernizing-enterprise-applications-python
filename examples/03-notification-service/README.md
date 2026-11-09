@@ -1,6 +1,6 @@
 # 03-notification-service
 
-**ch.17, DRQ-035 -- r03 S5.** The monolith's (`../00-monolith`) `notification`
+The monolith's (`../00-monolith`) `notification`
 bounded context, extracted onto a standalone **FastAPI** service on
 **`:8002`**. Unlike `../02-review-service` (a lift-and-reauthor of an
 existing synchronous REST surface), this extraction is **net-new**: the
@@ -11,10 +11,10 @@ write path to lift. This service is authored idiomatic-from-the-start:
 
 - An **idempotent `aiokafka` consumer** of the frozen `order.placed` topic
   (see "Event contract" below), recording a `Notification` row into this
-  service's **OWN `notification` Postgres schema** -- the **first owned
+  service's **OWN `notification` Postgres schema**, the **first owned
   schema in this project** (contrast with review-service's shared-schema
-  posture, DRQ-028). Migrated with **Alembic**.
-- `GET /api/notifications?customerId=` -- the lifted read surface, matching
+  posture). Migrated with **Alembic**.
+- `GET /api/notifications?customerId=`: the lifted read surface, matching
   the monolith's `notification/views.py::NotificationListView` contract
   byte-for-byte.
 
@@ -29,10 +29,10 @@ Notification is event-driven: it consumes `order.placed` off Kafka
 asynchronously. Sharing the upstream aggregate's table would mean two writers
 racing on the same rows (the monolith's synchronous path and this service's
 consumer) with no way to reconcile them. Owning the table from the start
-avoids that split-brain entirely -- the honest teaching point of DRQ-035's
+avoids that split-brain entirely, the reason for the
 own-schema decision.
 
-## Event contract (frozen, STEP 0 of the r03 build)
+## Event contract (frozen, written first)
 
 Topic `order.placed`, key = `orderId` (string). JSON value, camelCase:
 
@@ -48,22 +48,22 @@ Topic `order.placed`, key = `orderId` (string). JSON value, camelCase:
 ```
 
 There is no shared module between the monolith and this service (each is an
-independently deployable project in this repo) -- `app/schemas.py`'s
+independently deployable project in this repo), `app/schemas.py`'s
 `OrderPlacedEvent` is this service's own hand-maintained copy of that shape.
-That duplication is the honest cost of a JSON wire contract with no schema
-registry until ch.28/Apicurio (DRQ-036).
+That duplication is the cost of a JSON wire contract with no schema
+registry until the Apicurio registry demo.
 
 ## Idempotency
 
-The monolith's outbox relay is an **at-least-once** publisher -- a crash
+The monolith's outbox relay is an **at-least-once** publisher, a crash
 between the Kafka send and marking the outbox row published republishes the
 identical event. Two layers guarantee a redelivered `order.placed` event
 yields exactly one `Notification` row:
 
-1. **Application-level check-then-insert** --
+1. **Application-level check-then-insert**,
    `app/service.py::record_order_placed` looks up `get_by_order_id` first;
    if a row already exists, it is a no-op.
-2. **Database-level partial unique index** -- `uq_notifications_order_id`
+2. **Database-level partial unique index**, `uq_notifications_order_id`
    (`UNIQUE (order_id) WHERE order_id IS NOT NULL`, created by
    `migrations/versions/0001_create_notification_schema.py`), the backstop
    for two deliveries racing concurrently (caught as an `IntegrityError` and
@@ -85,10 +85,10 @@ contract posture as review-service).
 | GET | `/api/notifications?customerId=` | required query param; `400 VALIDATION_FAILED` if missing |
 | GET | `/health` | reports Kafka consumer partition-assignment (CI readiness signal) |
 
-Response body: `{id, customerId, orderId, channel, message, sentAt}` --
+Response body: `{id, customerId, orderId, channel, message, sentAt}`,
 matches `notification.serializers.NotificationSerializer`'s field list
 exactly. Error body (every non-2xx response):
-`{"error": "<CODE>", "message": ..., "timestamp": ...}` -- the same uniform
+`{"error": "<CODE>", "message": ..., "timestamp": ...}`: the same uniform
 shape as the monolith's `common/exceptions.py` and review-service's
 `app/errors.py`.
 
@@ -103,7 +103,7 @@ in the SAME Postgres **instance** every example in this project shares by
 default (`DATABASE_URL`, default
 `postgresql://monolith:monolith@localhost:5432/monolith`). `app/db.py` sets
 `search_path=notification,public` on every connection AND every model in
-`app/models.py` declares `schema="notification"` explicitly -- the search
+`app/models.py` declares `schema="notification"` explicitly, the search
 path is a convenience, the explicit schema is the correctness guarantee.
 
 ## Quickstart
@@ -167,7 +167,7 @@ docker run --rm -p 8002:8002 \
 UBI 10 (`ubi10/python-314-minimal`, the same verified tag `../00-monolith`
 and `../02-review-service` use), multi-stage `uv sync`, non-root (UID 1001,
 GID 0). The container's `CMD` runs `alembic upgrade head` before starting
-uvicorn -- there is no separate init-container step in this project's
+uvicorn: there is no separate init-container step in this project's
 compose/CRC stacks.
 
 ## Structured logging

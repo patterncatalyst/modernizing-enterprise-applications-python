@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""ch.19 figure: inventory-grpc-proto-acl -- the proto IS the anti-corruption
+"""ch.19 figure: inventory-grpc-proto-acl, the proto IS the anti-corruption
 layer for the synchronous order<->inventory seam. Two distinct
 vocabularies meet only at the wire: the monolith's domain vocabulary
 (sku/name/priceCents/quantityOnHand) on one side, inventory.proto's wire
 vocabulary (stock_keeping_unit/display_name/unit_price_cents/on_hand_qty)
 in the middle, and inventory-service's OWN domain vocabulary
-(sku/quantity_on_hand) on the other -- each side's client/server translates,
+(sku/quantity_on_hand) on the other, each side's client/server translates,
 so the two shapes never get to "happen to already agree."
 
 Sourced from examples/00-monolith/order/inventory_client.py
@@ -28,7 +28,7 @@ monolith_dom = node(30, 150, 240, 120,
 client = node(300, 150, 230, 120,
     ["order/inventory_client.py", "RemoteInventoryClient", "CLIENT-SIDE ACL translator"], style="accent")
 proto = node(560, 150, 280, 120,
-    ["inventory.proto -- frozen, versioned", "stock_keeping_unit, display_name,", "unit_price_cents, on_hand_qty"], style="accent")
+    ["inventory.proto: frozen, versioned", "stock_keeping_unit, display_name,", "unit_price_cents, on_hand_qty"], style="accent")
 server = node(870, 150, 230, 120,
     ["app/grpc_server.py", "InventoryGrpcServiceServicer", "SERVER-SIDE ACL translator"], style="accent")
 inv_dom = node(1130, 150, 240, 120,
@@ -48,7 +48,7 @@ notes = [
      "anchor": "start", "size": 11, "color": "#555555"},
     {"x": 40, "y": H - 42, "text": "(sku/name/priceCents/quantityOnHand) so each side's translator does the mapping, instead of the shapes happening to agree.",
      "anchor": "start", "size": 11, "color": "#555555"},
-    {"x": 40, "y": H - 24, "text": "ReserveReply/StockReply carry the reply back through the SAME two translators, in reverse -- the boundary is symmetric.",
+    {"x": 40, "y": H - 24, "text": "ReserveReply/StockReply carry the reply back through the SAME two translators, in reverse, the boundary is symmetric.",
      "anchor": "start", "size": 11, "color": "#555555"},
 ]
 

@@ -1,4 +1,4 @@
-# deploy/k8s -- kustomize manifests (ch.29 + ch.30)
+# deploy/k8s: kustomize manifests (Kubernetes manifests and the service mesh)
 
 Kubernetes manifests for the full 8-service running topology
 (`examples/01-strangler-proxy` through `examples/08-graphql-gateway`;
@@ -8,14 +8,14 @@ from the running topology). Adapted from the layout at
 `~/Dev/datamesh-reference-arch-quarkus/k8s/` (`base/` per-service
 Deployment+Service, a shared ConfigMap, `kustomization.yaml`,
 `overlays/minikube`) and re-authored against this project's own Python
-config model -- see `base/app-config.yaml`'s header for how that model
+config model: see `base/app-config.yaml`'s header for how that model
 diverges from the Java sibling's per-service JDBC-URL approach.
 
-ch.30 layers an Istio service mesh (mTLS, mesh-wide tracing) and a Grafana
+This layer adds Istio (mTLS, mesh-wide tracing) and a Grafana
 LGTM observability backend onto this same topology (`deploy/k8s/istio/`,
 `deploy/k8s/observability/`), activated in `overlays/minikube`.
 
-This tree is additive only -- it does not change any application code,
+This tree is additive only, it does not change any application code,
 `compose.yaml`, `.env.example`, CI, or any existing demo.
 
 ## Layout
@@ -59,9 +59,9 @@ deploy/k8s/
   scripts/                      # setup-profile, install-istio, build-images, deploy, teardown
 ```
 
-## Cluster, mesh, images, deploy (minikube) -- the ch.30 bring-up sequence
+## Cluster, mesh, images, deploy (minikube), the bring-up sequence
 
-The minikube driver is always `docker` + `containerd` -- this is the only
+The minikube driver is always `docker` + `containerd`, this is the only
 documented minikube driver for this project (`CONTAINER_ENGINE` is a
 separate, unrelated knob: it picks docker or podman to BUILD the container
 images in step 3, not which driver starts the cluster).
@@ -125,16 +125,16 @@ kubectl --context mea -n mea logs <pod-name> -c istio-proxy
 ```
 
 If a pod shows 1/1 instead of 2/2, check that its Deployment's pod template
-carries the `sidecar.istio.io/inject: "true"` LABEL (not an annotation --
+carries the `sidecar.istio.io/inject: "true"` LABEL (not an annotation,
 see `overlays/minikube/kustomization.yaml`'s header) and that it was
 created or restarted AFTER `install-istio.sh` completed (the injection
 webhook only acts on admission, not retroactively).
 
-### Capturing ch.30 evidence
+### Capturing mesh evidence
 
 Once `deploy.sh` reports every pod 2/2, one command drives a few checkouts
-through `strangler-proxy` and pulls the 3 files ch.30's footer cites --
-a distributed trace, an mTLS check, and a set of mesh request metrics --
+through `strangler-proxy` and pulls the 3 files the mesh chapter's footer cites,
+a distributed trace, an mTLS check, and a set of mesh request metrics,
 into `deploy/k8s/observability/evidence/`:
 
 ```bash
@@ -147,13 +147,13 @@ It writes `ch30-hero-trace.json` (one trace from Tempo spanning
 column), and `ch30-metrics.txt` (`istio_requests_total` from Mimir, via
 `svc/lgtm`). Each capture either produces a real file or, if the cluster
 hasn't produced the data yet (no trace indexed, an empty metrics result),
-writes a `*.MISSING.txt` note describing what to retry and exits non-zero --
+writes a `*.MISSING.txt` note describing what to retry and exits non-zero,
 it never substitutes placeholder content. Pass the resulting 3 files back
-so they can be committed and wired into ch.30.
+so they can be committed and wired into the mesh chapter.
 
 ### review-service's shared schema
 
-`review-service` runs no Alembic migration of its own -- it reads the
+`review-service` runs no Alembic migration of its own, it reads the
 monolith's shared `public` schema (`reviews`/`customers`/`inventory_items`/
 `auth_user`), created and seeded by `examples/00-monolith`'s own
 `manage.py migrate`/`manage.py seed`. `scripts/deploy.sh` runs that once
@@ -175,7 +175,7 @@ kubectl kustomize deploy/k8s/overlays/minikube
 
 # Offline schema validation against the upstream Kubernetes OpenAPI schemas
 # (no cluster, no network call to a live apiserver):
-kubectl kustomize deploy/k8s/overlays/minikube | kubeconform -strict -summary
+kubectl kustomize deploy/k8s/overlays/minikube | kubeconform -strict -ignore-missing-schemas -summary
 
 # Client-side structural validation of every rendered object:
 kubectl kustomize deploy/k8s/base | kubectl apply --dry-run=client -f -
@@ -184,12 +184,12 @@ kubectl kustomize deploy/k8s/base | kubectl apply --dry-run=client -f -
 `kubectl kustomize` and `kubeconform -strict` both run fully offline and
 catch manifest-shape errors (missing required fields, wrong types, unknown
 fields under `-strict`). `kubectl apply --dry-run=client` additionally needs
-a RESTMapping discovery step -- it resolves each manifest's `kind` to a REST
+a RESTMapping discovery step, it resolves each manifest's `kind` to a REST
 resource before validating, which requires a reachable apiserver (a running
 `minikube`/`kind`, or a cached discovery document from a previous
 connection). In a sandbox with no reachable apiserver at all, that step
 fails at discovery (`dial tcp ...: connection refused`), not at manifest
-validation -- `kubeconform` is what covers structural validation in that
+validation: `kubeconform` is what covers structural validation in that
 case. Server-side dry-run, real admission control, and webhook evaluation
 all require a live cluster and are exercised through the `scripts/` path
 above, not by this offline check.
@@ -197,7 +197,7 @@ above, not by this offline check.
 ### Istio CRs and kubeconform
 
 `kubeconform -strict` has no bundled schema for Istio's CRDs
-(`PeerAuthentication`, `Telemetry`) -- they are cluster-defined types, not
+(`PeerAuthentication`, `Telemetry`): they are cluster-defined types, not
 part of the upstream Kubernetes OpenAPI set kubeconform ships. Running it
 plain reports them as validation **errors** ("could not find schema for
 ..."), not as structurally invalid:
@@ -208,7 +208,7 @@ kubectl kustomize deploy/k8s/istio | kubeconform -strict -summary
 ```
 
 Add `-ignore-missing-schemas` to turn those into explicit **skips** instead
-of errors -- the point of this flag is to let the plain Kubernetes objects
+of errors: the point of this flag is to let the plain Kubernetes objects
 (everywhere else in this tree) keep failing `-strict` on real problems while
 the Istio CRs, which have no schema to check against here, are called out
 rather than silently passed:
@@ -241,7 +241,7 @@ convention across all eight:
 | `payment-service` | `httpGet /health` | Reports consumer partition-assignment |
 | `shipping-service` | `httpGet /health` | Reports consumer partition-assignment + resume-complete flag |
 | `order-service` | `httpGet /health` | Liveness/readiness only |
-| `graphql-gateway` | `httpGet /health` | Liveness only -- it never probes a downstream (see its own docstring) |
+| `graphql-gateway` | `httpGet /health` | Liveness only: it never probes a downstream (see its own docstring) |
 
 ## Env contract
 
@@ -252,32 +252,32 @@ per-service JDBC URLs work. Summary:
 
 | Env var(s) | Consumed by | Source |
 |---|---|---|
-| `DATABASE_URL` | review-/notification-/inventory-/payment-/shipping-/order-service | `app-secret.yaml` (`database-url` key) -- ONE value for all six; each service's own `app/db.py` picks its schema in code |
+| `DATABASE_URL` | review-/notification-/inventory-/payment-/shipping-/order-service | `app-secret.yaml` (`database-url` key): ONE value for all six; each service's own `app/db.py` picks its schema in code |
 | `KAFKA_BOOTSTRAP_SERVERS` | notification-/inventory-/payment-/shipping-/order-service | ConfigMap |
 | `ORDER_PLACED_TOPIC` / `PAYMENT_CAPTURED_TOPIC` / `PAYMENT_DECLINED_TOPIC` / `PAYMENT_REFUNDED_TOPIC` / `SHIPMENT_DISPATCHED_TOPIC` / `SHIPMENT_FAILED_TOPIC` | the services producing/consuming each topic | ConfigMap |
-| `INVENTORY_CDC_ENABLED` | inventory-service | ConfigMap (`"false"` -- transition-only consumer, off) |
+| `INVENTORY_CDC_ENABLED` | inventory-service | ConfigMap (`"false"`: transition-only consumer, off) |
 | `INVENTORY_GRPC_TARGET` | order-service, graphql-gateway | ConfigMap |
 | `STRANGLER_REVIEW_BASE_URL` .. `STRANGLER_ORDER_BASE_URL` | strangler-proxy | ConfigMap |
 | `ORDER_BASE_URL` | shipping-service (saga enrich step) | ConfigMap |
 | `ORDER_SERVICE_URL` / `PAYMENT_SERVICE_URL` / `SHIPPING_SERVICE_URL` / `REVIEW_SERVICE_URL` | graphql-gateway | ConfigMap |
 | `OUTBOX_POLL_MS` | payment-/shipping-/order-service | ConfigMap (same `1000` default for all three) |
-| `HTTP_PORT` / `PORT` / `GRPC_PORT` / `CONSUMER_GROUP` | each service that reads one | set directly in that Deployment's own `env:` block -- the same env var name needs a different value per service, so these can't live in the shared ConfigMap |
+| `HTTP_PORT` / `PORT` / `GRPC_PORT` / `CONSUMER_GROUP` | each service that reads one | set directly in that Deployment's own `env:` block, the same env var name needs a different value per service, so these can't live in the shared ConfigMap |
 
 Every app Deployment pulls the whole ConfigMap via `envFrom`; a service with
 no matching `Settings.from_env()` field for a given key ignores it.
 
-## ch.30: mesh + observability
+## Mesh and observability
 
 The Istio mesh (`deploy/k8s/istio/`) and the LGTM observability backend
 (`deploy/k8s/observability/`) are activated in `overlays/minikube/
 kustomization.yaml`'s `resources:`, alongside a `sidecar.istio.io/inject`
 pod-template label on each of the 8 app Deployments (postgres/kafka carry
-none -- meshing a stateful workload's own TLS would collide with the
+none: meshing a stateful workload's own TLS would collide with the
 injected sidecar's mTLS wrapping). See "Cluster, mesh, images, deploy"
 above for the bring-up order and "Mesh verification" for confirming it live.
 
 A live minikube run (pods actually Ready 2/2, mTLS actually enforced, a
-trace actually captured end to end) is not part of any CI gate -- the
+trace actually captured end to end) is not part of any CI gate, the
 `scripts/` path above is user-runnable; the separate `mesh-manifests.yml`
 CI gate (if present) only covers the headless render + kubeconform checks
 in this README, never a live cluster.
