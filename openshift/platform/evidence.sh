@@ -4,7 +4,7 @@
 # $OUT/1N-*.txt; every check fails the capture on a miss. Expects lib.sh,
 # $OUT, https(), in_pod() and route_url() from capture-evidence.sh.
 
-PROBE_IMAGE="${PROBE_IMAGE:-registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506}"
+PROBE_IMAGE="${PROBE_IMAGE:-registry.access.redhat.com/ubi10/python-314-minimal:10.2-1793853808}"
 
 mesh_on() { occ get istio default >/dev/null 2>&1; }
 otel_on() { occ get deployment lgtm -n "$NS" >/dev/null 2>&1; }
